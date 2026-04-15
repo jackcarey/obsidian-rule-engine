@@ -16,7 +16,13 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	settings: CustomRulesSettings = Object.assign({}, DEFAULT_SETTINGS);
 
 	get commands(): CommandWithSetup[] {
-		return [];
+		return [{
+			id: 'log-time',
+			name: 'Log the time',
+			description: 'logs the current time to the console',
+			icon: 'clock',
+			callback: () => console.debug(new Date().toISOString(), Date.now())
+		}];
 	};
 
 
@@ -414,7 +420,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (Object.keys(allCommands).length === 0) {
 			console.warn('no commands found for rule engine');
 		}
-		console.debug(`all commands`, allCommands);
 		return allCommands;
 	}
 

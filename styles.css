@@ -55,7 +55,7 @@
 }
 
 .ore-textarea {
-    height: 250px;
+    height: 15lh;
     width: 100%;
     font-family: var(--font-monospace);
 }
@@ -919,4 +919,9 @@ font-size: var(--metadata-input-font-size);
 
 .ore-clear-button-hidden {
     display: none !important;
+}
+
+.ore-command-id-list-item{
+    width: 50%;
+    width: max(50%, fit-content);
 }

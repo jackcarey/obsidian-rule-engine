@@ -1,5 +1,5 @@
 /* eslint-disable obsidianmd/ui/sentence-case */
-import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Value } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Value, SuggestModal, prepareFuzzySearch, Command } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
@@ -33,7 +33,6 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 						const file = this.app.workspace.getActiveFile();
 						if (file) {
 							this.plugin.processActiveView(file).catch((e) => {
-								// todo: Error handling for processActiveView
 								console.error(e);
 							});
 						}
@@ -101,7 +100,9 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const commandConfigContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
 
 
-		this.plugin.commands.forEach(cmdConfig => {
+		this.plugin.commands.sort((a, b) => {
+			return a.name.localeCompare(b.name);
+		}).forEach(cmdConfig => {
 			this.renderCommandConfigListItem(commandConfigContainer, cmdConfig);
 		});
 	}
@@ -198,7 +199,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	}
 
 	renderCommandConfigListItem(container: HTMLElement, cmdConfig: CommandWithSetup) {
-		const { id, name, icon, description, settingCallback } = cmdConfig;
+		const { id, name, description, settingCallback } = cmdConfig;
 		const currentConfig = this.plugin.getCommandConfig(id);
 		const cmdGroup = new SettingGroup(container).setHeading(name);
 		cmdGroup.addSetting(setting => {
@@ -211,11 +212,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						console.debug(`toggle enabled for`, id, value);
 						this.plugin.updateCommandConfig(id, { enabled: value });
-					}));
-			if (icon) {
-				//todo: check if this looks good
-				setIcon(setting.settingEl, icon);
-			}
+					}))
 		});
 		if (settingCallback) {
 			const saveFn: CommandSaveFn = (updatedConfig) => {
@@ -231,6 +228,16 @@ class EditRuleModal extends Modal {
 	rule: RuleConfig;
 	ruleIndex: number;
 	onSave: () => void;
+
+	openSuggestModal(
+		items: { label: string, value: string, icon?: string }[],
+		selectedValue: string,
+		onSelect: (val: string) => void,
+		anchorEl?: HTMLElement
+	) {
+		const modal = new ComboboxSuggestModal(this.plugin.app, items, selectedValue, onSelect, anchorEl);
+		modal.open();
+	}
 
 	constructor(app: App, plugin: ObsidianRuleEnginePlugin, rule: RuleConfig, ruleIndex: number, onSave: () => void) {
 		super(app);
@@ -269,7 +276,7 @@ class EditRuleModal extends Modal {
 					.onChange(val => { this.rule.enabled = val; });
 			});
 
-		contentEl.createEl("h3", { text: "Filters" });
+		new Setting(contentEl).setHeading().setName("Filters");
 		const rulesContainer = contentEl.createDiv({ cls: "ore-parent-query-container" });
 
 		const builder = new FilterBuilder(
@@ -299,16 +306,58 @@ class EditRuleModal extends Modal {
 				});
 			});
 
-		contentEl.createEl("h3", { text: "Commands" });
-		const commandsContainer = contentEl.createDiv({ cls: "ore-parent-commands-container" });
+		const selectedCmdIds = [...this.rule.commandIds];
+		new Setting(contentEl)
+			.setHeading()
+			.setName("Commands")
+			.setDesc("Executed in order. Only shows & executes commands available in the current context.")
+			.addButton(btn => {
+				btn.setCta()
+					.setIcon("plus")
+					.setButtonText("Add")
+					.onClick(() => {
+						const firstCmdId = Object.keys(this.plugin.obsidianCommands)[0];
+						if (firstCmdId) {
+							selectedCmdIds.push(firstCmdId);
+							renderCommandIdList();
+						} else {
+							console.error(`failed to add new command ID to rule`);
+						}
+					});
+			});
+
+		const commandsContainer = contentEl.createEl("ol", { cls: "ore-parent-commands-container" });
 		commandsContainer.role = "list";
-		//todo: add command drag and drop UI
-		commandsContainer.innerText = "//todo";
+		const renderCommandIdList = () => {
+			commandsContainer.empty();
+			selectedCmdIds.forEach((id, idx) => {
+				const childLiEl = commandsContainer.createEl("li", { cls: "ore-command-id-list-item" });
+				new Setting(childLiEl).addButton(btn => {
+					btn.setIcon("terminal")
+						.setButtonText(this.plugin.obsidianCommands[id]?.name ?? id)
+						.onClick(() => {
+							const items: SuggestItem[] = Object.values(this.plugin.obsidianCommands).map(cmd => ({
+								label: cmd.name,
+								value: cmd.id,
+								icon: cmd.icon
+							}));
+							const selectedValue = '';
+							const onSelect = (val: string) => {
+								selectedCmdIds[idx] = val;
+								renderCommandIdList();
+							};
+							this.openSuggestModal(items, selectedValue, onSelect, btn.buttonEl);
+						});
+				}).addExtraButton(btn => {
+					btn.setIcon("trash-2").onClick(() => {
+						selectedCmdIds.splice(idx, 1);
+					});
+				});
+			});
+		};
+		renderCommandIdList();
 
-
-
-
-		contentEl.createEl("h3", { text: "HTML template" });
+		new Setting(contentEl).setHeading().setName("HTML template").setDesc("Leave blank for no template. Use {{mustache}} syntax for variables.");
 		const templateContainer = contentEl.createDiv({ cls: "ore-parent-template-container" });
 		const textarea = templateContainer.createEl("textarea", {
 			cls: "ore-textarea",
