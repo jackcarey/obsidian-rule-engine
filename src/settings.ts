@@ -17,7 +17,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		const readingModeSetting = new Setting(containerEl)
+		const addReadingModeSetting = (setting: Setting) => setting
 			.setName("Work in live preview")
 			.setDesc("Enable to allow custom views in both live preview and reading view. Disable to limit them to reading view only.")
 			.addToggle(toggle => toggle
@@ -32,7 +32,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 						});
 					}
 				}));
-		const canvasSetting = new Setting(containerEl)
+		const addCanvasSetting = (setting: Setting) => setting
 			.setName("Work in canvas (experimental)")
 			.setDesc("May not work. Enable to apply custom views to markdown file nodes in canvas files.")
 			.addToggle(toggle => toggle
@@ -47,8 +47,8 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		const settingsGroup = new SettingGroup().setHeading('Settings');
-		[readingModeSetting, canvasSetting].forEach(setting => {
+		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
+		[addReadingModeSetting, addCanvasSetting].forEach(setting => {
 			settingsGroup.addSetting(setting);
 		});
 
