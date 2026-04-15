@@ -1,5 +1,5 @@
 /* eslint-disable obsidianmd/ui/sentence-case */
-import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Value, SuggestModal, prepareFuzzySearch, Command } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
@@ -328,6 +328,7 @@ class EditRuleModal extends Modal {
 
 		const commandsContainer = contentEl.createEl("ol", { cls: "ore-parent-commands-container" });
 		commandsContainer.role = "list";
+		//todo: make this use drag and drop
 		const renderCommandIdList = () => {
 			commandsContainer.empty();
 			selectedCmdIds.forEach((id, idx) => {
