@@ -717,6 +717,7 @@ font-size: var(--metadata-input-font-size);
 .ore-rule-list-item[data-rule-enabled="false"]{
     font-style: italic;
     .ore-rule-name::after{
+        margin-left:1em;
         content: "(disabled)";
     }
 }
