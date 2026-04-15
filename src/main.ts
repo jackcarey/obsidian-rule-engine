@@ -218,11 +218,13 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		const cache = this.app.metadataCache.getFileCache(file);
 		let matchedTemplate = "";
+		let commandIds: string[] = [];
 
 		for (const ruleConfig of this.settings.rules) {
-			const isMatch = checkRules(this.app, ruleConfig.rules, file, cache?.frontmatter);
+			const isMatch = checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
 			if (isMatch) {
 				matchedTemplate = ruleConfig.template;
+				commandIds = ruleConfig.commandIds;
 				break;
 			}
 		}
@@ -250,6 +252,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			return;
 		}
 
+		this.executeCommands(commandIds);
 		await this.injectCustomView(view.contentEl, file, matchedTemplate);
 	}
 
@@ -333,11 +336,13 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		const cache = this.app.metadataCache.getFileCache(file);
 		let matchedTemplate = "";
+		let commandIds: string[] = [];
 
 		for (const ruleConfig of this.settings.rules) {
-			const isMatch = checkRules(this.app, ruleConfig.rules, file, cache?.frontmatter);
+			const isMatch = checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
 			if (isMatch) {
 				matchedTemplate = ruleConfig.template;
+				commandIds = ruleConfig.commandIds;
 				break;
 			}
 		}
@@ -355,6 +360,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const previewContainer = nodeEl.querySelector(".markdown-preview-view") as HTMLElement;
 		if (!previewContainer) return;
 
+		this.executeCommands(commandIds);
 		await this.injectCustomView(previewContainer, file, matchedTemplate);
 	}
 
@@ -388,6 +394,33 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				}
 			}
 		});
+	}
+
+	public get obsidianCommands(): Record<string, Command> {
+		// @ts-expect-error 'commands' is private
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+		const regularCommands = this.app.commands.commands;
+		// @ts-expect-error 'commands' is private
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+		const editorCommands = this.app.commands.editorCommands;
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+		const allCommands: Record<string, Command> = { ...regularCommands, ...editorCommands };
+		if (Object.keys(allCommands).length === 0) {
+			//todo
+			throw new Error('no commands found. handle this error gracefully');
+		}
+		console.debug(`all commands`, allCommands);
+		return allCommands;
+	}
+
+	executeCommands(commandIds: string[]): void {
+		if (!commandIds?.length) return;
+		const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
+		for (const cmd of commandObjects) {
+			const commandFn = cmd?.callback ?? cmd?.checkCallback ?? undefined;
+			commandFn?.(false);
+			console.debug(`executed command`, cmd);
+		}
 	}
 
 }

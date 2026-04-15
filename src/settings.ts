@@ -58,23 +58,24 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setHeading()
 			.setName("Rule configuration")
-			.setDesc("Rules are checked in order from top to bottom. Drag to reorder.")
+			.setDesc("Rules are checked and executed in order from top to bottom. Drag to reorder.")
 			.addButton(btn => btn
-				.setButtonText("Add new view")
+				.setButtonText("Add new rule")
 				.setCta()
 				.onClick(async () => {
-					const newView: RuleConfig = {
+					const newRule: RuleConfig = {
 						id: `${Date.now()}`,
 						name: "New View",
-						rules: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
-						template: "<h1>{{file.basename}}</h1>"
+						filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
+						template: "<h1>{{file.basename}}</h1>",
+						commandIds: []
 					};
-					this.plugin.settings.rules.push(newView);
+					this.plugin.settings.rules.push(newRule);
 					await this.plugin.saveSettings();
 					this.display();
 
 					const newIndex = this.plugin.settings.rules.length - 1;
-					new EditViewModal(this.app, this.plugin, newView, newIndex, () => {
+					new EditViewModal(this.app, this.plugin, newRule, newIndex, () => {
 						this.display();
 					}).open();
 				}));
@@ -88,7 +89,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setHeading()
 			.setName("Command configuration")
-			.setDesc("Not implemented. Command configuration is shared across all automations.");
+			.setDesc("Command configuration is shared across all rules.");
 
 		const commandConfigContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
 
@@ -196,7 +197,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			setting
 				.setName('Enabled')
 				.setDesc(description ?? '')
-				.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rule automations')
+				.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rules')
 				.addToggle(toggle => toggle
 					.setValue(currentConfig.enabled)
 					.onChange(async (value) => {
@@ -240,7 +241,7 @@ class EditViewModal extends Modal {
 
 		new Setting(contentEl)
 			.setName("Rule name")
-			.setDesc("The name of the rule will be displayed in the rule selector.")
+			.setDesc("The name of the rule will be displayed in the view selector.")
 			.addText(text => {
 				text.setValue(this.view.name)
 					.onChange((value) => {
@@ -256,7 +257,7 @@ class EditViewModal extends Modal {
 
 		const builder = new FilterBuilder(
 			this.plugin,
-			this.view.rules,
+			this.view.filterGroup,
 			() => { void this.plugin.saveSettings(); },
 			() => { rulesContainer.empty(); builder.render(rulesContainer); }
 		);

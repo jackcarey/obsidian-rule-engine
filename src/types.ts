@@ -32,8 +32,9 @@ export interface FilterGroup {
 export interface RuleConfig {
 	id: string;
 	name: string;
-	rules: FilterGroup;
+	filterGroup: FilterGroup;
 	template: string;
+	commandIds: string[];
 }
 
 export type CommandConfig = Record<string, unknown> & { enabled: boolean };
