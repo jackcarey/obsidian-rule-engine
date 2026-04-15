@@ -102,7 +102,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 
 		this.plugin.commands.forEach(cmdConfig => {
-			this.renderCommandListItem(commandConfigContainer, cmdConfig);
+			this.renderCommandConfigListItem(commandConfigContainer, cmdConfig);
 		});
 	}
 
@@ -197,7 +197,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		});
 	}
 
-	renderCommandListItem(container: HTMLElement, cmdConfig: CommandWithSetup) {
+	renderCommandConfigListItem(container: HTMLElement, cmdConfig: CommandWithSetup) {
 		const { id, name, icon, description, settingCallback } = cmdConfig;
 		const currentConfig = this.plugin.getCommandConfig(id);
 		const cmdGroup = new SettingGroup(container).setHeading(name);
@@ -289,7 +289,7 @@ class EditRuleModal extends Modal {
 					'results': 'On each result'
 				};
 				dd.addOptions(options);
-				//todo: support executing across base results
+				dd.setValue(Object.keys(options)[0]!);
 				dd.disabled = true;
 				dd.onChange(val => {
 					const allowed = ["file", "results"];
@@ -299,7 +299,6 @@ class EditRuleModal extends Modal {
 				});
 			});
 
-		//todo: make in into a setting group or something
 		contentEl.createEl("h3", { text: "Commands" });
 		const commandsContainer = contentEl.createDiv({ cls: "ore-parent-commands-container" });
 		commandsContainer.role = "list";
@@ -309,7 +308,6 @@ class EditRuleModal extends Modal {
 
 
 
-		//todo: replace this with a setting group or something
 		contentEl.createEl("h3", { text: "HTML template" });
 		const templateContainer = contentEl.createDiv({ cls: "ore-parent-template-container" });
 		const textarea = templateContainer.createEl("textarea", {
@@ -815,7 +813,7 @@ function createPill(container: HTMLElement, value: string, onRemove: () => void,
 
 function setupComboboxButtonHandlers(
 	button: HTMLElement,
-	parent: HTMLElement,
+	_parent: HTMLElement,
 	onOpen: () => void
 ): void {
 	button.onclick = (e) => {
@@ -1075,7 +1073,7 @@ class FilterBuilder {
 
 		const openPropertyModal = () => {
 			addFocusClasses(propertyBtn, expression);
-			this.openPropertySuggestModal(
+			this.openSuggestModal(
 				this.availableProperties.map(p => ({
 					label: this.getPropertyLabel(p.key),
 					value: p.key,
@@ -1131,7 +1129,7 @@ class FilterBuilder {
 
 		const openOperatorModal = () => {
 			addFocusClasses(operatorBtn, expression);
-			this.openOperatorSuggestModal(
+			this.openSuggestModal(
 				validOps.map(op => ({ label: op, value: op })),
 				filter.operator,
 				(newVal) => {
@@ -1196,30 +1194,13 @@ class FilterBuilder {
 		createDeleteButton(actions, handleDelete);
 	}
 
-
-	openPropertySuggestModal(
+	openSuggestModal(
 		items: { label: string, value: string, icon?: string }[],
 		selectedValue: string,
 		onSelect: (val: string) => void,
 		anchorEl?: HTMLElement
 	) {
 		const modal = new ComboboxSuggestModal(this.plugin.app, items, selectedValue, onSelect, anchorEl);
-		modal.open();
-	}
-
-	openOperatorSuggestModal(
-		items: { label: string, value: string }[],
-		selectedValue: string,
-		onSelect: (val: string) => void,
-		anchorEl?: HTMLElement
-	) {
-		const modal = new ComboboxSuggestModal(
-			this.plugin.app,
-			items,
-			selectedValue,
-			onSelect,
-			anchorEl
-		);
 		modal.open();
 	}
 
