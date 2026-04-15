@@ -3,7 +3,7 @@ import { ObsidianRuleEngineSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
 import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
-import { CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings } from "./types";
+import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings } from "./types";
 
 /**
  * Type guard to check if a view is a canvas view
@@ -219,17 +219,19 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const cache = this.app.metadataCache.getFileCache(file);
 		let matchedTemplate = "";
 		let commandIds: string[] = [];
+		let baseFileHandling: BaseFileHandling = "file";
 
 		for (const ruleConfig of this.settings.rules) {
 			const isMatch = checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
 			if (isMatch) {
 				matchedTemplate = ruleConfig.template;
 				commandIds = ruleConfig.commandIds;
+				baseFileHandling = ruleConfig.baseFileHandling;
 				break;
 			}
 		}
 
-		this.executeCommands(commandIds);
+		this.executeCommands(baseFileHandling, commandIds);
 
 		if (!matchedTemplate) {
 			this.restoreDefaultView(view);
@@ -338,17 +340,19 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const cache = this.app.metadataCache.getFileCache(file);
 		let matchedTemplate = "";
 		let commandIds: string[] = [];
+		let baseFileHandling: BaseFileHandling = "file";
 
 		for (const ruleConfig of this.settings.rules) {
 			const isMatch = checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
 			if (isMatch) {
 				matchedTemplate = ruleConfig.template;
 				commandIds = ruleConfig.commandIds;
+				baseFileHandling = ruleConfig.baseFileHandling;
 				break;
 			}
 		}
 
-		this.executeCommands(commandIds);
+		this.executeCommands(baseFileHandling, commandIds);
 
 		if (!matchedTemplate) {
 			this.restoreCanvasNode(node);
@@ -415,13 +419,17 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return allCommands;
 	}
 
-	executeCommands(commandIds: string[]): void {
+	executeCommands(mode: BaseFileHandling, commandIds: string[]): void {
 		if (!commandIds?.length) return;
 		const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
-		for (const cmd of commandObjects) {
-			const commandFn = cmd?.callback ?? cmd?.checkCallback ?? undefined;
-			commandFn?.(false);
-			console.debug(`executed command`, cmd);
+		if (mode === "file") {
+			for (const cmd of commandObjects) {
+				const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
+				commandFn?.(false);
+				console.debug(`executed command`, cmd);
+			}
+		} else {
+			throw new Error('base file handling not implemented!');
 		}
 	}
 

@@ -29,12 +29,15 @@ export interface FilterGroup {
 	conditions: (Filter | FilterGroup)[];
 }
 
+
+export type BaseFileHandling = "file" | "results";
 export interface RuleConfig {
 	id: string;
 	name: string;
 	filterGroup: FilterGroup;
 	template: string;
 	commandIds: string[];
+	baseFileHandling: BaseFileHandling;
 }
 
 export type CommandConfig = Record<string, unknown> & { enabled: boolean };

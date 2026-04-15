@@ -1,7 +1,7 @@
 /* eslint-disable obsidianmd/ui/sentence-case */
 import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
-import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn } from "./types";
+import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	plugin: ObsidianRuleEnginePlugin;
@@ -73,7 +73,8 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 						name: `Rule ${this.ruleCount + 1}`,
 						filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
 						template: "<h1>{{file.basename}}</h1>",
-						commandIds: []
+						commandIds: [],
+						baseFileHandling: "file"
 					};
 					this.plugin.settings.rules.push(newRule);
 					await this.plugin.saveSettings();
@@ -257,8 +258,8 @@ class EditRuleModal extends Modal {
 				});
 			});
 
-		contentEl.createEl("h3", { text: "Rules" });
-		const rulesContainer = contentEl.createDiv({ cls: "ore-bases-query-container" });
+		contentEl.createEl("h3", { text: "Filters" });
+		const rulesContainer = contentEl.createDiv({ cls: "ore-parent-query-container" });
 
 		const builder = new FilterBuilder(
 			this.plugin,
@@ -268,8 +269,38 @@ class EditRuleModal extends Modal {
 		);
 		builder.render(rulesContainer);
 
+		new Setting(contentEl)
+			.setName("Base file handling")
+			.setDesc("How should rules run against Base files (.base)?")
+			.addDropdown(dd => {
+				const options: Record<BaseFileHandling, string> = {
+					'file': 'Regular file',
+					'results': 'On each result'
+				};
+				dd.addOptions(options);
+				//todo: support executing across base results
+				dd.disabled = true;
+				dd.onChange(val => {
+					const allowed = ["file", "results"];
+					if (allowed.includes(val)) {
+						this.rule.baseFileHandling = val as BaseFileHandling;
+					}
+				});
+			});
+
+		//todo: make in into a setting group or something
+		contentEl.createEl("h3", { text: "Commands" });
+		const commandsContainer = contentEl.createDiv({ cls: "ore-parent-commands-container" });
+		commandsContainer.role = "list";
+		//todo: add command drag and drop UI
+		commandsContainer.innerText = "//todo";
+
+
+
+
+		//todo: replace this with a setting group or something
 		contentEl.createEl("h3", { text: "HTML template" });
-		const templateContainer = contentEl.createDiv({ cls: "ore-bases-template-container" });
+		const templateContainer = contentEl.createDiv({ cls: "ore-parent-template-container" });
 		const textarea = templateContainer.createEl("textarea", {
 			cls: "ore-textarea",
 			text: this.rule.template
@@ -792,19 +823,14 @@ function setupComboboxButtonHandlers(
 }
 
 class FilterBuilder {
-	plugin: ObsidianRuleEnginePlugin;
-	root: FilterGroup;
-	onSave: () => void;
-	onRefresh: () => void;
-	onDeleteRule?: () => void;
 	availableProperties: PropertyDef[];
 
-	constructor(plugin: ObsidianRuleEnginePlugin, root: FilterGroup, onSave: () => void, onRefresh: () => void, onDeleteRule?: () => void) {
-		this.plugin = plugin;
-		this.root = root;
-		this.onSave = onSave;
-		this.onRefresh = onRefresh;
-		this.onDeleteRule = onDeleteRule;
+	constructor(
+		public plugin: ObsidianRuleEnginePlugin,
+		public root: FilterGroup,
+		public onSave: () => void,
+		public onRefresh: () => void
+	) {
 		this.availableProperties = this.scanVaultProperties();
 	}
 
