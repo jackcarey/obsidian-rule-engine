@@ -16,14 +16,7 @@ export default class CustomViewsPlugin extends Plugin {
 	settings: CustomViewsSettings = Object.assign({}, DEFAULT_SETTINGS);
 
 	get commands(): CommandWithSetup[] {
-		return [{
-			id: 'alert-wow',
-			name: 'Alert wow',
-			description: 'logs small surprise',
-			callback: () => {
-				console.debug("wow");
-			}
-		}];
+		return [];
 	};
 
 
