@@ -55,25 +55,26 @@ const filters: Record<string, FilterFunction> = {
 		const formatStr = typeof format === 'string' ? format : "YYYY-MM-DD";
 		const inputFormatStr = typeof inputFormat === 'string' ? inputFormat : undefined;
 		const valStr = typeof val === 'string' || typeof val === 'number' ? val : String(val);
-		const m = inputFormatStr ? moment(valStr, inputFormatStr) : moment(valStr);
+		const m = inputFormatStr ? moment.utc(valStr, inputFormatStr) : moment.utc(valStr);
 		return m.isValid() ? m.format(formatStr) : val;
 	},
-	date_modify: (val: string, modification: string) => {
-		const parts = modification.trim().split(" ");
-		const amount = parseInt(parts[0]);
+	date_modify: (val: FilterValue, ...[modification]) => {
+		const parts = String(modification).trim().split(" ");
+		const amount = parseInt(parts[0]!);
 		const unit = parts[1] as moment.unitOfTime.DurationConstructor;
-		const m = moment(val);
+		const valStr = typeof val === 'string' || typeof val === 'number' ? val : String(val);
+		const m = moment.utc(valStr);
 		return m.isValid() ? m.add(amount, unit).format("YYYY-MM-DD") : val;
 	},
 
-	capitalize: (val: string) => String(val).charAt(0).toUpperCase() + String(val).slice(1).toLowerCase(),
-	upper: (val: string) => String(val).toUpperCase(),
-	lower: (val: string) => String(val).toLowerCase(),
-	title: (val: string) => String(val).replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()),
-	camel: (val: string) => String(val).toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (_m: string, chr: string) => chr.toUpperCase()),
-	kebab: (val: string) => String(val).match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)?.map(x => x.toLowerCase()).join('-') || val,
-	snake: (val: string) => String(val).match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)?.map(x => x.toLowerCase()).join('_') || val,
-	trim: (val: string) => String(val).trim(),
+	capitalize: (val) => String(val).charAt(0).toUpperCase() + String(val).slice(1).toLowerCase(),
+	upper: (val) => String(val).toUpperCase(),
+	lower: (val) => String(val).toLowerCase(),
+	title: (val) => String(val).replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()),
+	camel: (val) => String(val).toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (_m: string, chr: string) => chr.toUpperCase()),
+	kebab: (val) => String(val).match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)?.map(x => x.toLowerCase()).join('-') || val,
+	snake: (val) => String(val).match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)?.map(x => x.toLowerCase()).join('_') || val,
+	trim: (val) => String(val).trim(),
 
 	replace: (val: FilterValue, search: unknown, replaceWith?: unknown) => {
 		const searchStr = (typeof search === 'string' || typeof search === 'number') ? String(search) : "";
@@ -102,7 +103,7 @@ const filters: Record<string, FilterFunction> = {
 		if (Array.isArray(val)) return val.map(v => `![${txt}](${v})`).join("\n");
 		return `![${txt}](${val})`;
 	},
-	blockquote: (val: string) => val.split('\n').map(line => `> ${line}`).join('\n'),
+	blockquote: (val) => String(val).split('\n').map(line => `> ${line}`).join('\n'),
 
 	strip_tags: (val: FilterValue, keep?: unknown) => {
 		const doc = new DOMParser().parseFromString(String(val), 'text/html');
@@ -122,8 +123,8 @@ const filters: Record<string, FilterFunction> = {
 	},
 	count: (val: FilterValue) => Array.isArray(val) ? val.length : String(val).length,
 
-	calc: (val: number, opString: string) => {
-		const trimmed = opString.trim();
+	calc: (val, ...[opString]) => {
+		const trimmed = String(opString).trim();
 		const base = parseFloat(String(val));
 		if (isNaN(base)) return val;
 

@@ -37,7 +37,8 @@ export const DEFAULT_SETTINGS: CustomViewsSettings = {
             rules: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
             template: "<h1>{{file.basename}}</h1> <p>{{file.content}}</p>"
         }
-    ]
+    ],
+    commands: []
 };
 
 export const CUSTOM_VIEW_CLASS = "obsidian-custom-view-render";

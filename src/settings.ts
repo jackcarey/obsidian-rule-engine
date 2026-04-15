@@ -1,6 +1,7 @@
+/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, TextComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
 import CustomViewsPlugin from "./main";
-import { ViewConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandConfig, CommandWithSetup, CommandSettingCallback, CommandSaveFn } from "./types";
+import { ViewConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
 export class CustomViewsSettingTab extends PluginSettingTab {
 	plugin: CustomViewsPlugin;
@@ -16,40 +17,42 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		const addReadingModeSetting = (setting: Setting) => setting
-			.setName("Work in live preview")
-			.setDesc("Enable to allow custom views in both live preview and reading view. Disable to limit them to reading view only.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.workInLivePreview)
-				.onChange(async (value) => {
-					this.plugin.settings.workInLivePreview = value;
-					await this.plugin.saveSettings();
-					const file = this.app.workspace.getActiveFile();
-					if (file) {
-						this.plugin.processActiveView(file).catch(() => {
-							// Error handling for processActiveView
-						});
-					}
-				}));
-		const addCanvasSetting = (setting: Setting) => setting
-			.setName("Work in canvas (experimental)")
-			.setDesc("May not work. Enable to apply custom views to markdown file nodes in canvas files.")
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.workInCanvas)
-				.onChange(async (value) => {
-					this.plugin.settings.workInCanvas = value;
-					await this.plugin.saveSettings();
-					if (value) {
-						this.plugin.processAllCanvasNodes();
-					} else {
-						this.plugin.restoreAllCanvasNodes();
-					}
-				}));
-
+		const addReadingModeSetting = (setting: Setting) => {
+			setting
+				.setName("Work in live preview")
+				.setDesc("Enable to allow custom views in both live preview and reading view. Disable to limit them to reading view only.")
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.workInLivePreview)
+					.onChange(async (value) => {
+						this.plugin.settings.workInLivePreview = value;
+						await this.plugin.saveSettings();
+						const file = this.app.workspace.getActiveFile();
+						if (file) {
+							this.plugin.processActiveView(file).catch(() => {
+								// Error handling for processActiveView
+							});
+						}
+					}));
+		};
+		const addCanvasSetting = (setting: Setting) => {
+			setting
+				.setName("Work in canvas (experimental)")
+				.setDesc("Enable to apply custom views to Markdown file nodes in Canvas files.")
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.workInCanvas)
+					.onChange(async (value) => {
+						this.plugin.settings.workInCanvas = value;
+						await this.plugin.saveSettings();
+						if (value) {
+							this.plugin.processAllCanvasNodes();
+						} else {
+							this.plugin.restoreAllCanvasNodes();
+						}
+					}));
+		};
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
-		[addReadingModeSetting, addCanvasSetting].forEach(setting => {
-			settingsGroup.addSetting(setting);
-		});
+		settingsGroup.addSetting(addReadingModeSetting);
+		settingsGroup.addSetting(addCanvasSetting);
 
 
 		new Setting(containerEl)
@@ -178,7 +181,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 			if (targetIndex === -1) return;
 
 			this.plugin.settings.views.splice(this.draggedIndex, 1);
-			this.plugin.settings.views.splice(targetIndex, 0, draggedView);
+			this.plugin.settings.views.splice(targetIndex, 0, draggedView!);
 
 			void this.plugin.saveSettings();
 			this.display();
@@ -197,6 +200,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 				.addToggle(toggle => toggle
 					.setValue(currentConfig.enabled)
 					.onChange(async (value) => {
+						console.debug(`toggle enabled for`, id, value);
 						this.plugin.updateCommandConfig(id, { enabled: value });
 					}));
 			if (icon) {
@@ -583,7 +587,7 @@ function createFilterValueInput(
 		const focusPill = (index: number): void => {
 			const pills = getPills();
 			if (index >= 0 && index < pills.length) {
-				pills[index].focus();
+				pills[index]?.focus();
 			}
 		};
 
@@ -591,7 +595,7 @@ function createFilterValueInput(
 		const focusLastPill = (): void => {
 			const pills = getPills();
 			if (pills.length > 0) {
-				pills[pills.length - 1].focus();
+				pills[pills.length - 1]?.focus();
 			}
 		};
 
@@ -953,9 +957,12 @@ class FilterBuilder {
 		select.value = valueMap[group.operator] || "and";
 
 		select.onchange = () => {
-			group.operator = reverseValueMap[select.value];
-			this.onSave();
-			this.onRefresh();
+			const val = reverseValueMap[select.value];
+			if (val) {
+				group.operator = val;
+				this.onSave();
+				this.onRefresh();
+			}
 		};
 
 
@@ -1036,8 +1043,8 @@ class FilterBuilder {
 				filter.field,
 				(newVal) => {
 					const newType = this.getPropertyType(newVal);
-					const validOps = OPERATORS[newType === "datetime" ? "date" : newType] || OPERATORS["text"];
-					const newOperator = validOps[0] as FilterOperator;
+					const validOps = OPERATORS[newType === "datetime" ? "date" : newType] ?? OPERATORS["text"];
+					const newOperator = validOps?.[0] as FilterOperator;
 
 					// If this is a placeholder, add it to the conditions array
 					if (isPlaceholder && !placeholderAdded) {
@@ -1051,7 +1058,7 @@ class FilterBuilder {
 					} else if (isPlaceholder && placeholderAdded) {
 						// Update the filter in the conditions array
 						const conditionIndex = parentGroup.conditions.length - 1;
-						if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex].type === "filter") {
+						if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
 							const conditionFilter = parentGroup.conditions[conditionIndex];
 							conditionFilter.field = newVal;
 							conditionFilter.operator = newOperator;
@@ -1095,7 +1102,7 @@ class FilterBuilder {
 					} else if (isPlaceholder && placeholderAdded) {
 						// Update the filter in the conditions array (it's the last one we added)
 						const conditionIndex = parentGroup.conditions.length - 1;
-						if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex].type === "filter") {
+						if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
 							parentGroup.conditions[conditionIndex].operator = operator;
 						}
 					} else {
@@ -1133,7 +1140,7 @@ class FilterBuilder {
 				} else if (isPlaceholder && placeholderAdded) {
 					// Update the filter in the conditions array (it's the last one we added)
 					const conditionIndex = parentGroup.conditions.length - 1;
-					if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex].type === "filter") {
+					if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
 						parentGroup.conditions[conditionIndex].value = val;
 					}
 				} else {

@@ -36,7 +36,7 @@ export interface ViewConfig {
 	template: string;
 }
 
-export type CommandConfig = Record<string, any> & { enabled: boolean };
+export type CommandConfig = Record<string, unknown> & { enabled: boolean };
 
 
 export type PropertyType = "text" | "number" | "date" | "datetime" | "list" | "checkbox" | "file" | "unknown";
@@ -46,7 +46,7 @@ export interface CustomViewsSettings {
 	workInLivePreview: boolean;
 	workInCanvas: boolean;
 	views: ViewConfig[];
-	commandConfig: Record<string, CommandConfig>;
+	commands: CommandConfig[];
 }
 
 /**
@@ -79,7 +79,7 @@ export interface SuggestItem {
 	icon?: string;
 }
 
-export type CommandSaveFn = (updatedConfig: Partial<CommandConfig>) => void;
+export type CommandSaveFn = (updatedConfig: Partial<Omit<CommandConfig, 'id'>>) => void;
 export type CommandSettingCallback = (setting: SettingGroup, currentConfig: CommandConfig, saveFn: CommandSaveFn) => void
 
 export type CommandWithSetup = Command & {

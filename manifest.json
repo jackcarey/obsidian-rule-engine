@@ -1,10 +1,10 @@
 {
-	"id": "custom-views",
-	"name": "Custom Views",
-	"version": "0.1.6",
+	"id": "rule-engine",
+	"name": "Rule Engine",
+	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-  "description": "Create custom HTML views for your notes based on filter rules. Transform how your notes are displayed.",
-  "author": "Anup Chavan",
-	"authorUrl": "https://anupchavan.com",
+	"description": "Run commands and create custom HTML views for your notes based on filter rules. Transform how your vault behaves and how notes are displayed.",
+	"author": "Jack Carey",
+	"authorUrl": "https://jackcarey.co.uk",
 	"isDesktopOnly": false
 }

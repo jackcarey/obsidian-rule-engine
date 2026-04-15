@@ -59,7 +59,7 @@ export async function renderTemplate(
 
 		if (index !== undefined && Array.isArray(value)) {
 			const i = parseInt(index);
-			return i < value.length ? value[i] : "";
+			return i < value.length ? (value[i] ?? null) : "";
 		}
 		return value ?? null;
 	};

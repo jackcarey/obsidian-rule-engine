@@ -19,9 +19,9 @@ export default class CustomViewsPlugin extends Plugin {
 		return [{
 			id: 'alert-wow',
 			name: 'Alert wow',
-			description: 'alerts with surprise',
+			description: 'logs small surprise',
 			callback: () => {
-				window.alert("wow!");
+				console.debug("wow");
 			}
 		}];
 	};
@@ -33,12 +33,9 @@ export default class CustomViewsPlugin extends Plugin {
 	 * @returns The command config from the plugin data.json
 	 */
 	getCommandConfig = (id: string): CommandConfig => {
-		if (!Boolean(this.settings.commandConfig)) {
-			this.settings.commandConfig = {};
-		}
 		return {
 			enabled: false,
-			... this.settings.commandConfig[id],
+			... this.settings.commands.find(cmd => cmd.id === id),
 		};
 	}
 
@@ -47,15 +44,27 @@ export default class CustomViewsPlugin extends Plugin {
 	 * @param id The command ID
 	 * @param partialUpdate An object containing some settings to update in the plugin data.json
 	 */
-	updateCommandConfig = (id: string, partialUpdate: Partial<CommandConfig>): void => {
-		if (!Boolean(this.settings.commandConfig)) {
-			this.settings.commandConfig = {};
+	updateCommandConfig = (id: string, partialUpdate: Partial<Omit<CommandConfig, 'id'>>): void => {
+		if (!this.settings.commands) {
+			this.settings.commands = [];
 		}
-		this.settings.commandConfig[id] = {
+		const fullConfig: CommandConfig = {
 			...this.getCommandConfig(id),
 			...partialUpdate,
+			id
 		};
-		this.saveSettings();
+		console.debug(`updateCommandConfig`, id, fullConfig);
+		const idx = this.settings.commands.findIndex(cmd => cmd.id === id);
+		if (idx !== -1) {
+			this.settings.commands[idx] = fullConfig;
+		} else {
+			this.settings.commands.push(fullConfig);
+		}
+		this.saveSettings().then(_ => {
+			console.debug(`saved settings data`);
+		}).catch(_reason => {
+			throw new Error(`failed to update command config`);
+		});
 	};
 
 	async onload() {
@@ -88,39 +97,63 @@ export default class CustomViewsPlugin extends Plugin {
 			},
 		});
 
-		this.commands.forEach(cmd => {
-			if ('description' in cmd) {
-				delete cmd.description;
-			}
-			if ('settingCallback' in cmd) {
-				delete cmd.settingCallback
-			}
-			// each command must be enabled before it can be used and wrapping the check functions
-			// allows check callbacks to be optional in the commands array
-			const checkFn: Command['checkCallback'] = (checking) => {
-				if (!this.getCommandConfig(cmd.id)?.enabled) {
-					return false;
+		console.debug(`adding ${this.commands.length} commands`, this.commands);
+		for (const cmd of this.commands) {
+			try {
+				if ('description' in cmd) {
+					delete cmd.description;
 				}
-				if (cmd.checkCallback) {
-					return cmd.checkCallback(checking);
+				if ('settingCallback' in cmd) {
+					delete cmd.settingCallback
 				}
-				return true;
+				const cmdObject: Command = {
+					...cmd,
+				};
+				//ensure the commands always go through an enabled check
+				delete cmdObject.callback;
+				delete cmdObject.editorCallback;
+				delete cmdObject.checkCallback;
+				delete cmdObject.editorCheckCallback;
+
+				if (cmd.callback || cmd.checkCallback) {
+					cmdObject.checkCallback = (checking: boolean): boolean | void => {
+						if (checking) {
+							const enabled = this.getCommandConfig(cmd.id)?.enabled;
+							if (enabled && cmd.checkCallback) {
+								return cmd.checkCallback(checking);
+							}
+							return enabled;
+						}
+						if (cmd.checkCallback) {
+							return cmd.checkCallback(checking);
+						}
+						cmd.callback?.();
+					};
+				}
+
+				if (cmd.editorCallback || cmd.editorCheckCallback) {
+					cmdObject.editorCheckCallback = (checking, editor, ctx) => {
+						if (checking) {
+							const enabled = this.getCommandConfig(cmd.id)?.enabled;
+							if (enabled && cmd.editorCheckCallback) {
+								return cmd.editorCheckCallback(checking, editor, ctx);
+							}
+							return enabled;
+						}
+						if (cmd.editorCheckCallback) {
+							return cmd.editorCheckCallback(checking, editor, ctx);
+						}
+						cmd.editorCallback?.(editor, ctx);
+					};
+				}
+
+				this.addCommand(cmdObject);
+				console.debug(`added cmd`, cmdObject);
+			} catch (e) {
+				console.error(e);
+				console.warn(`couldn't add command`, cmd);
 			}
-			const editorCheckFn: Command['checkCallback'] = (checking) => {
-				if (!this.getCommandConfig(cmd.id)?.enabled) {
-					return false;
-				}
-				if (cmd.checkCallback) {
-					return cmd.checkCallback(checking);
-				}
-				return true;
-			}
-			this.addCommand({
-				...cmd,
-				checkCallback: checkFn,
-				editorCheckCallback: editorCheckFn
-			});
-		});
+		}
 
 		this.registerEvent(
 			this.app.workspace.on("file-open", (file) => this.processActiveView(file))
@@ -151,7 +184,7 @@ export default class CustomViewsPlugin extends Plugin {
 			if (this.settings.enabled && this.settings.workInCanvas) {
 				void this.processAllCanvasNodes();
 			}
-		}, 1000));
+		}, 5000));
 	}
 
 	async setPluginState(enabled: boolean) {

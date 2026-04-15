@@ -1,7 +1,6 @@
 import tsparser from "@typescript-eslint/parser";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import obsidianmd from "eslint-plugin-obsidianmd";
-import tseslintConfigs from "typescript-eslint";
 
 // Convert iterable to array and resolve 'extends' by spreading referenced configs
 const recommendedConfigs = Array.from(obsidianmd.configs.recommended).flatMap(config => {
@@ -30,7 +29,7 @@ const recommendedConfigs = Array.from(obsidianmd.configs.recommended).flatMap(co
 export default [
 	// Global ignores (replaces .eslintignore)
 	{
-		ignores: ["node_modules/**", "main.js", "eslint.config.mjs", "*.config.mjs"],
+		ignores: ["node_modules", "node_modules/**", "main.js", "eslint.config.mjs", "*.config.mjs"],
 	},
 	// Use the converted configs, ensuring all have proper file filters
 	...recommendedConfigs.map(config => {

@@ -80,10 +80,10 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 						const strValue = String(value);
 						const linkPattern = /\[\[([^\]]+)\]\]/g;
 						const matches: string[] = [];
-						let match;
+						let match: RegExpExecArray | null = null;
 
 						while ((match = linkPattern.exec(strValue)) !== null) {
-							matches.push(match[1]);
+							matches.push(match[1]!);
 						}
 
 						return matches;
@@ -300,7 +300,7 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 		const targetDateStr = targetDate.toISOString().split('T')[0];
 
 		// Compare dates
-		const targetDateObj = new Date(targetDateStr);
+		const targetDateObj = new Date(targetDateStr!);
 		const filterDateObj = new Date(filterDateStr);
 
 		// Normalize to midnight for accurate date comparison
