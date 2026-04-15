@@ -1,9 +1,9 @@
 import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf, Command } from "obsidian";
-import { CustomViewsSettingTab } from "./settings";
+import { ObsidianRuleEngineSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
-import { CUSTOM_VIEW_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
-import { CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomViewsSettings } from "./types";
+import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
+import { CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings } from "./types";
 
 /**
  * Type guard to check if a view is a canvas view
@@ -12,8 +12,8 @@ function isCanvasView(view: unknown): view is CanvasView {
 	return typeof view === "object" && view !== null && "canvas" in view;
 }
 
-export default class CustomViewsPlugin extends Plugin {
-	settings: CustomViewsSettings = Object.assign({}, DEFAULT_SETTINGS);
+export default class ObsidianRuleEnginePlugin extends Plugin {
+	settings: CustomRulesSettings = Object.assign({}, DEFAULT_SETTINGS);
 
 	get commands(): CommandWithSetup[] {
 		return [];
@@ -62,7 +62,7 @@ export default class CustomViewsPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		this.addSettingTab(new CustomViewsSettingTab(this.app, this));
+		this.addSettingTab(new ObsidianRuleEngineSettingTab(this.app, this));
 
 		this.addCommand({
 			id: "enable",
@@ -184,7 +184,7 @@ export default class CustomViewsPlugin extends Plugin {
 		this.settings.enabled = enabled;
 		await this.saveSettings();
 
-		new Notice(enabled ? "Custom Views Enabled" : "Custom Views Disabled");
+		new Notice(enabled ? "Rule Engine Enabled" : "Rule Engine Disabled");
 
 		const file = this.app.workspace.getActiveFile();
 
@@ -219,10 +219,10 @@ export default class CustomViewsPlugin extends Plugin {
 		const cache = this.app.metadataCache.getFileCache(file);
 		let matchedTemplate = "";
 
-		for (const viewConfig of this.settings.views) {
-			const isMatch = checkRules(this.app, viewConfig.rules, file, cache?.frontmatter);
+		for (const ruleConfig of this.settings.rules) {
+			const isMatch = checkRules(this.app, ruleConfig.rules, file, cache?.frontmatter);
 			if (isMatch) {
-				matchedTemplate = viewConfig.template;
+				matchedTemplate = ruleConfig.template;
 				break;
 			}
 		}
@@ -254,11 +254,11 @@ export default class CustomViewsPlugin extends Plugin {
 	}
 
 	async injectCustomView(container: HTMLElement, file: TFile, template: string) {
-		let customEl = container.querySelector(`.${CUSTOM_VIEW_CLASS}`) as HTMLElement;
+		let customEl = container.querySelector(`.${CUSTOM_RULE_CLASS}`) as HTMLElement;
 
 		if (!customEl) {
 			customEl = document.createElement("div");
-			customEl.addClass(CUSTOM_VIEW_CLASS);
+			customEl.addClass(CUSTOM_RULE_CLASS);
 			container.appendChild(customEl);
 
 			this.registerDomEvent(customEl, "click", (evt: MouseEvent) => {
@@ -284,12 +284,12 @@ export default class CustomViewsPlugin extends Plugin {
 	restoreDefaultView(view: MarkdownView) {
 		const container = view.contentEl;
 		container.removeClass(HIDE_MARKDOWN_CLASS);
-		const customEl = container.querySelector(`.${CUSTOM_VIEW_CLASS}`);
+		const customEl = container.querySelector(`.${CUSTOM_RULE_CLASS}`);
 		if (customEl) customEl.remove();
 	}
 
 	async loadSettings() {
-		const loadedData = await this.loadData() as Partial<CustomViewsSettings> | null;
+		const loadedData = await this.loadData() as Partial<CustomRulesSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
 	}
 
@@ -334,10 +334,10 @@ export default class CustomViewsPlugin extends Plugin {
 		const cache = this.app.metadataCache.getFileCache(file);
 		let matchedTemplate = "";
 
-		for (const viewConfig of this.settings.views) {
-			const isMatch = checkRules(this.app, viewConfig.rules, file, cache?.frontmatter);
+		for (const ruleConfig of this.settings.rules) {
+			const isMatch = checkRules(this.app, ruleConfig.rules, file, cache?.frontmatter);
 			if (isMatch) {
-				matchedTemplate = viewConfig.template;
+				matchedTemplate = ruleConfig.template;
 				break;
 			}
 		}
@@ -369,7 +369,7 @@ export default class CustomViewsPlugin extends Plugin {
 		if (!previewContainer) return;
 
 		previewContainer.removeClass(HIDE_MARKDOWN_CLASS);
-		const customEl = previewContainer.querySelector(`.${CUSTOM_VIEW_CLASS}`);
+		const customEl = previewContainer.querySelector(`.${CUSTOM_RULE_CLASS}`);
 		if (customEl) customEl.remove();
 	}
 

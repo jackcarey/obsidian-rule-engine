@@ -1,4 +1,4 @@
-import { CustomViewsSettings, FilterGroup, PropertyType } from "./types";
+import { CustomRulesSettings, FilterGroup, PropertyType } from "./types";
 
 export const TYPE_ICONS: Record<PropertyType, string> = {
     text: "text",
@@ -26,14 +26,14 @@ export const DEFAULT_RULES: FilterGroup = {
     conditions: []
 } as const;
 
-export const DEFAULT_SETTINGS: CustomViewsSettings = {
+export const DEFAULT_SETTINGS: CustomRulesSettings = {
     enabled: true,
     workInLivePreview: true,
     workInCanvas: false,
-    views: [
+    rules: [
         {
             id: 'default-1',
-            name: 'View 1',
+            name: 'Rule 1',
             rules: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
             template: "<h1>{{file.basename}}</h1> <p>{{file.content}}</p>"
         }
@@ -41,5 +41,5 @@ export const DEFAULT_SETTINGS: CustomViewsSettings = {
     commands: []
 };
 
-export const CUSTOM_VIEW_CLASS = "obsidian-custom-view-render";
-export const HIDE_MARKDOWN_CLASS = "obsidian-custom-view-hidden";
+export const CUSTOM_RULE_CLASS = "obsidian-custom-rule-render";
+export const HIDE_MARKDOWN_CLASS = "obsidian-custom-rule-hidden";

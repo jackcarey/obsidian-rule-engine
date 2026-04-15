@@ -30,7 +30,7 @@ export async function renderTemplate(
 	}
 
 	const markdownQueue: { id: string, content: string }[] = [];
-	const contentPlaceholderId = `custom-view-content-${Date.now()}`;
+	const contentPlaceholderId = `custom-rule-content-${Date.now()}`;
 
 	const resolveValue = (key: string, index?: string, isFileProperty: boolean = false): string | number | boolean | string[] | null => {
 		let value: string | number | boolean | string[] | undefined;
@@ -104,7 +104,7 @@ export async function renderTemplate(
 			if (isInsideAttribute) {
 				return String(value);
 			} else {
-				const placeholderId = `cv-md-${markdownQueue.length}-${Date.now()}`;
+				const placeholderId = `ore-md-${markdownQueue.length}-${Date.now()}`;
 				markdownQueue.push({ id: placeholderId, content: String(value) });
 				return `<span id="${placeholderId}"></span>`;
 			}

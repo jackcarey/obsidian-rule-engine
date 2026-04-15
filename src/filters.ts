@@ -201,7 +201,7 @@ export function applyFilterChain(value: FilterValue, filterChain: string): Filte
 			try {
 				result = fn(result, ...args);
 			} catch (e) {
-				console.error(`[Custom Views] Filter error '${name}':`, e);
+				console.error(`[ORE] Filter error '${name}':`, e);
 			}
 		}
 	}

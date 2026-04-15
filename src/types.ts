@@ -29,7 +29,7 @@ export interface FilterGroup {
 	conditions: (Filter | FilterGroup)[];
 }
 
-export interface ViewConfig {
+export interface RuleConfig {
 	id: string;
 	name: string;
 	rules: FilterGroup;
@@ -41,11 +41,11 @@ export type CommandConfig = Record<string, unknown> & { enabled: boolean };
 
 export type PropertyType = "text" | "number" | "date" | "datetime" | "list" | "checkbox" | "file" | "unknown";
 
-export interface CustomViewsSettings {
+export interface CustomRulesSettings {
 	enabled: boolean;
 	workInLivePreview: boolean;
 	workInCanvas: boolean;
-	views: ViewConfig[];
+	rules: RuleConfig[];
 	commands: CommandConfig[];
 }
 

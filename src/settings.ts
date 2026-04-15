@@ -1,14 +1,14 @@
 /* eslint-disable obsidianmd/ui/sentence-case */
-import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, TextComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
-import CustomViewsPlugin from "./main";
-import { ViewConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn } from "./types";
+import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
+import ObsidianRuleEnginePlugin from "./main";
+import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
-export class CustomViewsSettingTab extends PluginSettingTab {
-	plugin: CustomViewsPlugin;
+export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
+	plugin: ObsidianRuleEnginePlugin;
 	private draggedElement: HTMLElement | null = null;
 	private draggedIndex: number | null = null;
 
-	constructor(app: App, plugin: CustomViewsPlugin) {
+	constructor(app: App, plugin: ObsidianRuleEnginePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -20,7 +20,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 		const addReadingModeSetting = (setting: Setting) => {
 			setting
 				.setName("Work in live preview")
-				.setDesc("Enable to allow custom views in both live preview and reading view. Disable to limit them to reading view only.")
+				.setDesc("Enable to allow the rule engine in both live preview and reading view. Disable to limit them to reading view only.")
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.workInLivePreview)
 					.onChange(async (value) => {
@@ -37,7 +37,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 		const addCanvasSetting = (setting: Setting) => {
 			setting
 				.setName("Work in canvas (experimental)")
-				.setDesc("Enable to apply custom views to Markdown file nodes in Canvas files.")
+				.setDesc("Enable to apply templates to Markdown file nodes in Canvas files (excludes commands).")
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.workInCanvas)
 					.onChange(async (value) => {
@@ -57,32 +57,32 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setHeading()
-			.setName("Views configuration")
-			.setDesc("Views are checked in order from top to bottom. Drag to reorder.")
+			.setName("Rule configuration")
+			.setDesc("Rules are checked in order from top to bottom. Drag to reorder.")
 			.addButton(btn => btn
 				.setButtonText("Add new view")
 				.setCta()
 				.onClick(async () => {
-					const newView: ViewConfig = {
+					const newView: RuleConfig = {
 						id: `${Date.now()}`,
 						name: "New View",
 						rules: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
 						template: "<h1>{{file.basename}}</h1>"
 					};
-					this.plugin.settings.views.push(newView);
+					this.plugin.settings.rules.push(newView);
 					await this.plugin.saveSettings();
 					this.display();
 
-					const newIndex = this.plugin.settings.views.length - 1;
+					const newIndex = this.plugin.settings.rules.length - 1;
 					new EditViewModal(this.app, this.plugin, newView, newIndex, () => {
 						this.display();
 					}).open();
 				}));
 
-		const viewsListContainer = containerEl.createDiv({ cls: "cv-views-list-container" });
+		const ruleListContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
 
-		this.plugin.settings.views.forEach((view, index) => {
-			this.renderViewListItem(viewsListContainer, view, index);
+		this.plugin.settings.rules.forEach((rule, index) => {
+			this.renderViewListItem(ruleListContainer, rule, index);
 		});
 
 		new Setting(containerEl)
@@ -90,7 +90,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 			.setName("Command configuration")
 			.setDesc("Not implemented. Command configuration is shared across all automations.");
 
-		const commandConfigContainer = containerEl.createDiv({ cls: "cv-views-list-container" });
+		const commandConfigContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
 
 
 		this.plugin.commands.forEach(cmdConfig => {
@@ -98,22 +98,22 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 		});
 	}
 
-	renderViewListItem(container: HTMLElement, view: ViewConfig, index: number) {
-		const listItem = container.createDiv({ cls: "cv-view-list-item" });
-		listItem.setAttribute("data-view-id", view.id);
-		listItem.setAttribute("data-view-index", index.toString());
+	renderViewListItem(container: HTMLElement, view: RuleConfig, index: number) {
+		const listItem = container.createDiv({ cls: "ore-rule-list-item" });
+		listItem.setAttribute("data-rule-id", view.id);
+		listItem.setAttribute("data-rule-index", index.toString());
 		listItem.draggable = true;
 
-		const dragHandle = listItem.createDiv({ cls: "cv-view-drag-handle" });
+		const dragHandle = listItem.createDiv({ cls: "ore-rule-drag-handle" });
 		setIcon(dragHandle, "grip-vertical");
 
-		listItem.createSpan({ cls: "cv-view-name", text: view.name });
+		listItem.createSpan({ cls: "ore-rule-name", text: view.name });
 
-		const actionsContainer = listItem.createDiv({ cls: "cv-view-actions" });
+		const actionsContainer = listItem.createDiv({ cls: "ore-rule-actions" });
 
 		const editBtn = actionsContainer.createDiv({ cls: "clickable-icon" });
 		setIcon(editBtn, "pencil");
-		editBtn.setAttribute("aria-label", "Edit view");
+		editBtn.setAttribute("aria-label", "Edit rule");
 		editBtn.onclick = (e) => {
 			e.stopPropagation();
 			new EditViewModal(this.app, this.plugin, view, index, () => {
@@ -126,7 +126,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 		deleteBtn.setAttribute("aria-label", "Delete view");
 		deleteBtn.onclick = async (e) => {
 			e.stopPropagation();
-			this.plugin.settings.views.splice(index, 1);
+			this.plugin.settings.rules.splice(index, 1);
 			await this.plugin.saveSettings();
 			this.display();
 		};
@@ -136,16 +136,16 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 			e.dataTransfer.effectAllowed = "move";
 			this.draggedElement = listItem;
 			this.draggedIndex = index;
-			listItem.addClass("cv-dragging");
-			container.querySelectorAll(".cv-view-list-item").forEach((el) => {
-				el.removeClass("cv-drag-over");
+			listItem.addClass("ore-dragging");
+			container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
+				el.removeClass("ore-drag-over");
 			});
 		});
 
 		listItem.addEventListener("dragend", () => {
-			listItem.removeClass("cv-dragging");
-			container.querySelectorAll(".cv-view-list-item").forEach((el) => {
-				el.removeClass("cv-drag-over");
+			listItem.removeClass("ore-dragging");
+			container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
+				el.removeClass("ore-drag-over");
 			});
 			this.draggedElement = null;
 			this.draggedIndex = null;
@@ -158,11 +158,11 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 
 			if (listItem === this.draggedElement) return;
 
-			listItem.addClass("cv-drag-over");
+			listItem.addClass("ore-drag-over");
 		});
 
 		listItem.addEventListener("dragleave", () => {
-			listItem.removeClass("cv-drag-over");
+			listItem.removeClass("ore-drag-over");
 		});
 
 		listItem.addEventListener("drop", (e) => {
@@ -170,18 +170,18 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 			if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
 
 			if (listItem === this.draggedElement) {
-				listItem.removeClass("cv-drag-over");
+				listItem.removeClass("ore-drag-over");
 				return;
 			}
 
-			const draggedView = this.plugin.settings.views[this.draggedIndex];
-			const allItems = Array.from(container.querySelectorAll(".cv-view-list-item"));
+			const draggedView = this.plugin.settings.rules[this.draggedIndex];
+			const allItems = Array.from(container.querySelectorAll(".ore-rule-list-item"));
 			const targetIndex = allItems.indexOf(listItem);
 
 			if (targetIndex === -1) return;
 
-			this.plugin.settings.views.splice(this.draggedIndex, 1);
-			this.plugin.settings.views.splice(targetIndex, 0, draggedView!);
+			this.plugin.settings.rules.splice(this.draggedIndex, 1);
+			this.plugin.settings.rules.splice(targetIndex, 0, draggedView!);
 
 			void this.plugin.saveSettings();
 			this.display();
@@ -218,32 +218,30 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 }
 
 class EditViewModal extends Modal {
-	plugin: CustomViewsPlugin;
-	view: ViewConfig;
-	viewIndex: number;
+	plugin: ObsidianRuleEnginePlugin;
+	view: RuleConfig;
+	ruleIndex: number;
 	onSave: () => void;
-	private nameTextComponent: TextComponent | null = null;
 
-	constructor(app: App, plugin: CustomViewsPlugin, view: ViewConfig, viewIndex: number, onSave: () => void) {
+	constructor(app: App, plugin: ObsidianRuleEnginePlugin, view: RuleConfig, viewIndex: number, onSave: () => void) {
 		super(app);
 		this.plugin = plugin;
-		this.view = JSON.parse(JSON.stringify(view)) as ViewConfig;
-		this.viewIndex = viewIndex;
+		this.view = JSON.parse(JSON.stringify(view)) as RuleConfig;
+		this.ruleIndex = viewIndex;
 		this.onSave = onSave;
-		this.setTitle('Edit view');
+		this.setTitle('Edit rule');
 	}
 
 	onOpen() {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.addClass("cv-edit-view-modal");
+		contentEl.addClass("ore-edit-rule-modal");
 
 
 		new Setting(contentEl)
-			.setName("View name")
-			.setDesc("The name of the view will be displayed in the view selector.")
+			.setName("Rule name")
+			.setDesc("The name of the rule will be displayed in the rule selector.")
 			.addText(text => {
-				this.nameTextComponent = text;
 				text.setValue(this.view.name)
 					.onChange((value) => {
 						this.view.name = value;
@@ -254,7 +252,7 @@ class EditViewModal extends Modal {
 			});
 
 		contentEl.createEl("h3", { text: "Rules" });
-		const rulesContainer = contentEl.createDiv({ cls: "cv-bases-query-container" });
+		const rulesContainer = contentEl.createDiv({ cls: "ore-bases-query-container" });
 
 		const builder = new FilterBuilder(
 			this.plugin,
@@ -265,9 +263,9 @@ class EditViewModal extends Modal {
 		builder.render(rulesContainer);
 
 		contentEl.createEl("h3", { text: "HTML template" });
-		const templateContainer = contentEl.createDiv({ cls: "cv-bases-template-container" });
+		const templateContainer = contentEl.createDiv({ cls: "ore-bases-template-container" });
 		const textarea = templateContainer.createEl("textarea", {
-			cls: "cv-textarea",
+			cls: "ore-textarea",
 			text: this.view.template
 		});
 		textarea.addEventListener("input", (e: Event) => {
@@ -283,7 +281,7 @@ class EditViewModal extends Modal {
 			.setButtonText("Save")
 			.setCta()
 			.onClick(async () => {
-				this.plugin.settings.views[this.viewIndex] = this.view;
+				this.plugin.settings.rules[this.ruleIndex] = this.view;
 				await this.plugin.saveSettings();
 				this.onSave();
 				this.close();
@@ -342,30 +340,30 @@ class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
 		requestAnimationFrame(() => {
 			const modalContainer = this.modalEl.closest('.modal-container');
 			if (modalContainer) {
-				modalContainer.addClass('cv-modal-container');
+				modalContainer.addClass('ore-modal-container');
 				modalContainer.removeClass('mod-dim');
 				const modalBg = modalContainer.querySelector('.modal-bg');
 				if (modalBg) {
-					(modalBg as HTMLElement).addClass('cv-modal-bg-hidden');
+					(modalBg as HTMLElement).addClass('ore-modal-bg-hidden');
 				}
 			}
 		});
 
-		this.modalEl.addClass("cv-suggestion-container", "cv-combobox");
+		this.modalEl.addClass("ore-suggestion-container", "ore-combobox");
 
 		// Position relative to anchor element
 		if (this.anchorEl) {
 			const rect = this.anchorEl.getBoundingClientRect();
-			this.modalEl.addClass('cv-combobox-positioned');
+			this.modalEl.addClass('ore-combobox-positioned');
 			// Use CSS custom properties for dynamic positioning (setProperty is acceptable for CSS variables)
-			this.modalEl.style.setProperty('--cv-combobox-left', `${rect.left}px`);
-			this.modalEl.style.setProperty('--cv-combobox-top', `${rect.bottom + 5}px`);
+			this.modalEl.style.setProperty('--ore-combobox-left', `${rect.left}px`);
+			this.modalEl.style.setProperty('--ore-combobox-top', `${rect.bottom + 5}px`);
 		}
 
 		// Style input and container
 		const promptEl = this.modalEl.querySelector('.prompt-input-container');
 		if (promptEl) {
-			promptEl.addClass("cv-search-input-container");
+			promptEl.addClass("ore-search-input-container");
 			const input = promptEl.querySelector('input');
 			if (input) {
 				input.setAttribute('type', 'search');
@@ -376,11 +374,11 @@ class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
 					const clearButton = promptEl.querySelector('.search-input-clear-button') as HTMLElement;
 					if (clearButton) {
 						if (input.value.trim().length > 0) {
-							clearButton.removeClass('cv-clear-button-hidden');
-							clearButton.addClass('cv-clear-button-visible');
+							clearButton.removeClass('ore-clear-button-hidden');
+							clearButton.addClass('ore-clear-button-visible');
 						} else {
-							clearButton.removeClass('cv-clear-button-visible');
-							clearButton.addClass('cv-clear-button-hidden');
+							clearButton.removeClass('ore-clear-button-visible');
+							clearButton.addClass('ore-clear-button-hidden');
 						}
 					}
 				};
@@ -397,7 +395,7 @@ class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
 
 		const suggestionsEl = this.modalEl.querySelector('.suggestion-container');
 		if (suggestionsEl) {
-			suggestionsEl.addClass("cv-suggestion");
+			suggestionsEl.addClass("ore-suggestion");
 		}
 
 		// Keep anchor focused
@@ -427,21 +425,21 @@ class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
 
 	renderSuggestion(match: FuzzyMatch<SuggestItem>, el: HTMLElement): void {
 		const item = match.item;
-		el.addClass("cv-suggestion-item", "cv-mod-complex", "cv-mod-toggle");
+		el.addClass("ore-suggestion-item", "ore-mod-complex", "ore-mod-toggle");
 
 		if (item.value === this.selectedValue) {
-			const checkIcon = el.createDiv({ cls: "cv-suggestion-icon cv-mod-checked" });
+			const checkIcon = el.createDiv({ cls: "ore-suggestion-icon ore-mod-checked" });
 			setIcon(checkIcon, "check");
 		}
 
 		if (item.icon) {
-			const iconDiv = el.createDiv({ cls: "cv-suggestion-icon" });
-			const flair = iconDiv.createSpan({ cls: "cv-suggestion-flair" });
+			const iconDiv = el.createDiv({ cls: "ore-suggestion-icon" });
+			const flair = iconDiv.createSpan({ cls: "ore-suggestion-flair" });
 			setIcon(flair, item.icon);
 		}
 
-		const content = el.createDiv({ cls: "cv-suggestion-content" });
-		content.createDiv({ cls: "cv-suggestion-title", text: item.label });
+		const content = el.createDiv({ cls: "ore-suggestion-content" });
+		content.createDiv({ cls: "ore-suggestion-title", text: item.label });
 	}
 
 	onChooseItem(item: SuggestItem): void {
@@ -454,20 +452,20 @@ class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
 			this.clickOutsideHandler = null;
 		}
 
-		// Remove focus class from button and cv-filter-statement
+		// Remove focus class from button and ore-filter-statement
 		if (this.anchorEl) {
-			// Find the cv-filter-expression element that contains the anchor
-			const expression = this.anchorEl.closest('.cv-filter-expression') as HTMLElement;
+			// Find the ore-filter-expression element that contains the anchor
+			const expression = this.anchorEl.closest('.ore-filter-expression') as HTMLElement;
 			removeFocusClasses(this.anchorEl, expression);
 		}
 
 		const modalContainer = this.modalEl.closest('.modal-container');
 		if (modalContainer) {
-			modalContainer.removeClass('cv-modal-container');
+			modalContainer.removeClass('ore-modal-container');
 			modalContainer.addClass('mod-dim');
 			const modalBg = modalContainer.querySelector('.modal-bg');
 			if (modalBg) {
-				(modalBg as HTMLElement).removeClass('cv-modal-bg-hidden');
+				(modalBg as HTMLElement).removeClass('ore-modal-bg-hidden');
 			}
 		}
 		super.onClose();
@@ -482,16 +480,16 @@ function createComboboxButton(
 	label: string,
 	icon?: string
 ): HTMLElement {
-	const button = container.createDiv({ cls: "cv-combobox-button", attr: { tabindex: "0" } });
+	const button = container.createDiv({ cls: "ore-combobox-button", attr: { tabindex: "0" } });
 
 	if (icon) {
-		const iconEl = button.createDiv({ cls: "cv-combobox-button-icon" });
+		const iconEl = button.createDiv({ cls: "ore-combobox-button-icon" });
 		setIcon(iconEl, icon);
 	}
 
-	const labelEl = button.createDiv({ cls: "cv-combobox-button-label" });
+	const labelEl = button.createDiv({ cls: "ore-combobox-button-label" });
 	labelEl.innerText = label;
-	setIcon(button.createDiv({ cls: "cv-combobox-button-chevron" }), "chevrons-up-down");
+	setIcon(button.createDiv({ cls: "ore-combobox-button-chevron" }), "chevrons-up-down");
 
 	return button;
 }
@@ -514,16 +512,16 @@ function createDeleteButton(
 }
 
 function addFocusClasses(button: HTMLElement, parent: HTMLElement): void {
-	button.addClass("cv-has-focus");
-	parent.addClass("cv-has-focus");
+	button.addClass("ore-has-focus");
+	parent.addClass("ore-has-focus");
 }
 
 function removeFocusClasses(button: HTMLElement | null, parent: HTMLElement | null): void {
 	if (button) {
-		button.removeClass("cv-has-focus");
+		button.removeClass("ore-has-focus");
 	}
 	if (parent) {
-		parent.removeClass("cv-has-focus");
+		parent.removeClass("ore-has-focus");
 	}
 }
 
@@ -540,14 +538,14 @@ function createFilterValueInput(
 		|| operator === "has tag" || operator === "does not have tag";
 	if (needsMultiSelect) {
 		// Multi-select container for operators that accept multiple values
-		const multiSelectContainer = container.createDiv({ cls: "cv-multi-select-container", attr: { tabindex: "-1" } });
+		const multiSelectContainer = container.createDiv({ cls: "ore-multi-select-container", attr: { tabindex: "-1" } });
 
 		// Parse existing values (comma-separated)
 		const values: string[] = safeValue ? safeValue.split(",").map(v => v.trim()).filter(v => v.length > 0) : [];
 
 		// Create contenteditable input
 		const input = multiSelectContainer.createDiv({
-			cls: "cv-multi-select-input",
+			cls: "ore-multi-select-input",
 			attr: {
 				contenteditable: "true",
 				tabindex: "0",
@@ -788,14 +786,14 @@ function setupComboboxButtonHandlers(
 }
 
 class FilterBuilder {
-	plugin: CustomViewsPlugin;
+	plugin: ObsidianRuleEnginePlugin;
 	root: FilterGroup;
 	onSave: () => void;
 	onRefresh: () => void;
 	onDeleteView?: () => void;
 	availableProperties: PropertyDef[];
 
-	constructor(plugin: CustomViewsPlugin, root: FilterGroup, onSave: () => void, onRefresh: () => void, onDeleteView?: () => void) {
+	constructor(plugin: ObsidianRuleEnginePlugin, root: FilterGroup, onSave: () => void, onRefresh: () => void, onDeleteView?: () => void) {
 		this.plugin = plugin;
 		this.root = root;
 		this.onSave = onSave;
@@ -1018,8 +1016,8 @@ class FilterBuilder {
 	}
 
 	renderFilterRow(row: HTMLElement, filter: Filter, parentGroup: FilterGroup, index: number, isPlaceholder: boolean = false) {
-		const statement = row.createDiv({ cls: "cv-filter-statement" });
-		const expression = statement.createDiv({ cls: "cv-filter-expression metadata-property" });
+		const statement = row.createDiv({ cls: "ore-filter-statement" });
+		const expression = statement.createDiv({ cls: "ore-filter-expression metadata-property" });
 
 		const currentType = this.getPropertyType(filter.field);
 
@@ -1130,7 +1128,7 @@ class FilterBuilder {
 		};
 
 		if (!["is empty", "is not empty"].includes(filter.operator)) {
-			const rhs = expression.createDiv({ cls: "cv-filter-rhs-container metadata-property-value" });
+			const rhs = expression.createDiv({ cls: "ore-filter-rhs-container metadata-property-value" });
 
 			createFilterValueInput(rhs, currentType, filter.value, (val) => {
 				// If this is a placeholder, add it to the conditions array first
@@ -1151,7 +1149,7 @@ class FilterBuilder {
 			}, filter.operator);
 		}
 
-		const actions = expression.createDiv({ cls: "cv-filter-row-actions" });
+		const actions = expression.createDiv({ cls: "ore-filter-row-actions" });
 		createDeleteButton(actions, handleDelete);
 	}
 
@@ -1183,9 +1181,9 @@ class FilterBuilder {
 	}
 
 	createSimpleBtn(container: HTMLElement, icon: string, text: string, onClick: () => void) {
-		const btn = container.createDiv({ cls: "cv-text-icon-button", attr: { tabindex: "0" } });
-		setIcon(btn.createSpan({ cls: "cv-text-button-icon" }), icon);
-		btn.createSpan({ cls: "cv-text-button-label", text: text });
+		const btn = container.createDiv({ cls: "ore-text-icon-button", attr: { tabindex: "0" } });
+		setIcon(btn.createSpan({ cls: "ore-text-button-icon" }), icon);
+		btn.createSpan({ cls: "ore-text-button-label", text: text });
 		btn.onclick = (e) => { e.stopPropagation(); onClick(); };
 	}
 }
