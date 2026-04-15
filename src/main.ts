@@ -229,6 +229,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			}
 		}
 
+		this.executeCommands(commandIds);
+
 		if (!matchedTemplate) {
 			this.restoreDefaultView(view);
 			return;
@@ -252,7 +254,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			return;
 		}
 
-		this.executeCommands(commandIds);
 		await this.injectCustomView(view.contentEl, file, matchedTemplate);
 	}
 
@@ -347,6 +348,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			}
 		}
 
+		this.executeCommands(commandIds);
+
 		if (!matchedTemplate) {
 			this.restoreCanvasNode(node);
 			return;
@@ -360,7 +363,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const previewContainer = nodeEl.querySelector(".markdown-preview-view") as HTMLElement;
 		if (!previewContainer) return;
 
-		this.executeCommands(commandIds);
 		await this.injectCustomView(previewContainer, file, matchedTemplate);
 	}
 

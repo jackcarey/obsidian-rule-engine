@@ -13,6 +13,10 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	get ruleCount(): number {
+		return this.plugin.settings.rules.length ?? 0;
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
@@ -28,8 +32,9 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						const file = this.app.workspace.getActiveFile();
 						if (file) {
-							this.plugin.processActiveView(file).catch(() => {
-								// Error handling for processActiveView
+							this.plugin.processActiveView(file).catch((e) => {
+								// todo: Error handling for processActiveView
+								console.error(e);
 							});
 						}
 					}));
@@ -65,7 +70,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					const newRule: RuleConfig = {
 						id: `${Date.now()}`,
-						name: "New View",
+						name: `Rule ${this.ruleCount + 1}`,
 						filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
 						template: "<h1>{{file.basename}}</h1>",
 						commandIds: []
@@ -75,7 +80,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					this.display();
 
 					const newIndex = this.plugin.settings.rules.length - 1;
-					new EditViewModal(this.app, this.plugin, newRule, newIndex, () => {
+					new EditRuleModal(this.app, this.plugin, newRule, newIndex, () => {
 						this.display();
 					}).open();
 				}));
@@ -83,7 +88,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const ruleListContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
 
 		this.plugin.settings.rules.forEach((rule, index) => {
-			this.renderViewListItem(ruleListContainer, rule, index);
+			this.renderRuleListItem(ruleListContainer, rule, index);
 		});
 
 		new Setting(containerEl)
@@ -99,16 +104,16 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		});
 	}
 
-	renderViewListItem(container: HTMLElement, view: RuleConfig, index: number) {
+	renderRuleListItem(container: HTMLElement, rule: RuleConfig, index: number) {
 		const listItem = container.createDiv({ cls: "ore-rule-list-item" });
-		listItem.setAttribute("data-rule-id", view.id);
+		listItem.setAttribute("data-rule-id", rule.id);
 		listItem.setAttribute("data-rule-index", index.toString());
 		listItem.draggable = true;
 
 		const dragHandle = listItem.createDiv({ cls: "ore-rule-drag-handle" });
 		setIcon(dragHandle, "grip-vertical");
 
-		listItem.createSpan({ cls: "ore-rule-name", text: view.name });
+		listItem.createSpan({ cls: "ore-rule-name", text: rule.name });
 
 		const actionsContainer = listItem.createDiv({ cls: "ore-rule-actions" });
 
@@ -117,14 +122,14 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		editBtn.setAttribute("aria-label", "Edit rule");
 		editBtn.onclick = (e) => {
 			e.stopPropagation();
-			new EditViewModal(this.app, this.plugin, view, index, () => {
+			new EditRuleModal(this.app, this.plugin, rule, index, () => {
 				this.display();
 			}).open();
 		};
 
 		const deleteBtn = actionsContainer.createDiv({ cls: "clickable-icon" });
 		setIcon(deleteBtn, "trash-2");
-		deleteBtn.setAttribute("aria-label", "Delete view");
+		deleteBtn.setAttribute("aria-label", "Delete rule");
 		deleteBtn.onclick = async (e) => {
 			e.stopPropagation();
 			this.plugin.settings.rules.splice(index, 1);
@@ -175,14 +180,14 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				return;
 			}
 
-			const draggedView = this.plugin.settings.rules[this.draggedIndex];
+			const draggedRule = this.plugin.settings.rules[this.draggedIndex];
 			const allItems = Array.from(container.querySelectorAll(".ore-rule-list-item"));
 			const targetIndex = allItems.indexOf(listItem);
 
 			if (targetIndex === -1) return;
 
 			this.plugin.settings.rules.splice(this.draggedIndex, 1);
-			this.plugin.settings.rules.splice(targetIndex, 0, draggedView!);
+			this.plugin.settings.rules.splice(targetIndex, 0, draggedRule!);
 
 			void this.plugin.saveSettings();
 			this.display();
@@ -218,17 +223,17 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	}
 }
 
-class EditViewModal extends Modal {
+class EditRuleModal extends Modal {
 	plugin: ObsidianRuleEnginePlugin;
-	view: RuleConfig;
+	rule: RuleConfig;
 	ruleIndex: number;
 	onSave: () => void;
 
-	constructor(app: App, plugin: ObsidianRuleEnginePlugin, view: RuleConfig, viewIndex: number, onSave: () => void) {
+	constructor(app: App, plugin: ObsidianRuleEnginePlugin, rule: RuleConfig, ruleIndex: number, onSave: () => void) {
 		super(app);
 		this.plugin = plugin;
-		this.view = JSON.parse(JSON.stringify(view)) as RuleConfig;
-		this.ruleIndex = viewIndex;
+		this.rule = JSON.parse(JSON.stringify(rule)) as RuleConfig;
+		this.ruleIndex = ruleIndex;
 		this.onSave = onSave;
 		this.setTitle('Edit rule');
 	}
@@ -241,11 +246,11 @@ class EditViewModal extends Modal {
 
 		new Setting(contentEl)
 			.setName("Rule name")
-			.setDesc("The name of the rule will be displayed in the view selector.")
+			.setDesc("The name of the rule will be displayed in the rule list.")
 			.addText(text => {
-				text.setValue(this.view.name)
+				text.setValue(this.rule.name)
 					.onChange((value) => {
-						this.view.name = value;
+						this.rule.name = value;
 					});
 				requestAnimationFrame(() => {
 					text.inputEl.select();
@@ -257,7 +262,7 @@ class EditViewModal extends Modal {
 
 		const builder = new FilterBuilder(
 			this.plugin,
-			this.view.filterGroup,
+			this.rule.filterGroup,
 			() => { void this.plugin.saveSettings(); },
 			() => { rulesContainer.empty(); builder.render(rulesContainer); }
 		);
@@ -267,11 +272,11 @@ class EditViewModal extends Modal {
 		const templateContainer = contentEl.createDiv({ cls: "ore-bases-template-container" });
 		const textarea = templateContainer.createEl("textarea", {
 			cls: "ore-textarea",
-			text: this.view.template
+			text: this.rule.template
 		});
 		textarea.addEventListener("input", (e: Event) => {
 			const target = e.target as HTMLTextAreaElement;
-			this.view.template = target.value;
+			this.rule.template = target.value;
 		});
 
 		const buttonContainer = contentEl.createDiv('modal-button-container');
@@ -282,7 +287,7 @@ class EditViewModal extends Modal {
 			.setButtonText("Save")
 			.setCta()
 			.onClick(async () => {
-				this.plugin.settings.rules[this.ruleIndex] = this.view;
+				this.plugin.settings.rules[this.ruleIndex] = this.rule;
 				await this.plugin.saveSettings();
 				this.onSave();
 				this.close();
@@ -791,15 +796,15 @@ class FilterBuilder {
 	root: FilterGroup;
 	onSave: () => void;
 	onRefresh: () => void;
-	onDeleteView?: () => void;
+	onDeleteRule?: () => void;
 	availableProperties: PropertyDef[];
 
-	constructor(plugin: ObsidianRuleEnginePlugin, root: FilterGroup, onSave: () => void, onRefresh: () => void, onDeleteView?: () => void) {
+	constructor(plugin: ObsidianRuleEnginePlugin, root: FilterGroup, onSave: () => void, onRefresh: () => void, onDeleteRule?: () => void) {
 		this.plugin = plugin;
 		this.root = root;
 		this.onSave = onSave;
 		this.onRefresh = onRefresh;
-		this.onDeleteView = onDeleteView;
+		this.onDeleteRule = onDeleteRule;
 		this.availableProperties = this.scanVaultProperties();
 	}
 
