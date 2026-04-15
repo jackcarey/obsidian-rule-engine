@@ -412,8 +412,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const allCommands: Record<string, Command> = { ...regularCommands, ...editorCommands };
 		if (Object.keys(allCommands).length === 0) {
-			//todo
-			throw new Error('no commands found. handle this error gracefully');
+			console.warn('no commands found for rule engine');
 		}
 		console.debug(`all commands`, allCommands);
 		return allCommands;
