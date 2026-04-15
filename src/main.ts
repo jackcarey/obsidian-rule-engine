@@ -1,29 +1,9 @@
 import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf } from "obsidian";
-import { CustomViewsSettings, DEFAULT_SETTINGS, CustomViewsSettingTab } from "./settings";
+import { CustomViewsSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
-
-const CUSTOM_VIEW_CLASS = "obsidian-custom-view-render";
-const HIDE_MARKDOWN_CLASS = "obsidian-custom-view-hidden";
-
-/**
- * Interface for canvas node structure
- * CanvasView and CanvasNode types are not exported from Obsidian, so we define minimal interfaces
- */
-interface CanvasNode {
-	file?: TFile;
-	nodeEl?: HTMLElement;
-}
-
-/**
- * Interface for canvas structure
- * CanvasView type is not exported from Obsidian, so we define a minimal interface
- */
-interface CanvasView {
-	canvas?: {
-		nodes?: CanvasNode[];
-	};
-}
+import { CUSTOM_VIEW_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
+import { CanvasNode, CanvasView, CustomViewsSettings } from "./types";
 
 /**
  * Type guard to check if a view is a canvas view
@@ -33,7 +13,7 @@ function isCanvasView(view: unknown): view is CanvasView {
 }
 
 export default class CustomViewsPlugin extends Plugin {
-	settings: CustomViewsSettings;
+	settings: CustomViewsSettings = Object.assign({}, DEFAULT_SETTINGS);
 
 	async onload() {
 		await this.loadSettings();

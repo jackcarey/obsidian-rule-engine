@@ -1,57 +1,7 @@
-import { App, PluginSettingTab, Setting, ButtonComponent, TextComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, TextComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
 import CustomViewsPlugin from "./main";
-import { ViewConfig, FilterGroup, Filter, FilterOperator, FilterConjunction } from "./types";
-
-
-type PropertyType = "text" | "number" | "date" | "datetime" | "list" | "checkbox" | "file" | "unknown";
-
-const TYPE_ICONS: Record<PropertyType, string> = {
-	text: "text",
-	number: "binary",
-	date: "calendar",
-	datetime: "clock",
-	list: "list",
-	checkbox: "check-square",
-	file: "file",
-	unknown: "text"
-};
-
-const OPERATORS: Record<string, string[]> = {
-	text: ["contains", "does not contain", "is", "is not", "starts with", "ends with", "contains any of", "does not contain any of", "contains all of", "does not contain all of", "is empty", "is not empty"],
-	list: ["contains", "does not contain", "contains any of", "does not contain any of", "contains all of", "does not contain all of", "is empty", "is not empty"],
-	number: ["=", "≠", "<", "≤", ">", "≥", "is empty", "is not empty"],
-	date: ["on", "not on", "before", "on or before", "after", "on or after", "is empty", "is not empty"],
-	checkbox: ["is"],
-	file: ["links to", "does not link to", "in folder", "is not in folder", "has tag", "does not have tag", "has property", "does not have property"]
-};
-
-const DEFAULT_RULES: FilterGroup = {
-	type: "group",
-	operator: "AND",
-	conditions: []
-};
-
-
-export interface CustomViewsSettings {
-	enabled: boolean;
-	workInLivePreview: boolean;
-	workInCanvas: boolean;
-	views: ViewConfig[];
-}
-
-export const DEFAULT_SETTINGS: CustomViewsSettings = {
-	enabled: true,
-	workInLivePreview: true,
-	workInCanvas: false,
-	views: [
-		{
-			id: 'default-1',
-			name: 'View 1',
-			rules: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
-			template: "<h1>{{file.basename}}</h1> <p>{{file.content}}</p>"
-		}
-	]
-};
+import { ViewConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem } from "./types";
+import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
 
 export class CustomViewsSettingTab extends PluginSettingTab {
 	plugin: CustomViewsPlugin;
@@ -67,7 +17,7 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl)
+		const readingModeSetting = new Setting(containerEl)
 			.setName("Work in live preview")
 			.setDesc("Enable to allow custom views in both live preview and reading view. Disable to limit them to reading view only.")
 			.addToggle(toggle => toggle
@@ -82,10 +32,9 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 						});
 					}
 				}));
-
-		new Setting(containerEl)
+		const canvasSetting = new Setting(containerEl)
 			.setName("Work in canvas (experimental)")
-			// .setDesc("Enable to apply custom views to markdown file nodes in canvas files.")
+			.setDesc("May not work. Enable to apply custom views to markdown file nodes in canvas files.")
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.workInCanvas)
 				.onChange(async (value) => {
@@ -98,8 +47,10 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 					}
 				}));
 
-
-
+		const settingsGroup = new SettingGroup().setHeading('Settings');
+		[readingModeSetting, canvasSetting].forEach(setting => {
+			settingsGroup.addSetting(setting);
+		});
 
 
 		new Setting(containerEl)
@@ -307,17 +258,6 @@ class EditViewModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 	}
-}
-
-interface PropertyDef {
-	key: string;
-	type: PropertyType;
-}
-
-interface SuggestItem {
-	label: string;
-	value: string;
-	icon?: string;
 }
 
 /**

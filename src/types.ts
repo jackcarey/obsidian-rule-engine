@@ -1,3 +1,5 @@
+import { type TFile } from "obsidian";
+
 export type FilterOperator =
 	| "contains" | "does not contain"
 	| "contains any of" | "does not contain any of"
@@ -32,4 +34,43 @@ export interface ViewConfig {
 	name: string;
 	rules: FilterGroup;
 	template: string;
+}
+
+export type PropertyType = "text" | "number" | "date" | "datetime" | "list" | "checkbox" | "file" | "unknown";
+
+export interface CustomViewsSettings {
+	enabled: boolean;
+	workInLivePreview: boolean;
+	workInCanvas: boolean;
+	views: ViewConfig[];
+}
+
+/**
+ * Interface for canvas node structure
+ * CanvasView and CanvasNode types are not exported from Obsidian, so we define minimal interfaces
+ */
+export interface CanvasNode {
+	file?: TFile;
+	nodeEl?: HTMLElement;
+}
+
+/**
+ * Interface for canvas structure
+ * CanvasView type is not exported from Obsidian, so we define a minimal interface
+ */
+export interface CanvasView {
+	canvas?: {
+		nodes?: CanvasNode[];
+	};
+}
+
+export interface PropertyDef {
+	key: string;
+	type: PropertyType;
+}
+
+export interface SuggestItem {
+	label: string;
+	value: string;
+	icon?: string;
 }
