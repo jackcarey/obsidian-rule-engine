@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This fork is expended to change a lot. Documentation may be out of date for a while.
+
 # Obsidian Custom Views <img src="https://img.shields.io/github/manifest-json/v/anuwup/obsidian-custom-views"> <img src="https://img.shields.io/github/downloads/anuwup/obsidian-custom-views/total">
 
 A plugin for Obsidian that lets you create custom HTML views for your notes based on filter rules. Transform how your notes are displayed by defining custom templates that match specific files.
