@@ -1,9 +1,9 @@
-import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf } from "obsidian";
+import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf, Command } from "obsidian";
 import { CustomViewsSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
 import { CUSTOM_VIEW_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
-import { CanvasNode, CanvasView, CustomViewsSettings } from "./types";
+import { CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomViewsSettings } from "./types";
 
 /**
  * Type guard to check if a view is a canvas view
@@ -14,6 +14,49 @@ function isCanvasView(view: unknown): view is CanvasView {
 
 export default class CustomViewsPlugin extends Plugin {
 	settings: CustomViewsSettings = Object.assign({}, DEFAULT_SETTINGS);
+
+	get commands(): CommandWithSetup[] {
+		return [{
+			id: 'alert-wow',
+			name: 'Alert wow',
+			description: 'alerts with surprise',
+			callback: () => {
+				window.alert("wow!");
+			}
+		}];
+	};
+
+
+	/**
+	 * 
+	 * @param id The command ID
+	 * @returns The command config from the plugin data.json
+	 */
+	getCommandConfig = (id: string): CommandConfig => {
+		if (!Boolean(this.settings.commandConfig)) {
+			this.settings.commandConfig = {};
+		}
+		return {
+			enabled: false,
+			... this.settings.commandConfig[id],
+		};
+	}
+
+	/**
+	 * 
+	 * @param id The command ID
+	 * @param partialUpdate An object containing some settings to update in the plugin data.json
+	 */
+	updateCommandConfig = (id: string, partialUpdate: Partial<CommandConfig>): void => {
+		if (!Boolean(this.settings.commandConfig)) {
+			this.settings.commandConfig = {};
+		}
+		this.settings.commandConfig[id] = {
+			...this.getCommandConfig(id),
+			...partialUpdate,
+		};
+		this.saveSettings();
+	};
 
 	async onload() {
 		await this.loadSettings();
@@ -43,6 +86,40 @@ export default class CustomViewsPlugin extends Plugin {
 				void this.setPluginState(false);
 				return true;
 			},
+		});
+
+		this.commands.forEach(cmd => {
+			if ('description' in cmd) {
+				delete cmd.description;
+			}
+			if ('settingCallback' in cmd) {
+				delete cmd.settingCallback
+			}
+			// each command must be enabled before it can be used and wrapping the check functions
+			// allows check callbacks to be optional in the commands array
+			const checkFn: Command['checkCallback'] = (checking) => {
+				if (!this.getCommandConfig(cmd.id)?.enabled) {
+					return false;
+				}
+				if (cmd.checkCallback) {
+					return cmd.checkCallback(checking);
+				}
+				return true;
+			}
+			const editorCheckFn: Command['checkCallback'] = (checking) => {
+				if (!this.getCommandConfig(cmd.id)?.enabled) {
+					return false;
+				}
+				if (cmd.checkCallback) {
+					return cmd.checkCallback(checking);
+				}
+				return true;
+			}
+			this.addCommand({
+				...cmd,
+				checkCallback: checkFn,
+				editorCheckCallback: editorCheckFn
+			});
 		});
 
 		this.registerEvent(

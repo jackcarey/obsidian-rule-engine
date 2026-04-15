@@ -1,8 +1,7 @@
 import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, TextComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
 import CustomViewsPlugin from "./main";
-import { ViewConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem } from "./types";
+import { ViewConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandConfig, CommandWithSetup, CommandSettingCallback, CommandSaveFn } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
-
 export class CustomViewsSettingTab extends PluginSettingTab {
 	plugin: CustomViewsPlugin;
 	private draggedElement: HTMLElement | null = null;
@@ -81,6 +80,18 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 
 		this.plugin.settings.views.forEach((view, index) => {
 			this.renderViewListItem(viewsListContainer, view, index);
+		});
+
+		new Setting(containerEl)
+			.setHeading()
+			.setName("Command configuration")
+			.setDesc("Not implemented. Command configuration is shared across all automations.");
+
+		const commandConfigContainer = containerEl.createDiv({ cls: "cv-views-list-container" });
+
+
+		this.plugin.commands.forEach(cmdConfig => {
+			this.renderCommandListItem(commandConfigContainer, cmdConfig);
 		});
 	}
 
@@ -172,6 +183,33 @@ export class CustomViewsSettingTab extends PluginSettingTab {
 			void this.plugin.saveSettings();
 			this.display();
 		});
+	}
+
+	renderCommandListItem(container: HTMLElement, cmdConfig: CommandWithSetup) {
+		const { id, name, icon, description, settingCallback } = cmdConfig;
+		const currentConfig = this.plugin.getCommandConfig(id);
+		const cmdGroup = new SettingGroup(container).setHeading(name);
+		cmdGroup.addSetting(setting => {
+			setting
+				.setName('Enabled')
+				.setDesc(description ?? '')
+				.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rule automations')
+				.addToggle(toggle => toggle
+					.setValue(currentConfig.enabled)
+					.onChange(async (value) => {
+						this.plugin.updateCommandConfig(id, { enabled: value });
+					}));
+			if (icon) {
+				//todo: check if this looks good
+				setIcon(setting.settingEl, icon);
+			}
+		});
+		if (settingCallback) {
+			const saveFn: CommandSaveFn = (updatedConfig) => {
+				this.plugin.updateCommandConfig(id, updatedConfig);
+			}
+			settingCallback(cmdGroup, currentConfig, saveFn);
+		}
 	}
 }
 

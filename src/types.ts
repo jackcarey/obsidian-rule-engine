@@ -1,4 +1,4 @@
-import { type TFile } from "obsidian";
+import { Command, SettingGroup, type TFile } from "obsidian";
 
 export type FilterOperator =
 	| "contains" | "does not contain"
@@ -36,6 +36,9 @@ export interface ViewConfig {
 	template: string;
 }
 
+export type CommandConfig = Record<string, any> & { enabled: boolean };
+
+
 export type PropertyType = "text" | "number" | "date" | "datetime" | "list" | "checkbox" | "file" | "unknown";
 
 export interface CustomViewsSettings {
@@ -43,6 +46,7 @@ export interface CustomViewsSettings {
 	workInLivePreview: boolean;
 	workInCanvas: boolean;
 	views: ViewConfig[];
+	commandConfig: Record<string, CommandConfig>;
 }
 
 /**
@@ -74,3 +78,13 @@ export interface SuggestItem {
 	value: string;
 	icon?: string;
 }
+
+export type CommandSaveFn = (updatedConfig: Partial<CommandConfig>) => void;
+export type CommandSettingCallback = (setting: SettingGroup, currentConfig: CommandConfig, saveFn: CommandSaveFn) => void
+
+export type CommandWithSetup = Command & {
+	// human readable description of what the command does
+	description?: string;
+	// callback to add the command to the SettingsGroup for this command. The setting will already have a name, description, icon, and enabled toggle.
+	settingCallback?: CommandSettingCallback
+};
