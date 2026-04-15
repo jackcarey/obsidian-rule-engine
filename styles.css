@@ -714,6 +714,13 @@ font-size: var(--metadata-input-font-size);
     background-color: var(--background-modifier-hover);
 }
 
+.ore-rule-list-item[data-rule-enabled="false"]{
+    font-style: italic;
+    .ore-rule-name::after{
+        content: "(disabled)";
+    }
+}
+
 .ore-rule-list-item.ore-dragging {
     opacity: 0.5;
 }

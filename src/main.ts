@@ -343,7 +343,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		let baseFileHandling: BaseFileHandling = "file";
 
 		for (const ruleConfig of this.settings.rules) {
-			const isMatch = checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
+			const isMatch = ruleConfig.enabled && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
 			if (isMatch) {
 				matchedTemplate = ruleConfig.template;
 				commandIds = ruleConfig.commandIds;

@@ -36,6 +36,7 @@ export interface RuleConfig {
 	name: string;
 	filterGroup: FilterGroup;
 	template: string;
+	enabled: boolean;
 	commandIds: string[];
 	baseFileHandling: BaseFileHandling;
 }

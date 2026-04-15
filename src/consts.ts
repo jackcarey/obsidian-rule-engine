@@ -36,6 +36,7 @@ export const DEFAULT_SETTINGS: CustomRulesSettings = {
             name: 'Rule 1',
             filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
             template: "<h1>{{file.basename}}</h1> <p>{{file.content}}</p>",
+            enabled: true,
             commandIds: [],
             baseFileHandling: "file",
         }

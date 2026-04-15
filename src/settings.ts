@@ -1,5 +1,5 @@
 /* eslint-disable obsidianmd/ui/sentence-case */
-import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Value } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
@@ -73,6 +73,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 						name: `Rule ${this.ruleCount + 1}`,
 						filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
 						template: "<h1>{{file.basename}}</h1>",
+						enabled: true,
 						commandIds: [],
 						baseFileHandling: "file"
 					};
@@ -109,6 +110,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const listItem = container.createDiv({ cls: "ore-rule-list-item" });
 		listItem.setAttribute("data-rule-id", rule.id);
 		listItem.setAttribute("data-rule-index", index.toString());
+		listItem.setAttribute("data-rule-enabled", String(rule.enabled));
 		listItem.draggable = true;
 
 		const dragHandle = listItem.createDiv({ cls: "ore-rule-drag-handle" });
@@ -256,6 +258,15 @@ class EditRuleModal extends Modal {
 				requestAnimationFrame(() => {
 					text.inputEl.select();
 				});
+			});
+
+		new Setting(contentEl)
+			.setName('Enabled')
+			.setDesc('')
+			.addToggle(toggle => {
+				toggle
+					.setValue(this.rule.enabled)
+					.onChange(val => { this.rule.enabled = val; });
 			});
 
 		contentEl.createEl("h3", { text: "Filters" });
