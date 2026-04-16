@@ -95,7 +95,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		this.addCommand({
 			id: "check-rules",
-			name: "Process file now",
+			name: "Process now",
 			checkCallback: (checking) => {
 				if (checking) {
 					return this.settings.enabled;
