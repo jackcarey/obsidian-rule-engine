@@ -6,5 +6,8 @@
 	"description": "Run commands and create custom HTML views for your notes based on filter rules. Transform how your vault behaves and how notes are displayed.",
 	"author": "Jack Carey",
 	"authorUrl": "https://jackcarey.co.uk",
-	"isDesktopOnly": false
+	"isDesktopOnly": false,
+	"fundingUrl": {
+		"GitHub": "https://github.com/sponsors/jackcarey"
+	}
 }
