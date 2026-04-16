@@ -2,6 +2,8 @@
 
 A plugin for Obsidian that lets you define rules to automate commands and render HTML views for your notes. Transform how your notes behave and are displayed by defining custom rules that match specific files.
 
+Based on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-custom-views).
+
 ## Commands
 
 Rules run commands in order and only if they are available in the current context. Some commands are provided by this plugin, or you can use any command exposed in the Obsidian command palette. This allows you to automate actions when opening a note. You can also use the 'process now' command to run rules on demand.
