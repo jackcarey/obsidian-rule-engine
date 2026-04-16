@@ -2,7 +2,7 @@
 
 A plugin for Obsidian that lets you define rules to automate commands and render HTML views for your notes. Transform how your notes behave and are displayed by defining custom rules that match specific files.
 
-Based on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-custom-views).
+_Based on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-custom-views)._
 
 ## Commands
 
