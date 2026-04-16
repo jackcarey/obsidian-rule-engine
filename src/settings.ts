@@ -62,7 +62,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setHeading()
 			.setName("Rule configuration")
-			.setDesc("Rules are checked and executed in order from top to bottom. Drag to reorder.")
+			.setDesc("Rules are checked and executed in order from top to bottom. The first matching template will be used. Commands from all matching rules will execute. Drag to reorder.")
 			.addButton(btn => btn
 				.setButtonText("Add new rule")
 				.setCta()

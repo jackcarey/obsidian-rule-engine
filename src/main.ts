@@ -230,10 +230,11 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		for (const ruleConfig of this.settings.rules) {
 			const isMatch = ruleConfig.enabled && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
 			if (isMatch) {
-				matchedTemplate = ruleConfig.template;
+				if (!matchedTemplate.length) {
+					matchedTemplate = ruleConfig.template;
+				}
 				commandIds = [...commandIds, ...ruleConfig.commandIds];
 				baseFileHandling = ruleConfig.baseFileHandling;
-				break;
 			}
 		}
 		return {
