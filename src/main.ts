@@ -93,6 +93,23 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "check-rules",
+			name: "Process file now",
+			checkCallback: (checking) => {
+				if (checking) {
+					return this.settings.enabled;
+				}
+
+				const file = this.app.workspace.getActiveFile();
+
+				if (file) {
+					void this.processActiveView(file);
+				}
+				return true;
+			},
+		});
+
 		for (const cmd of this.commands) {
 			try {
 				if ('description' in cmd) {
