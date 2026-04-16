@@ -6,7 +6,7 @@ A plugin for Obsidian that lets you define rules to automate commands and render
 
 Rules run commands in order and only if they are available in the current context. Some commands are provided by this plugin, or you can use any command exposed in the Obsidian command palette. This allows you to automate actions when opening a note. You can also use the 'process now' command to run rules on demand.
 
-<img width="696" height="476" alt="image" src="https://github.com/user-attachments/assets/89cb4a81-6531-4496-a765-1d73169fe1b3" />
+<img width="714" height="431" alt="image" src="https://github.com/user-attachments/assets/640d0d21-8ec7-426a-8332-f52752fd35ce" />
 
 ### Provided commands
 
