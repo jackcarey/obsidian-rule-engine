@@ -305,7 +305,6 @@ class EditRuleModal extends Modal {
 				});
 			});
 
-		const selectedCmdIds = [...this.rule.commandIds];
 		new Setting(contentEl)
 			.setHeading()
 			.setName("Commands")
@@ -317,7 +316,6 @@ class EditRuleModal extends Modal {
 					.onClick(() => {
 						const firstCmdId = Object.keys(this.plugin.obsidianCommands)[0];
 						if (firstCmdId) {
-							selectedCmdIds.push(firstCmdId);
 							this.rule.commandIds.push(firstCmdId);
 							renderCommandIdList();
 						} else {
@@ -331,7 +329,7 @@ class EditRuleModal extends Modal {
 		//todo: make this use drag and drop
 		const renderCommandIdList = () => {
 			commandsContainer.empty();
-			selectedCmdIds.forEach((id, idx) => {
+			this.rule.commandIds.forEach((id, idx) => {
 				const childLiEl = commandsContainer.createEl("li", { cls: "ore-command-id-list-item" });
 				new Setting(childLiEl).addButton(btn => {
 					btn.setIcon("terminal")
@@ -344,16 +342,14 @@ class EditRuleModal extends Modal {
 							}));
 							const selectedValue = '';
 							const onSelect = (val: string) => {
-								selectedCmdIds[idx] = val;
-								this.rule.commandIds = selectedCmdIds;
+								this.rule.commandIds[idx] = val;
 								renderCommandIdList();
 							};
 							this.openSuggestModal(items, selectedValue, onSelect, btn.buttonEl);
 						});
 				}).addExtraButton(btn => {
 					btn.setIcon("trash-2").onClick(() => {
-						selectedCmdIds.splice(idx, 1);
-						this.rule.commandIds = selectedCmdIds;
+						this.rule.commandIds.splice(idx, 1);
 						renderCommandIdList();
 					});
 				});
