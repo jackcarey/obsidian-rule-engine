@@ -99,7 +99,6 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 		const commandConfigContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
 
-
 		this.plugin.commands.sort((a, b) => {
 			return a.name.localeCompare(b.name);
 		}).forEach(cmdConfig => {
@@ -339,7 +338,7 @@ class EditRuleModal extends Modal {
 								label: cmd.name,
 								value: cmd.id,
 								icon: cmd.icon
-							}));
+							})).sort((a, b) => a.label.localeCompare(b.label));
 							const selectedValue = '';
 							const onSelect = (val: string) => {
 								this.rule.commandIds[idx] = val;
