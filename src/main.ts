@@ -221,6 +221,28 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		this.restoreAllCanvasNodes();
 	}
 
+	extractMatchingRuleParameters = (file: TFile) => {
+		const cache = this.app.metadataCache.getFileCache(file);
+		let matchedTemplate = "";
+		let commandIds: string[] = [];
+		let baseFileHandling: BaseFileHandling = "file";
+
+		for (const ruleConfig of this.settings.rules) {
+			const isMatch = ruleConfig.enabled && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
+			if (isMatch) {
+				matchedTemplate = ruleConfig.template;
+				commandIds = [...commandIds, ...ruleConfig.commandIds];
+				baseFileHandling = ruleConfig.baseFileHandling;
+				break;
+			}
+		}
+		return {
+			matchedTemplate,
+			commandIds,
+			baseFileHandling
+		};
+	};
+
 	async processActiveView(file: TFile | null) {
 		if (!file) return;
 
@@ -234,20 +256,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			return;
 		}
 
-		const cache = this.app.metadataCache.getFileCache(file);
-		let matchedTemplate = "";
-		let commandIds: string[] = [];
-		let baseFileHandling: BaseFileHandling = "file";
-
-		for (const ruleConfig of this.settings.rules) {
-			const isMatch = checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
-			if (isMatch) {
-				matchedTemplate = ruleConfig.template;
-				commandIds = ruleConfig.commandIds;
-				baseFileHandling = ruleConfig.baseFileHandling;
-				break;
-			}
-		}
+		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file);
 
 		this.executeCommands(baseFileHandling, commandIds);
 
@@ -355,20 +364,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const file = node.file;
 		if (!(file instanceof TFile)) return;
 
-		const cache = this.app.metadataCache.getFileCache(file);
-		let matchedTemplate = "";
-		let commandIds: string[] = [];
-		let baseFileHandling: BaseFileHandling = "file";
-
-		for (const ruleConfig of this.settings.rules) {
-			const isMatch = ruleConfig.enabled && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
-			if (isMatch) {
-				matchedTemplate = ruleConfig.template;
-				commandIds = ruleConfig.commandIds;
-				baseFileHandling = ruleConfig.baseFileHandling;
-				break;
-			}
-		}
+		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file);
 
 		this.executeCommands(baseFileHandling, commandIds);
 
