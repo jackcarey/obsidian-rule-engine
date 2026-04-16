@@ -52,16 +52,13 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			...partialUpdate,
 			id
 		};
-		console.debug(`updateCommandConfig`, id, fullConfig);
 		const idx = this.settings.commands.findIndex(cmd => cmd.id === id);
 		if (idx !== -1) {
 			this.settings.commands[idx] = fullConfig;
 		} else {
 			this.settings.commands.push(fullConfig);
 		}
-		this.saveSettings().then(_ => {
-			console.debug(`saved settings data`);
-		}).catch(_reason => {
+		this.saveSettings().catch(_reason => {
 			throw new Error(`failed to update command config`);
 		});
 	};
@@ -96,7 +93,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			},
 		});
 
-		console.debug(`adding ${this.commands.length} commands`, this.commands);
 		for (const cmd of this.commands) {
 			try {
 				if ('description' in cmd) {
@@ -147,7 +143,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				}
 
 				this.addCommand(cmdObject);
-				console.debug(`added cmd`, cmdObject);
 			} catch (e) {
 				console.error(e);
 				console.warn(`couldn't add command`, cmd);
@@ -430,9 +425,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			for (const cmd of commandObjects) {
 				const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
 				commandFn?.(false);
-				console.debug(`executed command`, cmd);
 			}
 		} else {
+			console.error(`mode not handled:`, mode);
 			throw new Error('base file handling not implemented!');
 		}
 	}

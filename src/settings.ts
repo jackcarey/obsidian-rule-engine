@@ -23,7 +23,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 		const addReadingModeSetting = (setting: Setting) => {
 			setting
-				.setName("Work in live preview")
+				.setName("Template in live preview")
 				.setDesc("Enable to allow the rule engine in both live preview and reading view. Disable to limit them to reading view only.")
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.workInLivePreview)
@@ -40,7 +40,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		};
 		const addCanvasSetting = (setting: Setting) => {
 			setting
-				.setName("Work in canvas (experimental)")
+				.setName("Template in canvas (experimental)")
 				.setDesc("Enable to apply templates to Markdown file nodes in Canvas files (excludes commands).")
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.workInCanvas)
@@ -210,7 +210,6 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				.addToggle(toggle => toggle
 					.setValue(currentConfig.enabled)
 					.onChange(async (value) => {
-						console.debug(`toggle enabled for`, id, value);
 						this.plugin.updateCommandConfig(id, { enabled: value });
 					}))
 		});
@@ -224,10 +223,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 }
 
 class EditRuleModal extends Modal {
-	plugin: ObsidianRuleEnginePlugin;
 	rule: RuleConfig;
-	ruleIndex: number;
-	onSave: () => void;
 
 	openSuggestModal(
 		items: { label: string, value: string, icon?: string }[],
@@ -239,12 +235,15 @@ class EditRuleModal extends Modal {
 		modal.open();
 	}
 
-	constructor(app: App, plugin: ObsidianRuleEnginePlugin, rule: RuleConfig, ruleIndex: number, onSave: () => void) {
+	constructor(
+		app: App,
+		private plugin: ObsidianRuleEnginePlugin,
+		rule: RuleConfig,
+		private ruleIndex: number,
+		private onSave: () => void
+	) {
 		super(app);
-		this.plugin = plugin;
 		this.rule = JSON.parse(JSON.stringify(rule)) as RuleConfig;
-		this.ruleIndex = ruleIndex;
-		this.onSave = onSave;
 		this.setTitle('Edit rule');
 	}
 
@@ -319,6 +318,7 @@ class EditRuleModal extends Modal {
 						const firstCmdId = Object.keys(this.plugin.obsidianCommands)[0];
 						if (firstCmdId) {
 							selectedCmdIds.push(firstCmdId);
+							this.rule.commandIds.push(firstCmdId);
 							renderCommandIdList();
 						} else {
 							console.error(`failed to add new command ID to rule`);
@@ -345,6 +345,7 @@ class EditRuleModal extends Modal {
 							const selectedValue = '';
 							const onSelect = (val: string) => {
 								selectedCmdIds[idx] = val;
+								this.rule.commandIds = selectedCmdIds;
 								renderCommandIdList();
 							};
 							this.openSuggestModal(items, selectedValue, onSelect, btn.buttonEl);
@@ -352,6 +353,8 @@ class EditRuleModal extends Modal {
 				}).addExtraButton(btn => {
 					btn.setIcon("trash-2").onClick(() => {
 						selectedCmdIds.splice(idx, 1);
+						this.rule.commandIds = selectedCmdIds;
+						renderCommandIdList();
 					});
 				});
 			});
