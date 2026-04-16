@@ -285,24 +285,24 @@ class EditRuleModal extends Modal {
 		);
 		builder.render(rulesContainer);
 
-		new Setting(contentEl)
-			.setName("Base file handling")
-			.setDesc("How should rules run against Base files (.base)?")
-			.addDropdown(dd => {
-				const options: Record<BaseFileHandling, string> = {
-					'file': 'Regular file',
-					'results': 'On each result'
-				};
-				dd.addOptions(options);
-				dd.setValue(Object.keys(options)[0]!);
-				dd.disabled = true;
-				dd.onChange(val => {
-					const allowed = ["file", "results"];
-					if (allowed.includes(val)) {
-						this.rule.baseFileHandling = val as BaseFileHandling;
-					}
-				});
-			});
+		// new Setting(contentEl)
+		// 	.setName("Base file handling")
+		// 	.setDesc("How should rules run against Base files (.base)?")
+		// 	.addDropdown(dd => {
+		// 		const options: Record<BaseFileHandling, string> = {
+		// 			'file': 'Regular file',
+		// 			'results': 'On each result'
+		// 		};
+		// 		dd.addOptions(options);
+		// 		dd.setValue(Object.keys(options)[0]!);
+		// 		dd.disabled = true;
+		// 		dd.onChange(val => {
+		// 			const allowed = ["file", "results"];
+		// 			if (allowed.includes(val)) {
+		// 				this.rule.baseFileHandling = val as BaseFileHandling;
+		// 			}
+		// 		});
+		// 	});
 
 		new Setting(contentEl)
 			.setHeading()
