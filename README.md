@@ -1,9 +1,20 @@
-> [!IMPORTANT]
-> This fork is expended to change a lot. Documentation may be out of date for a while.
+# Obsidian Rule Engine <img src="https://img.shields.io/github/manifest-json/v/jackcarey/obsidian-rule-engine"> <img src="https://img.shields.io/github/downloads/jackcarey/obsidian-rule-engine/total">
 
-# Obsidian Custom Views <img src="https://img.shields.io/github/manifest-json/v/anuwup/obsidian-custom-views"> <img src="https://img.shields.io/github/downloads/anuwup/obsidian-custom-views/total">
+A plugin for Obsidian that lets you define rules to automate commands and render HTML views for your notes. Transform how your notes behave and are displayed by defining custom rules that match specific files.
 
-A plugin for Obsidian that lets you create custom HTML views for your notes based on filter rules. Transform how your notes are displayed by defining custom templates that match specific files.
+## Commands
+
+Rules run commands in order and only if they are available in the current context. Some commands are provided by this plugin, or you can use any command exposed in the Obsidian command palette. This allows you to automate actions when opening a note. You can also use the 'process now' command to run rules on demand.
+
+<img width="696" height="476" alt="image" src="https://github.com/user-attachments/assets/89cb4a81-6531-4496-a765-1d73169fe1b3" />
+
+### Provided commands
+
+- Log time -logs the current time to the developer console.
+
+## Custom Views
+
+Use the `template` field in rules to render notes using custom HTML templates. If the `template` field is blank, no template will be used.
 
 ![output](https://github.com/user-attachments/assets/f94e92b6-93a0-42eb-a9c7-bad6bc3aa7e2)
 
@@ -17,9 +28,9 @@ The plugin's main feature is **custom views**, which allow you to:
 
 Perfect for creating card views, dashboards, or any custom presentation of your notes!
 
-## Usage
+### Usage
 
-### Getting Started
+#### Getting Started
 
 <!-- 1. **Enable the plugin** in **Settings → Community plugins**.
 2. Go to **Settings → Custom Views** to configure your views.
@@ -27,7 +38,7 @@ Perfect for creating card views, dashboards, or any custom presentation of your 
 4. Define **filter rules** to match which files should use this view.
 5. Write an **HTML template** to customize how those files are displayed. -->
 
-### Basic Example
+#### Basic Example
 
 Let's create a simple view for movie notes. First, add a filter rule:
 - **Property**: `file.folder`
@@ -47,9 +58,9 @@ Then, create a template like this:
 
 Now, any note in a folder containing "Movies" will be displayed using this custom template instead of the default markdown view!
 
-## Features
+### Features
 
-### Filter Rules
+#### Filter Rules
 
 Match files using powerful filter rules based on file properties or frontmatter. You can combine multiple conditions using AND, OR, or NOR logic.
 
@@ -65,7 +76,7 @@ Match files using powerful filter rules based on file properties or frontmatter.
 - **Lists/Tags**: `contains`, `does not contain`, `is empty`, `is not empty`
 - **Checkboxes**: `is` (true/false)
 
-### HTML Templates
+#### HTML Templates
 
 Write custom HTML templates using a simple placeholder syntax. Access file properties using `{{file.property}}` and frontmatter properties using `{{property}}`.
 
@@ -86,7 +97,7 @@ Write custom HTML templates using a simple placeholder syntax. Access file prope
 - `{{file.tags[1]}}` - Second tag
 - etc.
 
-### Filter Chains
+#### Filter Chains
 
 Transform values using filter chains. Chain multiple filters together using the pipe (`|`) operator.
 
@@ -99,12 +110,12 @@ Transform values using filter chains. Chain multiple filters together using the 
 
 **Available Filters:**
 
-#### Date Filters
+##### Date Filters
 - `date:"FORMAT"` - Format a date (e.g., `date:"YYYY-MM-DD"`, `date:"MMMM DD, YYYY"`)
 - `date:"FORMAT":"INPUT_FORMAT"` - Parse and format a date with custom input format
 - `date_modify:"+1 year"` - Modify a date (e.g., `"+1 year"`, `"-2 months"`)
 
-#### Text Transformation
+##### Text Transformation
 - `capitalize` - Capitalize first letter
 - `upper` - Convert to uppercase
 - `lower` - Convert to lowercase
@@ -115,13 +126,13 @@ Transform values using filter chains. Chain multiple filters together using the 
 - `trim` - Remove leading/trailing whitespace
 - `replace:"search":"replace"` - Replace text (supports regex: `replace:"/pattern/flags":"replace"`)
 
-#### Markdown Formatting
+##### Markdown Formatting
 - `wikilink:"alias"` - Convert to wikilink `[[value|alias]]`
 - `link:"text"` - Convert to markdown link `[text](value)`
 - `image:"alt"` - Convert to markdown image `![alt](value)`
 - `blockquote` - Convert each line to blockquote
 
-#### Array Operations
+##### Array Operations
 - `split:","` - Split string into array
 - `join:", "` - Join array into string
 - `first` - Get first element
@@ -129,13 +140,13 @@ Transform values using filter chains. Chain multiple filters together using the 
 - `slice:0:5` - Slice array or string
 - `count` - Get length of array or string
 
-#### HTML Processing
+##### HTML Processing
 - `strip_tags` - Remove HTML tags
 
-#### Math
+##### Math
 - `calc:"+10"` - Perform calculation (`+`, `-`, `*`, `/`, `^`)
 
-### View Modes
+#### View Modes
 
 The plugin works in different view modes based on your settings:
 
@@ -143,7 +154,7 @@ The plugin works in different view modes based on your settings:
 - **Live Preview**: Optionally enable custom views in live preview mode via **Settings → Custom Views → Work in Live Preview**.
 - **Source Mode**: Custom views are disabled in pure source mode (true editor mode).
 
-### Multiple Views
+#### Multiple Views
 
 You can create multiple custom views. The plugin will use the first matching view for each file. This allows you to have different templates for different types of notes.
 
@@ -152,7 +163,7 @@ You can create multiple custom views. The plugin will use the first matching vie
 - View 2: Book cards (matches `file.folder contains "Books"`)
 - View 3: Project dashboards (matches `file.status is "active"`)
 
-### Script Support
+#### Script Support
 
 You can include `<script>` tags in your templates for dynamic behavior. Scripts are executed when the template is rendered, allowing you to add interactivity to your custom views.
 
@@ -174,9 +185,9 @@ function toggleDetails() {
 > [!WARNING]
 > Scripts in templates are executed when the view is rendered. Be careful with scripts from untrusted sources.
 
-## Examples
+### Examples
 
-### Movie Card View
+#### Movie Card View
 
 **Filter Rule:**
 - `file.folder` contains `Movies`
@@ -202,7 +213,7 @@ function toggleDetails() {
 </div>
 ```
 
-### Project Dashboard
+#### Project Dashboard
 
 **Filter Rule:**
 - `file.status` is `active`
@@ -226,7 +237,7 @@ function toggleDetails() {
 </div>
 ```
 
-### Book Review Card
+#### Book Review Card
 
 **Filter Rule:**
 - `file.tags` contains `book`
@@ -249,31 +260,31 @@ function toggleDetails() {
 </div>
 ```
 
-## Commands
+### Commands
 
 The plugin adds the following commands to the Command palette:
 
 - **Enable Custom Views** - Enable the plugin (only shown when disabled)
 - **Disable Custom Views** - Disable the plugin (only shown when enabled)
 
-## Settings
+### Settings
 
 Access settings via **Settings → Custom Views**.
 
-### Global Settings
+#### Global Settings
 
 - **Work in Live Preview** - If enabled, custom views work in both reading mode and live preview mode. If disabled, custom views only work in reading mode.
 
-### View Configuration
+#### View Configuration
 
 Each view has:
 - **Name** - A descriptive name for the view
 - **Filter Rules** - Conditions that determine which files match this view
 - **HTML Template** - The custom HTML template to render for matching files
 
-## Template Reference
+### Template Reference
 
-### Placeholder Syntax
+#### Placeholder Syntax
 
 For file properties:
 ```
@@ -289,17 +300,17 @@ For frontmatter properties:
 - `[INDEX]` - Optional array index (e.g., `[0]` for first element)
 - `| FILTER:ARGS` - Optional filter chain
 
-### Special Placeholders
+#### Special Placeholders
 
 - `{{file.content}}` - Renders the note body as markdown. This is always rendered as markdown, regardless of context.
 
-### Context-Aware Rendering
+#### Context-Aware Rendering
 
 Placeholders are rendered differently based on context:
 - **Inside HTML attributes** (e.g., `href="{{file.path}}"` or `src="{{cover}}"`): Returns raw string value
 - **In HTML body**: Renders as markdown if the value contains markdown syntax (like `[[links]]`)
 
-### Filter Chain Syntax
+#### Filter Chain Syntax
 
 Filters are chained using the pipe (`|`) operator:
 
@@ -312,6 +323,6 @@ Filter arguments can be:
 - **Multiple arguments**: `replace:"old":"new"` (comma-separated, or use quotes for strings with commas)
 - **Regex patterns**: `replace:"/pattern/flags":"replace"`
 
-## Contributing
+### Contributing
 
 Any contributions and PRs are welcome! Feel free to open an issue or submit a pull request.
