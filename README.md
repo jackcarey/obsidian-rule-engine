@@ -14,7 +14,7 @@ Commands from all matching rules wll execute in order.
 
 ### Provided commands
 
-- Log time -logs the current time to the developer console.
+- `Process now` - Check and execute automations as if the file has just been opened.
 
 ## Custom Views
 

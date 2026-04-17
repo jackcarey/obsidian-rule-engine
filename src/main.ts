@@ -4,7 +4,7 @@ import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
 import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
 import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings } from "./types";
-
+import { list as commandList } from 'commands';
 /**
  * Type guard to check if a view is a canvas view
  */
@@ -16,15 +16,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	settings: CustomRulesSettings = Object.assign({}, DEFAULT_SETTINGS);
 
 	get commands(): CommandWithSetup[] {
-		return [{
-			id: 'log-time',
-			name: 'Log the time',
-			description: 'logs the current time to the console',
-			icon: 'clock',
-			callback: () => console.debug(new Date().toISOString(), Date.now())
-		}];
+		return commandList.map(fn => fn(this));
 	};
-
 
 	/**
 	 * 
@@ -89,23 +82,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				}
 
 				void this.setPluginState(false);
-				return true;
-			},
-		});
-
-		this.addCommand({
-			id: "check-rules",
-			name: "Process now",
-			checkCallback: (checking) => {
-				if (checking) {
-					return this.settings.enabled;
-				}
-
-				const file = this.app.workspace.getActiveFile();
-
-				if (file) {
-					void this.processActiveView(file);
-				}
 				return true;
 			},
 		});
@@ -419,15 +395,12 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 	public get obsidianCommands(): Record<string, Command> {
 		// @ts-expect-error 'commands' is private
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const regularCommands = this.app.commands.commands;
 		// @ts-expect-error 'commands' is private
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const editorCommands = this.app.commands.editorCommands;
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		const allCommands: Record<string, Command> = { ...regularCommands, ...editorCommands };
 		if (Object.keys(allCommands).length === 0) {
-			console.warn('no commands found for rule engine');
+			console.warn('no commands found for rule-engine');
 		}
 		return allCommands;
 	}
