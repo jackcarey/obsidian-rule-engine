@@ -143,14 +143,18 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 
 		this.registerEvent(
-			this.app.workspace.on("file-open", (file) => this.processActiveView(file))
+			this.app.workspace.on("file-open", (file) => this.processActiveView(file, {
+				skipCommandExecution: true
+			}))
 		);
 
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
 				const file = this.app.workspace.getActiveFile();
 
-				void this.processActiveView(file);
+				void this.processActiveView(file, {
+					skipCommandExecution: false
+				});
 				if (this.settings.workInCanvas) {
 					void this.processAllCanvasNodes();
 				}
@@ -220,7 +224,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		};
 	};
 
-	async processMarkdownView(file: TFile | null) {
+	async processMarkdownView(file: TFile | null, options?: {
+		skipCommandExecution?: boolean;
+	}) {
 		if (!file) return;
 
 		const leaf = this.app.workspace.getLeaf(false);
@@ -236,7 +242,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file);
 
-		this.executeCommands(baseFileHandling, commandIds);
+		if (!options?.skipCommandExecution) {
+			this.executeCommands(baseFileHandling, commandIds);
+		}
 
 		if (!matchedTemplate) {
 			this.restoreDefaultView(view);
@@ -264,27 +272,28 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		await this.injectCustomView(view.contentEl, file, matchedTemplate);
 	}
 
-	async processBasesView(file: TFile | null) {
+	async processBasesView(file: TFile | null, options?: {
+		skipCommandExecution?: boolean;
+	}) {
 		if (!file) return;
 
 		const leaf = this.app.workspace.getLeaf(false);
 		if (this.settings.allowBaseResultExecution && (leaf.view instanceof BasesView)) {
 			console.debug("base found, processing not yet implemented");
-			return undefined;
+			if (!options?.skipCommandExecution) {
+				return undefined;
+			}
 		}
 		return undefined;
 	}
 
-	async processActiveView(file: TFile | null) {
+	async processActiveView(file: TFile | null, options?: {
+		skipCommandExecution?: boolean;
+	}) {
+		console.debug(`processActiveView`, file);
 		if (!file) return;
 
-		const leaf = this.app.workspace.getLeaf(false);
-		if (this.settings.allowBaseResultExecution && (leaf.view instanceof BasesView)) {
-			console.debug("base processing not yet implemented");
-			return this.processBasesView(file);
-		}
-
-		return this.processBasesView(file) ?? this.processMarkdownView(file);
+		return this.processBasesView(file, options) ?? this.processMarkdownView(file, options);
 	}
 
 	async injectCustomView(container: HTMLElement, file: TFile, template: string) {
