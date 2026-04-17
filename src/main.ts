@@ -1,4 +1,4 @@
-import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf, Command } from "obsidian";
+import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf, Command, BasesView } from "obsidian";
 import { ObsidianRuleEngineSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
@@ -220,10 +220,11 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		};
 	};
 
-	async processActiveView(file: TFile | null) {
+	async processMarkdownView(file: TFile | null) {
 		if (!file) return;
 
 		const leaf = this.app.workspace.getLeaf(false);
+
 		if (!(leaf.view instanceof MarkdownView)) return;
 
 		const view = leaf.view;
@@ -261,6 +262,29 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 
 		await this.injectCustomView(view.contentEl, file, matchedTemplate);
+	}
+
+	async processBasesView(file: TFile | null) {
+		if (!file) return;
+
+		const leaf = this.app.workspace.getLeaf(false);
+		if (this.settings.allowBaseResultExecution && (leaf.view instanceof BasesView)) {
+			console.debug("base found, processing not yet implemented");
+			return undefined;
+		}
+		return undefined;
+	}
+
+	async processActiveView(file: TFile | null) {
+		if (!file) return;
+
+		const leaf = this.app.workspace.getLeaf(false);
+		if (this.settings.allowBaseResultExecution && (leaf.view instanceof BasesView)) {
+			console.debug("base processing not yet implemented");
+			return this.processBasesView(file);
+		}
+
+		return this.processBasesView(file) ?? this.processMarkdownView(file);
 	}
 
 	async injectCustomView(container: HTMLElement, file: TFile, template: string) {

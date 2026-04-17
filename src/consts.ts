@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: CustomRulesSettings = {
     enabled: true,
     workInLivePreview: true,
     workInCanvas: false,
+    allowBaseResultExecution: false,
     rules: [
         {
             id: 'default-1',

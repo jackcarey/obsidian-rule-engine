@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
-import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn } from "./types";
+import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	plugin: ObsidianRuleEnginePlugin;
@@ -53,9 +53,23 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 						}
 					}));
 		};
+
+		const addBaseSetting = (setting: Setting) => {
+			setting
+				.setName("Execute commands across .base files (experimental)")
+				.setDesc("Allow rules to execute across the result of .base files. This feature is a work in progress.")
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.allowBaseResultExecution)
+					.onChange(async (value) => {
+						this.plugin.settings.allowBaseResultExecution = value;
+						await this.plugin.saveSettings();
+					}));
+		};
+
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
 		settingsGroup.addSetting(addReadingModeSetting);
 		settingsGroup.addSetting(addCanvasSetting);
+		settingsGroup.addSetting(addBaseSetting);
 
 
 		new Setting(containerEl)
@@ -284,24 +298,26 @@ class EditRuleModal extends Modal {
 		);
 		builder.render(rulesContainer);
 
-		// new Setting(contentEl)
-		// 	.setName("Base file handling")
-		// 	.setDesc("How should rules run against Base files (.base)?")
-		// 	.addDropdown(dd => {
-		// 		const options: Record<BaseFileHandling, string> = {
-		// 			'file': 'Regular file',
-		// 			'results': 'On each result'
-		// 		};
-		// 		dd.addOptions(options);
-		// 		dd.setValue(Object.keys(options)[0]!);
-		// 		dd.disabled = true;
-		// 		dd.onChange(val => {
-		// 			const allowed = ["file", "results"];
-		// 			if (allowed.includes(val)) {
-		// 				this.rule.baseFileHandling = val as BaseFileHandling;
-		// 			}
-		// 		});
-		// 	});
+		if (this.plugin.settings.allowBaseResultExecution) {
+			new Setting(contentEl)
+				.setName("Base file handling")
+				.setDesc("How should this rule execute commands against .base files?")
+				.addDropdown(dd => {
+					const options: Record<BaseFileHandling, string> = {
+						'file': 'Regular file',
+						'results': 'On each result'
+					};
+					dd.addOptions(options);
+					dd.setValue(Object.keys(options)[0]!);
+					dd.disabled = this.plugin.settings.allowBaseResultExecution;
+					dd.onChange(val => {
+						const allowed = ["file", "results"];
+						if (allowed.includes(val)) {
+							this.rule.baseFileHandling = val as BaseFileHandling;
+						}
+					});
+				});
+		}
 
 		new Setting(contentEl)
 			.setHeading()
@@ -324,7 +340,6 @@ class EditRuleModal extends Modal {
 
 		const commandsContainer = contentEl.createEl("ol", { cls: "ore-parent-commands-container" });
 		commandsContainer.role = "list";
-		//todo: make this use drag and drop
 		const renderCommandIdList = () => {
 			commandsContainer.empty();
 			this.rule.commandIds.forEach((id, idx) => {
@@ -367,8 +382,6 @@ class EditRuleModal extends Modal {
 		});
 
 		const buttonContainer = contentEl.createDiv('modal-button-container');
-
-
 
 		new ButtonComponent(buttonContainer)
 			.setButtonText("Save")

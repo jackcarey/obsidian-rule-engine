@@ -50,6 +50,7 @@ export interface CustomRulesSettings {
 	enabled: boolean;
 	workInLivePreview: boolean;
 	workInCanvas: boolean;
+	allowBaseResultExecution: boolean;
 	rules: RuleConfig[];
 	commands: CommandConfig[];
 }
