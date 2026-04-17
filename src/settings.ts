@@ -1,7 +1,6 @@
-/* eslint-disable obsidianmd/ui/sentence-case */
 import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
-import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
+import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	plugin: ObsidianRuleEnginePlugin;
@@ -41,7 +40,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const addCanvasSetting = (setting: Setting) => {
 			setting
 				.setName("Template in canvas (experimental)")
-				.setDesc("Enable to apply templates to Markdown file nodes in Canvas files (excludes commands).")
+				.setDesc("Apply templates to Markdown file nodes in canvas files")
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.workInCanvas)
 					.onChange(async (value) => {
@@ -208,7 +207,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rules')
 				.addToggle(toggle => toggle
 					.setValue(currentConfig.enabled)
-					.onChange(async (value) => {
+					.onChange((value) => {
 						this.plugin.updateCommandConfig(id, { enabled: value });
 					}))
 		});
