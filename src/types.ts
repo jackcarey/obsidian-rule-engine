@@ -94,3 +94,9 @@ export type CommandWithSetup = Command & {
 	// callback to add the command to the SettingsGroup for this command. The setting will already have a name, description, icon, and enabled toggle.
 	settingCallback?: CommandSettingCallback
 };
+
+export type ProcessActiveViewOptions = {
+	skipCommandExecution?: boolean;
+	// from rule index
+	forceTemplateIndex?: number;
+}

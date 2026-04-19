@@ -3,7 +3,7 @@ import { ObsidianRuleEngineSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
 import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
-import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings } from "./types";
+import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessActiveViewOptions } from "./types";
 import { list as commandList } from 'commands';
 /**
  * Type guard to check if a view is a canvas view
@@ -224,9 +224,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		};
 	};
 
-	async processMarkdownView(file: TFile | null, options?: {
-		skipCommandExecution?: boolean;
-	}) {
+	async processMarkdownView(file: TFile | null, options?: ProcessActiveViewOptions) {
 		if (!file) return;
 
 		const leaf = this.app.workspace.getLeaf(false);
@@ -272,9 +270,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		await this.injectCustomView(view.contentEl, file, matchedTemplate);
 	}
 
-	async processBasesView(file: TFile | null, options?: {
-		skipCommandExecution?: boolean;
-	}) {
+	async processBasesView(file: TFile | null, options?: ProcessActiveViewOptions) {
 		if (!file) return;
 
 		const leaf = this.app.workspace.getLeaf(false);
@@ -289,6 +285,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 	async processActiveView(file: TFile | null, options?: {
 		skipCommandExecution?: boolean;
+		forceTemplate?: number // from rule index
 	}) {
 		console.debug(`processActiveView`, { file, options });
 		if (!file) return;
