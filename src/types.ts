@@ -51,6 +51,7 @@ export interface CustomRulesSettings {
 	workInLivePreview: boolean;
 	workInCanvas: boolean;
 	allowBaseResultExecution: boolean;
+	useDnd: boolean;
 	rules: RuleConfig[];
 	commands: CommandConfig[];
 }

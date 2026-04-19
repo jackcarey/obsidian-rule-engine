@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS: CustomRulesSettings = {
     workInLivePreview: true,
     workInCanvas: false,
     allowBaseResultExecution: false,
+    useDnd: true,
     rules: [
         {
             id: 'default-1',

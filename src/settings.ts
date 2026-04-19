@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Platform } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Platform, BaseComponent } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
@@ -66,10 +66,24 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					}));
 		};
 
+		const useDnD = (setting: Setting) => {
+			setting
+				.setName("Drag and and drop")
+				.setDesc("Use drag and drop in lists when your device supports it.")
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.useDnd)
+					.onChange(async (value) => {
+						this.plugin.settings.useDnd = value;
+						await this.plugin.saveSettings();
+					}));
+		}
+
+
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
 		settingsGroup.addSetting(addReadingModeSetting);
 		settingsGroup.addSetting(addCanvasSetting);
 		settingsGroup.addSetting(addBaseSetting);
+		settingsGroup.addSetting(useDnD);
 
 
 		new Setting(containerEl)
@@ -124,8 +138,8 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		listItem.setAttribute("data-rule-id", rule.id);
 		listItem.setAttribute("data-rule-index", index.toString());
 		listItem.setAttribute("data-rule-enabled", String(rule.enabled));
-		// only show drag controls on desktop and when supported
-		listItem.draggable = 'ondragstart' in listItem && Platform.isDesktop;
+		// only show drag controls on desktop and when supported, it does not work well on mobile
+		listItem.draggable = this.plugin.settings.useDnd && Platform.isDesktop && 'ondragstart' in listItem;
 
 		listItem.createSpan({ cls: "ore-rule-name", text: rule.name });
 
@@ -394,12 +408,13 @@ class EditRuleModal extends Modal {
 							};
 							this.openSuggestModal(items, selectedValue, onSelect, btn.buttonEl);
 						});
-				}).addExtraButton(btn => {
-					btn.setIcon("trash-2").onClick(() => {
-						this.rule.commandIds.splice(idx, 1);
-						renderCommandIdList();
+				})
+					.addExtraButton(btn => {
+						btn.setIcon("trash-2").onClick(() => {
+							this.rule.commandIds.splice(idx, 1);
+							renderCommandIdList();
+						});
 					});
-				});
 			});
 		};
 		renderCommandIdList();
