@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Platform, BaseComponent } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Platform, BaseComponent, TextAreaComponent } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
@@ -66,7 +66,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					}));
 		};
 
-		const useDnD = (setting: Setting) => {
+		const addUseDnd = (setting: Setting) => {
 			setting
 				.setName("Drag and and drop")
 				.setDesc("Use drag and drop in lists when your device supports it.")
@@ -75,6 +75,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.useDnd = value;
 						await this.plugin.saveSettings();
+						this.display();
 					}));
 		}
 
@@ -83,7 +84,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		settingsGroup.addSetting(addReadingModeSetting);
 		settingsGroup.addSetting(addCanvasSetting);
 		settingsGroup.addSetting(addBaseSetting);
-		settingsGroup.addSetting(useDnD);
+		settingsGroup.addSetting(addUseDnd);
 
 
 		new Setting(containerEl)
@@ -420,18 +421,13 @@ class EditRuleModal extends Modal {
 		renderCommandIdList();
 
 		new Setting(contentEl).setHeading().setName("HTML template").setDesc("Leave blank for no template. Use {{mustache}} syntax for variables.");
-		const templateContainer = contentEl.createDiv({ cls: "ore-parent-template-container" });
-		const textarea = templateContainer.createEl("textarea", {
-			cls: "ore-textarea",
-			text: this.rule.template
-		});
-		textarea.addEventListener("input", (e: Event) => {
-			const target = e.target as HTMLTextAreaElement;
-			this.rule.template = target.value;
-		});
+		const taEl = new TextAreaComponent(contentEl)
+			.setPlaceholder(`<h1>{{file.title}}</h1><main>{{file.content}}</main>`)
+			.setValue(this.rule.template)
+			.onChange(val => this.rule.template = val);
+		taEl.inputEl.classList.add(`ore-textarea`);
 
 		const buttonContainer = contentEl.createDiv('modal-button-container');
-
 		new ButtonComponent(buttonContainer)
 			.setButtonText("Save")
 			.setCta()
