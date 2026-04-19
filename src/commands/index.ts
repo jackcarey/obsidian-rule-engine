@@ -1,6 +1,7 @@
 import ObsidianRuleEnginePlugin from "main";
 import { CommandWithSetup } from "types";
 import { forceTemplate } from "./forceTemplate";
+import { MarkdownView } from "obsidian";
 
 export type GetCommandFn = (plugin?: ObsidianRuleEnginePlugin) => CommandWithSetup;
 
@@ -22,5 +23,27 @@ const processNow: GetCommandFn = (plugin) => ({
     },
 });
 
-export const list: GetCommandFn[] = [processNow, forceTemplate] as const;
+const resetTemplate: GetCommandFn = (plugin) => ({
+    id: "reset-view",
+    name: "Reset view",
+    description: "Reset the view",
+    checkCallback: (checking: boolean) => {
+        if (checking) {
+            return plugin && plugin.settings.enabled;
+        }
+
+        const file = plugin?.app.workspace.getActiveFile();
+
+        if (file && plugin) {
+            const leaf = plugin.app.workspace.getLeaf(false);
+            if (leaf) {
+                if (!(leaf.view instanceof MarkdownView)) return;
+                plugin.restoreDefaultView(leaf.view);
+            }
+        }
+        return true;
+    }
+});
+
+export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate] as const;
 
