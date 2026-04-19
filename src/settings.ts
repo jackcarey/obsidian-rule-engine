@@ -82,7 +82,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
 		settingsGroup.addSetting(addReadingModeSetting);
-		// settingsGroup.addSetting(addCanvasSetting);
+		settingsGroup.addSetting(addCanvasSetting);
 		settingsGroup.addSetting(addBaseSetting);
 		if (!Platform.isMobile) {
 			settingsGroup.addSetting(addUseDnd);
@@ -275,7 +275,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			setting
 				.setName(name)
 				.setHeading()
-				.setDesc(`Enable command${description ? `: ${description}` : ''}`.trim())
+				.setDesc(description ?? '')
 				.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rules')
 				.addToggle(toggle => toggle
 					.setValue(currentConfig.enabled)

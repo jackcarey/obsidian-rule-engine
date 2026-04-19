@@ -87,7 +87,7 @@ export interface SuggestItem {
 }
 
 export type CommandSaveFn = (updatedConfig: Partial<Omit<CommandConfig, 'id'>>) => void;
-export type CommandSettingCallback = (setting: SettingGroup, currentConfig: CommandConfig, saveFn: CommandSaveFn) => void
+export type CommandSettingCallback = (settingGroup: SettingGroup, currentConfig: CommandConfig, saveFn: CommandSaveFn) => void
 
 export type CommandWithSetup = Command & {
 	// human readable description of what the command does

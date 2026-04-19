@@ -1,7 +1,7 @@
 import ObsidianRuleEnginePlugin from "main";
 import { CommandWithSetup } from "types";
 import { forceTemplate } from "./forceTemplate";
-import { MarkdownView } from "obsidian";
+import { MarkdownView, Notice } from "obsidian";
 
 export type GetCommandFn = (plugin?: ObsidianRuleEnginePlugin) => CommandWithSetup;
 
@@ -45,5 +45,14 @@ const resetTemplate: GetCommandFn = (plugin) => ({
     }
 });
 
-export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate] as const;
+const notifyTime: GetCommandFn = () => ({
+    id: "notify-time",
+    name: "Notify time",
+    description: "Create a notification of the current time",
+    callback: () => {
+        new Notice(new Date().toISOString(), 3000);
+    }
+});
+
+export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate, notifyTime] as const;
 
