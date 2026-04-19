@@ -147,12 +147,13 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	}
 
 	renderRuleListItem(container: HTMLElement, rule: RuleConfig, index: number) {
+		const ruleCount = this.plugin.settings.rules.length;
 		const listItem = container.createDiv({ cls: "ore-rule-list-item" });
 		listItem.setAttribute("data-rule-id", rule.id);
 		listItem.setAttribute("data-rule-index", index.toString());
 		listItem.setAttribute("data-rule-enabled", String(rule.enabled));
 		// only show drag controls on desktop and when supported, it does not work well on mobile
-		listItem.draggable = this.plugin.settings.useDnd && Platform.isDesktop && 'ondragstart' in listItem;
+		listItem.draggable = this.plugin.settings.useDnd && Platform.isDesktop && 'ondragstart' in listItem && ruleCount > 1;
 
 		const itemTitle = [
 			rule.name,
@@ -197,84 +198,85 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			this.display();
 		}
 
-		if (listItem.draggable) {
-			const dragHandle = listItem.createDiv({ cls: "ore-rule-drag-handle" });
-			setIcon(dragHandle, "grip-vertical");
+		if (ruleCount > 1) {
+			if (listItem.draggable) {
+				const dragHandle = listItem.createDiv({ cls: "ore-rule-drag-handle" });
+				setIcon(dragHandle, "grip-vertical");
 
-			listItem.addEventListener("dragstart", (e) => {
-				if (!e.dataTransfer) return;
-				e.dataTransfer.effectAllowed = "move";
-				this.draggedElement = listItem;
-				this.draggedIndex = index;
-				listItem.addClass("ore-dragging");
-				container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
-					el.removeClass("ore-drag-over");
+				listItem.addEventListener("dragstart", (e) => {
+					if (!e.dataTransfer) return;
+					e.dataTransfer.effectAllowed = "move";
+					this.draggedElement = listItem;
+					this.draggedIndex = index;
+					listItem.addClass("ore-dragging");
+					container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
+						el.removeClass("ore-drag-over");
+					});
 				});
-			});
 
-			listItem.addEventListener("dragend", () => {
-				listItem.removeClass("ore-dragging");
-				container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
-					el.removeClass("ore-drag-over");
+				listItem.addEventListener("dragend", () => {
+					listItem.removeClass("ore-dragging");
+					container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
+						el.removeClass("ore-drag-over");
+					});
+					this.draggedElement = null;
+					this.draggedIndex = null;
 				});
-				this.draggedElement = null;
-				this.draggedIndex = null;
-			});
 
-			listItem.addEventListener("dragover", (e) => {
-				e.preventDefault();
-				if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
-				e.dataTransfer.dropEffect = "move";
+				listItem.addEventListener("dragover", (e) => {
+					e.preventDefault();
+					if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
+					e.dataTransfer.dropEffect = "move";
 
-				if (listItem === this.draggedElement) return;
+					if (listItem === this.draggedElement) return;
 
-				listItem.addClass("ore-drag-over");
-			});
+					listItem.addClass("ore-drag-over");
+				});
 
-			listItem.addEventListener("dragleave", () => {
-				listItem.removeClass("ore-drag-over");
-			});
-
-			listItem.addEventListener("drop", (e) => {
-				e.preventDefault();
-				if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
-
-				if (listItem === this.draggedElement) {
+				listItem.addEventListener("dragleave", () => {
 					listItem.removeClass("ore-drag-over");
-					return;
-				}
-
-				const draggedRule = this.plugin.settings.rules[this.draggedIndex];
-				const allItems = Array.from(container.querySelectorAll(".ore-rule-list-item"));
-				const targetIndex = allItems.indexOf(listItem);
-
-				if (targetIndex === -1) return;
-
-				this.plugin.settings.rules.splice(this.draggedIndex, 1);
-				this.plugin.settings.rules.splice(targetIndex, 0, draggedRule!);
-
-				void this.plugin.saveSettings();
-				this.display();
-			});
-		} else {
-			listItem.createEl('input', { cls: "ore-rule-move-input" }, (inputEl) => {
-				inputEl.dataset.idx = String(index);
-				inputEl.type = "number";
-				inputEl.min = String(1);
-				inputEl.max = String(this.plugin.settings.rules.length);
-				inputEl.style = "width: min-content;"
-				inputEl.value = String(index + 1);
-				inputEl.addEventListener("change", _evt => {
-					console.debug(_evt, inputEl);
-					if (inputEl.value) {
-						const oldIdx = Number(inputEl.dataset.idx);
-						console.debug({ inputEl, oldIdx, newIdx: Number(inputEl.value) });
-						moveItem(oldIdx, Number(inputEl.value) - 1);
-						inputEl.dataset.idx = inputEl.value;
-					}
 				});
-			});
 
+				listItem.addEventListener("drop", (e) => {
+					e.preventDefault();
+					if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
+
+					if (listItem === this.draggedElement) {
+						listItem.removeClass("ore-drag-over");
+						return;
+					}
+
+					const draggedRule = this.plugin.settings.rules[this.draggedIndex];
+					const allItems = Array.from(container.querySelectorAll(".ore-rule-list-item"));
+					const targetIndex = allItems.indexOf(listItem);
+
+					if (targetIndex === -1) return;
+
+					this.plugin.settings.rules.splice(this.draggedIndex, 1);
+					this.plugin.settings.rules.splice(targetIndex, 0, draggedRule!);
+
+					void this.plugin.saveSettings();
+					this.display();
+				});
+			} else {
+				listItem.createEl('input', { cls: "ore-rule-move-input" }, (inputEl) => {
+					inputEl.dataset.idx = String(index);
+					inputEl.type = "number";
+					inputEl.min = String(1);
+					inputEl.max = String(this.plugin.settings.rules.length);
+					inputEl.style = "width: min-content;"
+					inputEl.value = String(index + 1);
+					inputEl.addEventListener("change", _evt => {
+						console.debug(_evt, inputEl);
+						if (inputEl.value) {
+							const oldIdx = Number(inputEl.dataset.idx);
+							console.debug({ inputEl, oldIdx, newIdx: Number(inputEl.value) });
+							moveItem(oldIdx, Number(inputEl.value) - 1);
+							inputEl.dataset.idx = inputEl.value;
+						}
+					});
+				});
+			}
 		}
 	}
 

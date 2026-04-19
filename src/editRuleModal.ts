@@ -763,7 +763,7 @@ export class EditRuleModal extends Modal {
                         'results': 'On each result'
                     };
                     dd.addOptions(options);
-                    dd.setValue(Object.keys(options)[0]!);
+                    dd.setValue(this.rule.baseFileHandling);
                     dd.disabled = this.plugin.settings.allowBaseResultExecution;
                     dd.onChange(val => {
                         const allowed = ["file", "results"];
