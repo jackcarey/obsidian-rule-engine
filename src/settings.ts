@@ -143,7 +143,13 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		// only show drag controls on desktop and when supported, it does not work well on mobile
 		listItem.draggable = this.plugin.settings.useDnd && Platform.isDesktop && 'ondragstart' in listItem;
 
-		listItem.createSpan({ cls: "ore-rule-name", text: rule.name });
+		const itemTitle = [
+			rule.name,
+			`☰ ${rule.commandIds.length}`,
+			rule.template?.length ? `🗎` : '🗋'
+		].filter(str => Boolean(str?.length))
+			.join(" "); // em space
+		listItem.createSpan({ cls: "ore-rule-name", text: itemTitle });
 
 		const actionsContainer = listItem.createDiv({ cls: "ore-rule-actions" });
 
