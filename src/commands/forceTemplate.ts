@@ -1,6 +1,6 @@
 import { GetCommandFn } from "commands";
 import ObsidianRuleEnginePlugin from "main";
-import { FuzzyMatch, FuzzySuggestModal, MarkdownView, renderResults, View, WorkspaceLeaf } from "obsidian";
+import { FuzzyMatch, FuzzySuggestModal, MarkdownView, renderResults } from "obsidian";
 import { RuleConfig } from "types";
 
 class ForceTemplateModal extends FuzzySuggestModal<RuleConfig> {
@@ -86,7 +86,7 @@ class ForceTemplateModal extends FuzzySuggestModal<RuleConfig> {
 export const forceTemplate: GetCommandFn = (plugin) => ({
     id: "force-template",
     name: "Force template",
-    description: "Apply a template to the current file regardless of rule automations",
+    description: "Apply a template to the current file regardless of rule automations.",
     checkCallback: (checking) => {
         if (checking) {
             //only enable thi plugin if there are templates that could be applied to a markdown file
