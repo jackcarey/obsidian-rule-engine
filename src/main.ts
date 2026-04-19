@@ -281,7 +281,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (this.settings.allowBaseResultExecution && (leaf.view instanceof BasesView)) {
 			console.debug("base found, processing not yet implemented");
 			if (!options?.skipCommandExecution) {
-				return undefined;
+				return await Promise.resolve(undefined);
 			}
 		}
 		return undefined;
@@ -290,10 +290,11 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	async processActiveView(file: TFile | null, options?: {
 		skipCommandExecution?: boolean;
 	}) {
-		console.debug(`processActiveView`, file);
+		console.debug(`processActiveView`, { file, options });
 		if (!file) return;
 
-		return this.processBasesView(file, options) ?? this.processMarkdownView(file, options);
+		await this.processMarkdownView(file, options);
+		await this.processBasesView(file, options);
 	}
 
 	async injectCustomView(container: HTMLElement, file: TFile, template: string) {
