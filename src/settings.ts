@@ -262,11 +262,12 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	renderCommandConfigListItem(container: HTMLElement, cmdConfig: CommandWithSetup) {
 		const { id, name, description, settingCallback } = cmdConfig;
 		const currentConfig = this.plugin.getCommandConfig(id);
-		const cmdGroup = new SettingGroup(container).setHeading(name);
+		const cmdGroup = new SettingGroup(container)
 		cmdGroup.addSetting(setting => {
 			setting
-				.setName('Enabled')
-				.setDesc(description ?? '')
+				.setName(name)
+				.setHeading()
+				.setDesc(`Enable command ${description ? `:${description}` : ''}`.trim())
 				.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rules')
 				.addToggle(toggle => toggle
 					.setValue(currentConfig.enabled)
@@ -420,7 +421,10 @@ class EditRuleModal extends Modal {
 		};
 		renderCommandIdList();
 
-		new Setting(contentEl).setHeading().setName("HTML template").setDesc("Leave blank for no template. Use {{mustache}} syntax for variables.");
+		new Setting(contentEl)
+			.setHeading()
+			.setName("HTML template")
+			.setDesc("Leave blank for no template. Use {{mustache}} syntax for variables.");
 		const taEl = new TextAreaComponent(contentEl)
 			.setPlaceholder(`<h1>{{file.title}}</h1><main>{{file.content}}</main>`)
 			.setValue(this.rule.template)
