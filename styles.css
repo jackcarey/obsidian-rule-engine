@@ -743,7 +743,7 @@ font-size: var(--metadata-input-font-size);
 }
 
 .ore-rule-move-input{
-    width: 2em;
+    width: 2ch;
 }
 
 .ore-rule-move-input::-webkit-inner-spin-button , 
