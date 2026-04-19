@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingGroup, ButtonComponent, setIcon, Modal, FuzzySuggestModal, FuzzyMatch, Platform } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup, Filter, FilterOperator, FilterConjunction, PropertyType, PropertyDef, SuggestItem, CommandWithSetup, CommandSaveFn, BaseFileHandling } from "./types";
 import { DEFAULT_RULES, TYPE_ICONS, OPERATORS } from "./consts";
@@ -124,10 +124,8 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		listItem.setAttribute("data-rule-id", rule.id);
 		listItem.setAttribute("data-rule-index", index.toString());
 		listItem.setAttribute("data-rule-enabled", String(rule.enabled));
-		listItem.draggable = true;
-
-		const dragHandle = listItem.createDiv({ cls: "ore-rule-drag-handle" });
-		setIcon(dragHandle, "grip-vertical");
+		// only show drag controls on desktop and when supported
+		listItem.draggable = 'ondragstart' in listItem && Platform.isDesktop;
 
 		listItem.createSpan({ cls: "ore-rule-name", text: rule.name });
 
@@ -153,61 +151,97 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			this.display();
 		};
 
-		listItem.addEventListener("dragstart", (e) => {
-			if (!e.dataTransfer) return;
-			e.dataTransfer.effectAllowed = "move";
-			this.draggedElement = listItem;
-			this.draggedIndex = index;
-			listItem.addClass("ore-dragging");
-			container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
-				el.removeClass("ore-drag-over");
-			});
-		});
+		const moveItem = (fromIndex: number, toIndex: number) => {
+			console.debug(`moveItem`, fromIndex, toIndex);
+			if (fromIndex < 0) return;
+			toIndex = Math.max(0, Math.min(toIndex, this.plugin.settings.rules.length - 1));
 
-		listItem.addEventListener("dragend", () => {
-			listItem.removeClass("ore-dragging");
-			container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
-				el.removeClass("ore-drag-over");
-			});
-			this.draggedElement = null;
-			this.draggedIndex = null;
-		});
-
-		listItem.addEventListener("dragover", (e) => {
-			e.preventDefault();
-			if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
-			e.dataTransfer.dropEffect = "move";
-
-			if (listItem === this.draggedElement) return;
-
-			listItem.addClass("ore-drag-over");
-		});
-
-		listItem.addEventListener("dragleave", () => {
-			listItem.removeClass("ore-drag-over");
-		});
-
-		listItem.addEventListener("drop", (e) => {
-			e.preventDefault();
-			if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
-
-			if (listItem === this.draggedElement) {
-				listItem.removeClass("ore-drag-over");
-				return;
-			}
-
-			const draggedRule = this.plugin.settings.rules[this.draggedIndex];
-			const allItems = Array.from(container.querySelectorAll(".ore-rule-list-item"));
-			const targetIndex = allItems.indexOf(listItem);
-
-			if (targetIndex === -1) return;
-
-			this.plugin.settings.rules.splice(this.draggedIndex, 1);
-			this.plugin.settings.rules.splice(targetIndex, 0, draggedRule!);
-
+			const rule = this.plugin.settings.rules.splice(fromIndex, 1)?.[0];
+			console.debug(`rule`, rule);
+			this.plugin.settings.rules.splice(toIndex, 0, rule!);
 			void this.plugin.saveSettings();
 			this.display();
-		});
+		}
+
+		if (listItem.draggable) {
+			const dragHandle = listItem.createDiv({ cls: "ore-rule-drag-handle" });
+			setIcon(dragHandle, "grip-vertical");
+
+			listItem.addEventListener("dragstart", (e) => {
+				if (!e.dataTransfer) return;
+				e.dataTransfer.effectAllowed = "move";
+				this.draggedElement = listItem;
+				this.draggedIndex = index;
+				listItem.addClass("ore-dragging");
+				container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
+					el.removeClass("ore-drag-over");
+				});
+			});
+
+			listItem.addEventListener("dragend", () => {
+				listItem.removeClass("ore-dragging");
+				container.querySelectorAll(".ore-rule-list-item").forEach((el) => {
+					el.removeClass("ore-drag-over");
+				});
+				this.draggedElement = null;
+				this.draggedIndex = null;
+			});
+
+			listItem.addEventListener("dragover", (e) => {
+				e.preventDefault();
+				if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
+				e.dataTransfer.dropEffect = "move";
+
+				if (listItem === this.draggedElement) return;
+
+				listItem.addClass("ore-drag-over");
+			});
+
+			listItem.addEventListener("dragleave", () => {
+				listItem.removeClass("ore-drag-over");
+			});
+
+			listItem.addEventListener("drop", (e) => {
+				e.preventDefault();
+				if (!e.dataTransfer || !this.draggedElement || this.draggedIndex === null) return;
+
+				if (listItem === this.draggedElement) {
+					listItem.removeClass("ore-drag-over");
+					return;
+				}
+
+				const draggedRule = this.plugin.settings.rules[this.draggedIndex];
+				const allItems = Array.from(container.querySelectorAll(".ore-rule-list-item"));
+				const targetIndex = allItems.indexOf(listItem);
+
+				if (targetIndex === -1) return;
+
+				this.plugin.settings.rules.splice(this.draggedIndex, 1);
+				this.plugin.settings.rules.splice(targetIndex, 0, draggedRule!);
+
+				void this.plugin.saveSettings();
+				this.display();
+			});
+		} else {
+			listItem.createEl('input', { cls: "ore-rule-move-input" }, (inputEl) => {
+				inputEl.dataset.idx = String(index);
+				inputEl.type = "number";
+				inputEl.min = String(1);
+				inputEl.max = String(this.plugin.settings.rules.length);
+				inputEl.style = "width: min-content;"
+				inputEl.value = String(index) + 1;
+				inputEl.addEventListener("change", _evt => {
+					console.debug(_evt, inputEl);
+					if (inputEl.value) {
+						const oldIdx = Number(inputEl.dataset.idx);
+						console.debug({ inputEl, oldIdx, newIdx: Number(inputEl.value) });
+						moveItem(oldIdx, Number(inputEl.value) - 1);
+						inputEl.dataset.idx = inputEl.value;
+					}
+				});
+			});
+
+		}
 	}
 
 	renderCommandConfigListItem(container: HTMLElement, cmdConfig: CommandWithSetup) {

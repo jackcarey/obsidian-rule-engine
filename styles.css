@@ -742,6 +742,14 @@ font-size: var(--metadata-input-font-size);
     cursor: grabbing;
 }
 
+.ore-rule-move-input{
+    width: 2em;
+}
+
+.ore-rule-move-input::-webkit-inner-spin-button , 
+.ore-rule-move-input::-webkit-outer-spin-button {
+    opacity: 1;
+}
 .ore-rule-name {
     flex: 1;
     font-weight: var(--font-medium);
