@@ -82,7 +82,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
 		settingsGroup.addSetting(addReadingModeSetting);
-		settingsGroup.addSetting(addCanvasSetting);
+		// settingsGroup.addSetting(addCanvasSetting);
 		settingsGroup.addSetting(addBaseSetting);
 		if (!Platform.isMobile) {
 			settingsGroup.addSetting(addUseDnd);
