@@ -20,6 +20,15 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		const addGlobalEnableSetting = (setting: Setting) => {
+			setting.setName("Enabled")
+				.setDesc("Enable rule automations")
+				.addToggle(toggle => toggle.setValue(this.plugin.settings.enabled).onChange(async (value) => {
+					this.plugin.settings.enabled = value;
+					await this.plugin.saveSettings();
+				}))
+		}
+
 		const addReadingModeSetting = (setting: Setting) => {
 			setting
 				.setName("Template in live preview")
@@ -81,6 +90,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
+		settingsGroup.addSetting(addGlobalEnableSetting);
 		settingsGroup.addSetting(addReadingModeSetting);
 		settingsGroup.addSetting(addCanvasSetting);
 		settingsGroup.addSetting(addBaseSetting);
