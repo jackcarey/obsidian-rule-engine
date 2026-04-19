@@ -229,7 +229,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				inputEl.min = String(1);
 				inputEl.max = String(this.plugin.settings.rules.length);
 				inputEl.style = "width: min-content;"
-				inputEl.value = String(index) + 1;
+				inputEl.value = String(index + 1);
 				inputEl.addEventListener("change", _evt => {
 					console.debug(_evt, inputEl);
 					if (inputEl.value) {
