@@ -933,3 +933,8 @@ font-size: var(--metadata-input-font-size);
     width: 50%;
     width: max(50%, fit-content);
 }
+
+/* if there is only one setting inside a group then the default margin for following items can be removed */
+.ore-rules-list-container .setting-group .setting-items .setting-item:only-child {
+    margin-bottom: inherit;
+}
