@@ -24,9 +24,9 @@ const processNow: GetCommandFn = (plugin) => ({
 });
 
 const resetTemplate: GetCommandFn = (plugin) => ({
-    id: "reset-view",
-    name: "Reset view",
-    description: "Reset the view",
+    id: "restore-view",
+    name: "Restore view",
+    description: "Reset the view to remove a template",
     checkCallback: (checking: boolean) => {
         if (checking) {
             return plugin && plugin.settings.enabled;

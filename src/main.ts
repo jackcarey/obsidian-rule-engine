@@ -210,6 +210,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		for (const ruleConfig of this.settings.rules) {
 			const isMatch = ruleConfig.enabled && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
 			if (isMatch) {
+				//only match the first template
 				if (!matchedTemplate.length) {
 					matchedTemplate = ruleConfig.template;
 				}
