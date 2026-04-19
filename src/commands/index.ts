@@ -1,5 +1,6 @@
 import ObsidianRuleEnginePlugin from "main";
 import { CommandWithSetup } from "types";
+import { forceTemplate } from "./forceTemplate";
 
 export type GetCommandFn = (plugin?: ObsidianRuleEnginePlugin) => CommandWithSetup;
 
@@ -21,5 +22,5 @@ const processNow: GetCommandFn = (plugin) => ({
     },
 });
 
-export const list: GetCommandFn[] = [processNow] as const;
+export const list: GetCommandFn[] = [processNow, forceTemplate] as const;
 
