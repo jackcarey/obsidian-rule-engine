@@ -201,7 +201,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		this.restoreAllCanvasNodes();
 	}
 
-	extractMatchingRuleParameters = (file: TFile) => {
+	extractMatchingRuleParameters = (file: TFile, options?: ProcessActiveViewOptions) => {
 		const cache = this.app.metadataCache.getFileCache(file);
 		let matchedTemplate = "";
 		let commandIds: string[] = [];
@@ -213,12 +213,17 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				if (!matchedTemplate.length) {
 					matchedTemplate = ruleConfig.template;
 				}
-				commandIds = [...commandIds, ...ruleConfig.commandIds];
+				if (!options?.skipCommandExecution) {
+					commandIds = [...commandIds, ...ruleConfig.commandIds];
+				}
 				baseFileHandling = ruleConfig.baseFileHandling;
 			}
 		}
+
+		const forcedTemplate = options?.forceTemplateIndex === undefined ? undefined : this.settings.rules[options?.forceTemplateIndex]?.template?.trim();
+
 		return {
-			matchedTemplate,
+			matchedTemplate: forcedTemplate ?? matchedTemplate,
 			commandIds,
 			baseFileHandling
 		};
@@ -238,7 +243,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			return;
 		}
 
-		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file);
+		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file, options);
 
 		if (!options?.skipCommandExecution) {
 			this.executeCommands(baseFileHandling, commandIds);
@@ -283,11 +288,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return undefined;
 	}
 
-	async processActiveView(file: TFile | null, options?: {
-		skipCommandExecution?: boolean;
-		forceTemplate?: number // from rule index
-	}) {
-		console.debug(`processActiveView`, { file, options });
+	async processActiveView(file: TFile | null, options?: ProcessActiveViewOptions) {
 		if (!file) return;
 
 		await this.processMarkdownView(file, options);
