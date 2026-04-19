@@ -267,7 +267,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			setting
 				.setName(name)
 				.setHeading()
-				.setDesc(`Enable command ${description ? `:${description}` : ''}`.trim())
+				.setDesc(`Enable command${description ? `: ${description}` : ''}`.trim())
 				.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rules')
 				.addToggle(toggle => toggle
 					.setValue(currentConfig.enabled)
