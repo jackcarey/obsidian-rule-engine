@@ -69,10 +69,9 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const addUseDnd = (setting: Setting) => {
 			setting
 				.setName("Drag and drop")
-				.setDisabled(Platform.isMobile)
-				.setDesc(Platform.isMobile ? "Drag and drop is disabled on mobile." : "Use drag and drop in lists when your device supports it.")
+				.setDesc("Use drag and drop in lists when your device supports it.")
 				.addToggle(toggle => toggle
-					.setValue(Platform.isMobile ? false : this.plugin.settings.useDnd)
+					.setValue(this.plugin.settings.useDnd)
 					.onChange(async (value) => {
 						this.plugin.settings.useDnd = value;
 						await this.plugin.saveSettings();
@@ -85,8 +84,9 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		settingsGroup.addSetting(addReadingModeSetting);
 		settingsGroup.addSetting(addCanvasSetting);
 		settingsGroup.addSetting(addBaseSetting);
-		settingsGroup.addSetting(addUseDnd);
-
+		if (!Platform.isMobile) {
+			settingsGroup.addSetting(addUseDnd);
+		}
 
 		new Setting(containerEl)
 			.setHeading()
