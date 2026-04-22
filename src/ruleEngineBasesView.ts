@@ -100,13 +100,14 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         const propertySeparator: string = ' | ';
 
         containerEl.createEl('li', 'bases-list-entry', (el) => {
-            if (matchedTemplate?.length) {
-                el.style = `list-style: none;display:flex;`;
-                el.createDiv({ cls: 'custom-view-container' }, (divEl) => {
-                    this.plugin.injectCustomView(divEl, entry.file, matchedTemplate).catch(e => this.plugin.debug(e));
-                });
-                return;
-            }
+            //todo: fix template item rendering
+            // if (matchedTemplate?.length) {
+            //     el.style = `list-style: none;display:flex;`;
+            //     el.createDiv({ cls: 'custom-view-container' }, (divEl) => {
+            //         this.plugin.injectCustomView(divEl, entry.file, matchedTemplate).catch(e => this.plugin.debug(e));
+            //     });
+            //     return;
+            // }
             let firstProp = true;
             for (const propertyName of order) {
                 // Properties in the order can be parsed to determine what type
