@@ -5,7 +5,8 @@ import { renderTemplate } from "./renderer";
 import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
 import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessMarkdownViewOptions } from "./types";
 import { list as commandList } from 'commands';
-import { getRuleEngineViewOptions, RULE_ENGINE_BASE_VIEW_ID, RuleEngineBasesView } from "ruleEngineBasesView";
+import { RULE_ENGINE_BASE_VIEW_ID, RuleEngineBasesView } from "ruleEngineBasesView";
+import { getRuleEngineViewOptions } from "ruleEngineBasesViewOptions";
 /**
  * Type guard to check if a view is a canvas view
  */
@@ -474,7 +475,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return allCommands;
 	}
 
-	executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null): void {
+	public executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null): void {
 		if (!commandIds?.length) return;
 		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file });
 		if (file) {

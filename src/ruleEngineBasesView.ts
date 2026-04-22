@@ -1,196 +1,199 @@
 import ObsidianRuleEnginePlugin from "main";
-import { BasesEntry, BasesView, HoverParent, HoverPopover, Keymap, parsePropertyId, QueryController, ViewOption } from "obsidian";
+import { BasesEntry, BasesView, HoverParent, HoverPopover, Keymap, parsePropertyId, QueryController } from "obsidian";
 
 export const RULE_ENGINE_BASE_VIEW_ID = 'rule-engine-base';
 
-export function getRuleEngineViewOptions(): ViewOption[] {
-    return [
-        // // Slider option
-        // {
-        //     type: 'slider',
-        //     key: 'itemSize',
-        //     displayName: 'Item size',
-        //     min: 8,
-        //     max: 48,
-        //     step: 4,
-        //     default: 16
-        // },
-
-        // // Dropdown option
-        // {
-        //     type: 'dropdown',
-        //     key: 'layout',
-        //     displayName: 'Layout mode',
-        //     default: 'grid',
-        //     options: {
-        //         grid: 'Grid',
-        //         list: 'List',
-        //         compact: 'Compact'
-        //     }
-        // },
-
-        // // Property selector
-        // {
-        //     type: 'property',
-        //     key: 'groupByProperty',
-        //     displayName: 'Group by',
-        //     placeholder: 'Select property',
-        //     filter: (prop) => !prop.startsWith('file.') // Optional filter
-        // },
-
-        // // Toggle option
-        // {
-        //     type: 'toggle',
-        //     key: 'showLabels',
-        //     displayName: 'Show labels',
-        //     default: true
-        // },
-        // // Text input
-        // {
-        //     type: 'text',
-        //     key: 'customPrefix',
-        //     displayName: 'Custom prefix',
-        //     placeholder: 'Enter prefix...'
-        // },
-
-        // // Grouped options (collapsible section)
-        // {
-        //     type: 'group',
-        //     displayName: 'Advanced Options',
-        //     items: [
-        //         {
-        //             type: 'toggle',
-        //             key: 'debugMode',
-        //             displayName: 'Debug mode',
-        //             default: false
-        //         },
-        //         {
-        //             type: 'slider',
-        //             key: 'maxItems',
-        //             displayName: 'Max items',
-        //             min: 10,
-        //             max: 1000,
-        //             step: 10,
-        //             default: 100
-        //         }
-        //     ]
-        // }
-    ]
-}
-
-// Add `implements HoverParent` to enable hovering over file links.
 export class RuleEngineBasesView extends BasesView implements HoverParent {
     type = RULE_ENGINE_BASE_VIEW_ID;
-    private plugin: ObsidianRuleEnginePlugin
-    private containerEl: HTMLElement
-
+    private plugin: ObsidianRuleEnginePlugin;
+    private containerEl: HTMLElement;
     public hoverPopover: HoverPopover | null = null;
 
     constructor(controller: QueryController, scrollEl: HTMLElement, plugin: ObsidianRuleEnginePlugin) {
         super(controller);
-        this.plugin = plugin
-        this.containerEl = scrollEl.createDiv({ cls: 'rule-bases-view-container' })
-    }
+        this.plugin = plugin;
+        this.containerEl = scrollEl.createDiv({ cls: 'rule-bases-view-container' });
 
-    private renderEntry(containerEl: HTMLElement, entry: BasesEntry, matchedTemplate?: string): void {
-        const order = this.config.getOrder();
-        // The property separator configured by the ViewOptions above can be
-        // retrieved from the view config. Be sure to set a default value.
-        // const propertySeparator: string = this.config.get('separator') ?? ' - ';
-        const propertySeparator: string = ' | ';
-
-        containerEl.createEl('li', 'bases-list-entry', (el) => {
-            //todo: fix template item rendering
-            // if (matchedTemplate?.length) {
-            //     el.style = `list-style: none;display:flex;`;
-            //     el.createDiv({ cls: 'custom-view-container' }, (divEl) => {
-            //         this.plugin.injectCustomView(divEl, entry.file, matchedTemplate).catch(e => this.plugin.debug(e));
-            //     });
-            //     return;
-            // }
-            let firstProp = true;
-            for (const propertyName of order) {
-                // Properties in the order can be parsed to determine what type
-                // they are: formula, note, or file.
-                const { type, name } = parsePropertyId(propertyName);
-
-                // `entry.getValue` returns the evaluated result of the property
-                // in the context of this entry.
-                const value = entry.getValue(propertyName);
-
-                // Skip rendering properties which have an empty value.
-                // The list items for each file may have differing length.
-                if (!value) continue;
-
-                if (!firstProp) {
-                    el.createSpan({
-                        cls: 'bases-list-separator',
-                        text: propertySeparator
-                    });
-                }
-                firstProp = false;
-
-                // If the `file.name` property is included in the order, render
-                // it specially so that it links to that file.
-                if (name === 'name' && type === 'file') {
-                    const fileName = String(entry.file.name);
-                    const linkEl = el.createEl('a', { text: fileName });
-                    linkEl.onClickEvent((evt) => {
-                        if (evt.button !== 0 && evt.button !== 1) return;
-                        evt.preventDefault();
-                        const path = entry.file.path;
-                        const modEvent = Keymap.isModEvent(evt);
-                        void this.plugin.app.workspace.openLinkText(path, '', modEvent);
-                    });
-
-                    linkEl.addEventListener('mouseover', (evt) => {
-                        this.plugin.app.workspace.trigger('hover-link', {
-                            event: evt,
-                            source: 'bases',
-                            hoverParent: this,
-                            targetEl: linkEl,
-                            linktext: entry.file.path,
-                        });
-                    });
-                }
-                // For all other properties, just display the value as text.
-                // In your view you may also choose to use the `Value.renderTo`
-                // API to better support photos, links, icons, etc.
-                else {
-                    el.createSpan({
-                        cls: 'bases-list-entry-property',
-                        text: value === null ? '' : value?.toString()?.length ? value?.toString() : ''
-                    });
-                }
-            }
+        // @ts-expect-error eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const viewRegistry = this.app.viewRegistry;
+        console.debug(`RuleEngineBasesView viewRegistry`, {
+            viewRegistry,
+            byType: viewRegistry.getViewCreatorByType('bases-table'),
+            controller,
+            window
         });
     }
 
     public onDataUpdated(): void {
-        console.debug(`RuleEngineBasesView`, {
-            entries: this.data.data,
-            containerEl: this.containerEl,
-            plugin: this.plugin
-        });
-
-        // Clear entries created by previous iterations. Remember, you should
-        // instead attempt element reuse when possible.
         this.containerEl.empty();
-        this.containerEl.style = `width:100%;height:100%;`;
 
-        // this.data contains both grouped and ungrouped versions of the data.
-        // If it's appropriate for your view type, use the grouped form.
+        // --- 1. Container Baseline Style ---
+        // Forces the view to be a vertical scrollable block, bypassing parent flex squashing.
+        this.containerEl.setAttribute('style', `
+            display: block !important;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 15px;
+            box-sizing: border-box;
+        `);
+
+        const layoutMode = this.config.get('layout') ?? 'table';
+        const order = this.config.getOrder();
+
         for (const group of this.data.groupedData) {
-            const groupEl = this.containerEl.createDiv('bases-list-group');
-            const groupListEl = groupEl.createEl('ul', 'bases-list-group-list');
+            const groupWrapper = this.containerEl.createDiv();
+            // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+            groupWrapper.style.marginBottom = "20px";
 
-            // Each entry in the group is a separate file in the vault matching
-            // the Base filters. For list view, each entry is a separate line.
+            if (layoutMode === 'table') {
+                this.renderTable(groupWrapper, group.entries, order);
+            } else {
+                this.renderGrid(groupWrapper, group.entries, order);
+            }
+
+            // Command execution
             for (const entry of group.entries) {
-                const { matchedTemplate, commandIds, baseFileHandling } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
-                this.renderEntry(groupListEl, entry, matchedTemplate);
+                const { baseFileHandling, commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
                 this.plugin.executeCommands(baseFileHandling, commandIds, entry.file);
             }
         }
+    }
+
+    private renderGrid(parent: HTMLElement, entries: BasesEntry[], order: string[]) {
+        const grid = parent.createDiv();
+        // --- 2. Inlined Grid Engine ---
+        grid.setAttribute('style', `
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            width: 100%;
+            align-items: start;
+        `);
+
+        for (const entry of entries) {
+            const card = grid.createDiv();
+            // --- 3. Inlined Card Style ---
+            card.setAttribute('style', `
+                background-color: var(--background-secondary);
+                border: 1px solid var(--background-modifier-border);
+                border-radius: var(--radius-m);
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                box-shadow: var(--shadow-s);
+            `);
+
+            const { matchedTemplate } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
+
+            if (matchedTemplate?.length) {
+                this.plugin.injectCustomView(card, entry.file, matchedTemplate).catch(e => console.error(e));
+                continue;
+            }
+
+            // Render properties as rows inside the card
+            for (const propId of order) {
+                // @ts-expect-error
+                const { type, name } = parsePropertyId(propId);
+                // @ts-expect-error
+                const value = entry.getValue(propId);
+                if (!value && name !== 'name') continue;
+
+                const row = card.createDiv();
+                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                row.style.display = "flex";
+                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                row.style.justifyContent = "space-between";
+                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                row.style.fontSize = "var(--font-small)";
+
+                if (name === 'name' && type === 'file') {
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                    row.style.fontWeight = "bold";
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                    row.style.borderBottom = "1px solid var(--background-modifier-border)";
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                    row.style.marginBottom = "4px";
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                    row.style.paddingBottom = "4px";
+                    this.renderFileLink(row, entry);
+                } else {
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                    row.createSpan({ text: name, cls: 'card-label' }).style.color = "var(--text-muted)";
+                    row.createSpan({ text: value?.toString() ?? '' });
+                }
+            }
+        }
+    }
+
+    private renderTable(parent: HTMLElement, entries: BasesEntry[], order: string[]) {
+        const table = parent.createEl('table');
+        table.setAttribute('style', `
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-small);
+        `);
+
+        const thead = table.createEl('thead');
+        const headerRow = thead.createEl('tr');
+        order.forEach(id => {
+            //@ts-expect-error
+            const th = headerRow.createEl('th', { text: parsePropertyId(id).name });
+            th.setAttribute('style', `
+                text-align: left;
+                padding: 8px;
+                border-bottom: 2px solid var(--background-modifier-border);
+                color: var(--text-muted);
+            `);
+        });
+
+        const tbody = table.createEl('tbody');
+        for (const entry of entries) {
+            const tr = tbody.createEl('tr');
+            order.forEach(id => {
+                const td = tr.createEl('td');
+                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                td.style.padding = "8px";
+                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                td.style.borderBottom = "1px solid var(--background-modifier-border-soft)";
+
+                //@ts-expect-error
+                const { type, name } = parsePropertyId(id);
+                //@ts-expect-error
+                const value = entry.getValue(id);
+
+                if (name === 'name' && type === 'file') {
+                    this.renderFileLink(td, entry);
+                } else {
+                    if (value === null) {
+                        td.setText('-');
+                    } else {
+                        td.setText(value?.toString() ?? "");
+                    }
+                }
+            });
+        }
+    }
+
+    private renderFileLink(container: HTMLElement, entry: BasesEntry) {
+        const linkEl = container.createEl('a', { text: entry.file.name });
+        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+        linkEl.style.color = "var(--text-accent)";
+        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+        linkEl.style.cursor = "pointer";
+
+        linkEl.onClickEvent((evt) => {
+            evt.preventDefault();
+            const modEvent = Keymap.isModEvent(evt);
+            void this.plugin.app.workspace.openLinkText(entry.file.path, '', modEvent);
+        });
+
+        linkEl.addEventListener('mouseover', (evt) => {
+            this.plugin.app.workspace.trigger('hover-link', {
+                event: evt, source: 'bases', hoverParent: this,
+                targetEl: linkEl, linktext: entry.file.path,
+            });
+        });
     }
 }
