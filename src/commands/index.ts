@@ -17,7 +17,7 @@ const processNow: GetCommandFn = (plugin) => ({
         const file = plugin?.app.workspace.getActiveFile();
 
         if (file) {
-            void plugin?.processActiveView(file);
+            void plugin?.processMarkdownView(file);
         }
         return true;
     },

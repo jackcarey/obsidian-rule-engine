@@ -3,17 +3,28 @@ import { ObsidianRuleEngineSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
 import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
-import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessActiveViewOptions } from "./types";
+import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessMarkdownViewOptions } from "./types";
 import { list as commandList } from 'commands';
+import { getRuleEngineViewOptions, RULE_ENGINE_BASE_VIEW_ID, RuleEngineBasesView } from "ruleEngineBasesView";
 /**
  * Type guard to check if a view is a canvas view
  */
 function isCanvasView(view: unknown): view is CanvasView {
 	return typeof view === "object" && view !== null && "canvas" in view;
 }
-
 export default class ObsidianRuleEnginePlugin extends Plugin {
 	settings: CustomRulesSettings = Object.assign({}, DEFAULT_SETTINGS);
+
+	debug(...args: unknown[]) {
+		if (this.settings.debug) {
+			console.debug(...args);
+		}
+		if (args[0] instanceof Error) {
+			const msg = '⛔ ' + args[0].message?.length ? args[0].message : args[0].name;
+			console.error(...args);
+			new Notice(msg);
+		}
+	}
 
 	get commands(): CommandWithSetup[] {
 		return commandList.map(fn => fn(this));
@@ -47,18 +58,33 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		};
 		const idx = this.settings.commands.findIndex(cmd => cmd.id === id);
 		if (idx !== -1) {
+			this.debug(`setting command`, idx, `to`, fullConfig);
 			this.settings.commands[idx] = fullConfig;
 		} else {
+			this.debug(`adding new command`, idx, `to`, fullConfig);
 			this.settings.commands.push(fullConfig);
 		}
-		this.saveSettings().catch(_reason => {
+		this.saveSettings().catch(reason => {
+			this.debug(reason);
 			throw new Error(`failed to update command config`);
 		});
 	};
 
+	public isBasesViewRegistered: boolean = false;
+
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new ObsidianRuleEngineSettingTab(this.app, this));
+
+		if (!this.isBasesViewRegistered) {
+			this.debug(`registerBasesView`);
+			this.isBasesViewRegistered = this.registerBasesView(RULE_ENGINE_BASE_VIEW_ID, {
+				name: 'Rule Engine', // Display name in view selector
+				icon: 'terminal', // Lucide icon name
+				factory: (controller, containerEl) => new RuleEngineBasesView(controller, containerEl, this),
+				options: getRuleEngineViewOptions // Optional: user-configurable options function
+			});
+		};
 
 		this.addCommand({
 			id: "enable",
@@ -134,16 +160,15 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 						cmd.editorCallback?.(editor, ctx);
 					};
 				}
-
+				this.debug(`adding command`, cmdObject.id, cmdObject);
 				this.addCommand(cmdObject);
 			} catch (e) {
-				console.error(e);
-				console.warn(`couldn't add command`, cmd);
+				this.debug(e, `couldn't add command`, cmd);
 			}
 		}
 
 		this.registerEvent(
-			this.app.workspace.on("file-open", (file) => this.processActiveView(file, {
+			this.app.workspace.on("file-open", (file) => this.processMarkdownView(file, {
 				skipCommandExecution: true
 			}))
 		);
@@ -152,7 +177,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			this.app.workspace.on("layout-change", () => {
 				const file = this.app.workspace.getActiveFile();
 
-				void this.processActiveView(file, {
+				void this.processMarkdownView(file, {
 					skipCommandExecution: false
 				});
 				if (this.settings.workInCanvas) {
@@ -173,25 +198,29 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		// Also process canvas nodes periodically to catch updates
 		this.registerInterval(window.setInterval(() => {
 			if (this.settings.enabled && this.settings.workInCanvas) {
+				this.debug(`canvas node interval`);
 				void this.processAllCanvasNodes();
 			}
-		}, 5000));
+		}, 10000));
 	}
 
 	async setPluginState(enabled: boolean) {
 		this.settings.enabled = enabled;
 		await this.saveSettings();
 
-		new Notice(enabled ? "Rule Engine Enabled" : "Rule Engine Disabled");
+		const msg = enabled ? "Rule Engine Enabled" : "Rule Engine Disabled";
+		new Notice(msg);
+		this.debug(msg);
 
 		const file = this.app.workspace.getActiveFile();
 
 		if (file) {
-			void this.processActiveView(file);
+			void this.processMarkdownView(file);
 		}
 	}
 
 	onunload() {
+		this.debug(`onunload`);
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view instanceof MarkdownView) {
 				this.restoreDefaultView(leaf.view);
@@ -201,14 +230,22 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		this.restoreAllCanvasNodes();
 	}
 
-	extractMatchingRuleParameters = (file: TFile, options?: ProcessActiveViewOptions) => {
+	extractMatchingRuleParameters = (file: TFile, options?: ProcessMarkdownViewOptions) => {
 		const cache = this.app.metadataCache.getFileCache(file);
+		const useBaseFileHandling: BaseFileHandling = options?.baseFileHandling ?? "file";
 		let matchedTemplate = "";
 		let commandIds: string[] = [];
-		let baseFileHandling: BaseFileHandling = "file";
 
 		for (const ruleConfig of this.settings.rules) {
-			const isMatch = ruleConfig.enabled && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
+			//default to file baseFileHandling
+			const matchingBaseHandling = ruleConfig.baseFileHandling === "both" || ruleConfig.baseFileHandling === useBaseFileHandling;
+			const isMatch = ruleConfig.enabled && matchingBaseHandling && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
+			this.debug(`extractMatchingRuleParameters`, {
+				ruleConfig,
+				useBaseFileHandling,
+				matchingBaseHandling,
+				isMatch
+			});
 			if (isMatch) {
 				//only match the first template
 				if (!matchedTemplate.length) {
@@ -217,20 +254,23 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				if (!options?.skipCommandExecution) {
 					commandIds = [...commandIds, ...ruleConfig.commandIds];
 				}
-				baseFileHandling = ruleConfig.baseFileHandling;
 			}
 		}
 
 		const forcedTemplate = options?.forceTemplateIndex === undefined ? undefined : this.settings.rules[options?.forceTemplateIndex]?.template?.trim();
 
-		return {
+		const result = {
 			matchedTemplate: forcedTemplate ?? matchedTemplate,
 			commandIds,
-			baseFileHandling
+			baseFileHandling: useBaseFileHandling
 		};
+
+		this.debug(`extractMatchingRuleParameters`, result);
+
+		return result;
 	};
 
-	async processMarkdownView(file: TFile | null, options?: ProcessActiveViewOptions) {
+	async processMarkdownView(file: TFile | null, options?: ProcessMarkdownViewOptions) {
 		if (!file) return;
 
 		const leaf = this.app.workspace.getLeaf(false);
@@ -241,6 +281,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		if (!this.settings.enabled) {
 			this.restoreDefaultView(view);
+			this.debug(`processMarkdownView`, `plugin not enabled`);
 			return;
 		}
 
@@ -252,6 +293,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		if (!matchedTemplate) {
 			this.restoreDefaultView(view);
+			this.debug(`processMarkdownView`, `no matching template`);
 			return;
 		}
 
@@ -276,26 +318,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		await this.injectCustomView(view.contentEl, file, matchedTemplate);
 	}
 
-	async processBasesView(file: TFile | null, options?: ProcessActiveViewOptions) {
-		if (!file) return;
-
-		const leaf = this.app.workspace.getLeaf(false);
-		if (this.settings.allowBaseResultExecution && (leaf.view instanceof BasesView)) {
-			console.debug("base found, processing not yet implemented");
-			if (!options?.skipCommandExecution) {
-				return await Promise.resolve(undefined);
-			}
-		}
-		return undefined;
-	}
-
-	async processActiveView(file: TFile | null, options?: ProcessActiveViewOptions) {
-		if (!file) return;
-
-		await this.processMarkdownView(file, options);
-		await this.processBasesView(file, options);
-	}
-
 	async injectCustomView(container: HTMLElement, file: TFile, template: string) {
 		let customEl = container.querySelector(`.${CUSTOM_RULE_CLASS}`) as HTMLElement;
 
@@ -304,6 +326,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			customEl.addClass(CUSTOM_RULE_CLASS);
 			container.appendChild(customEl);
 
+			this.debug(`injectCustomView`, `new customEl`, customEl);
 			this.registerDomEvent(customEl, "click", (evt: MouseEvent) => {
 				const target = evt.target as HTMLElement;
 				const link = target.closest(".internal-link");
@@ -320,6 +343,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			});
 		}
 
+		this.debug(`injectCustomView`, `rendering template`);
 		await renderTemplate(this.app, template, file, customEl, this);
 		container.addClass(HIDE_MARKDOWN_CLASS);
 	}
@@ -328,15 +352,18 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const container = view.contentEl;
 		container.removeClass(HIDE_MARKDOWN_CLASS);
 		const customEl = container.querySelector(`.${CUSTOM_RULE_CLASS}`);
+		this.debug(`restoring default view`);
 		if (customEl) customEl.remove();
 	}
 
 	async loadSettings() {
 		const loadedData = await this.loadData() as Partial<CustomRulesSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+		this.debug(`loaded settings`);
 	}
 
 	async saveSettings() {
+		this.debug(`saving settings`);
 		await this.saveData(this.settings);
 	}
 
@@ -349,6 +376,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			return;
 		}
 
+		this.debug(`processAllCanvasNodes`, `iterating leaves`);
 		// Find all canvas views
 		this.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
 			const view = leaf.view;
@@ -357,6 +385,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				const canvas = view.canvas;
 				if (canvas.nodes) {
 					// Process each node in the canvas
+					this.debug(`processAllCanvasNodes`, `processing nodes`);
 					canvas.nodes.forEach((node) => {
 						if (node.file && node.file instanceof TFile && node.file.extension === "md") {
 							void this.processCanvasNode(node);
@@ -374,9 +403,12 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const file = node.file;
 		if (!(file instanceof TFile)) return;
 
-		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file);
+		const {
+			matchedTemplate,
+			// commandIds, baseFileHandling
+		} = this.extractMatchingRuleParameters(file);
 
-		this.executeCommands(baseFileHandling, commandIds);
+		// this.executeCommands(baseFileHandling, commandIds);
 
 		if (!matchedTemplate) {
 			this.restoreCanvasNode(node);
@@ -404,6 +436,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const previewContainer = nodeEl.querySelector(".markdown-preview-view") as HTMLElement;
 		if (!previewContainer) return;
 
+		this.debug(`restoreCanvasNode`);
 		previewContainer.removeClass(HIDE_MARKDOWN_CLASS);
 		const customEl = previewContainer.querySelector(`.${CUSTOM_RULE_CLASS}`);
 		if (customEl) customEl.remove();
@@ -413,6 +446,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	 * Restore all canvas nodes
 	 */
 	restoreAllCanvasNodes() {
+		this.debug(`restoreAllCanvasNodes`, `iterating leaves`);
 		this.app.workspace.iterateAllLeaves((leaf: WorkspaceLeaf) => {
 			const view = leaf.view;
 			if (isCanvasView(view) && view.canvas) {
@@ -428,27 +462,33 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 	public get obsidianCommands(): Record<string, Command> {
 		// @ts-expect-error 'commands' is private
-		const regularCommands = this.app.commands.commands;
+		const regularCommands: Record<string, Command> = this.app.commands.commands;
 		// @ts-expect-error 'commands' is private
-		const editorCommands = this.app.commands.editorCommands;
+		const editorCommands: Record<string, Command> = this.app.commands.editorCommands;
 		const allCommands: Record<string, Command> = { ...regularCommands, ...editorCommands };
 		if (Object.keys(allCommands).length === 0) {
-			console.warn('no commands found for rule-engine');
+			this.debug('no commands found for rule-engine');
+		} else {
+			this.debug(`found ${Object.keys(allCommands).length}`, allCommands);
 		}
 		return allCommands;
 	}
 
-	executeCommands(mode: BaseFileHandling, commandIds: string[]): void {
+	executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null): void {
 		if (!commandIds?.length) return;
+		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file });
+		if (file) {
+			this.debug(new Error(`executing on specific files not implemented`));
+			return;
+		}
 		const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
-		if (mode === "file") {
+		if (mode === "file" || mode === "both") {
 			for (const cmd of commandObjects) {
 				const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
 				commandFn?.(false);
 			}
 		} else {
-			console.error(`mode not handled:`, mode);
-			throw new Error('base file handling not implemented!');
+			this.debug(`commands not executed for mode '${mode}'`);
 		}
 	}
 

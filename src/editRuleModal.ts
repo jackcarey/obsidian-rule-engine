@@ -719,7 +719,6 @@ export class EditRuleModal extends Modal {
         contentEl.empty();
         contentEl.addClass("ore-edit-rule-modal");
 
-
         new Setting(contentEl)
             .setName("Rule name")
             .setDesc("The name of the rule will be displayed in the rule list.")
@@ -742,6 +741,29 @@ export class EditRuleModal extends Modal {
                     .onChange(val => { this.rule.enabled = val; });
             });
 
+        if (this.plugin.settings.allowBaseResultExecution) {
+            new Setting(contentEl)
+                .setName("File handling")
+                .setDesc(`How should this rule execute commands?`)
+                .addDropdown(dd => {
+                    const options: Record<BaseFileHandling, string> = {
+                        'file': 'Markdown files',
+                        'results': 'Across .base results',
+                        'both': 'Both'
+                    };
+                    dd.addOptions(options);
+                    dd.setValue(this.rule.baseFileHandling);
+                    dd.disabled = this.plugin.settings.allowBaseResultExecution;
+                    dd.onChange(val => {
+                        const allowed = ["file", "results", "both"];
+                        if (allowed.includes(val)) {
+                            this.rule.baseFileHandling = val as BaseFileHandling;
+                            this.onOpen();
+                        }
+                    });
+                });
+        }
+
         new Setting(contentEl).setHeading().setName("Filters");
         const rulesContainer = contentEl.createDiv({ cls: "ore-parent-query-container" });
 
@@ -753,26 +775,6 @@ export class EditRuleModal extends Modal {
         );
         builder.render(rulesContainer);
 
-        if (this.plugin.settings.allowBaseResultExecution) {
-            new Setting(contentEl)
-                .setName("Base file handling")
-                .setDesc("How should this rule execute commands against .base files?")
-                .addDropdown(dd => {
-                    const options: Record<BaseFileHandling, string> = {
-                        'file': 'Regular file',
-                        'results': 'On each result'
-                    };
-                    dd.addOptions(options);
-                    dd.setValue(this.rule.baseFileHandling);
-                    dd.disabled = this.plugin.settings.allowBaseResultExecution;
-                    dd.onChange(val => {
-                        const allowed = ["file", "results"];
-                        if (allowed.includes(val)) {
-                            this.rule.baseFileHandling = val as BaseFileHandling;
-                        }
-                    });
-                });
-        }
 
         new Setting(contentEl)
             .setHeading()
@@ -788,7 +790,7 @@ export class EditRuleModal extends Modal {
                             this.rule.commandIds.push(firstCmdId);
                             renderCommandIdList();
                         } else {
-                            console.error(`failed to add new command ID to rule`);
+                            this.plugin.debug(`failed to add new command ID to rule`);
                         }
                     });
             });

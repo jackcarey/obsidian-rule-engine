@@ -30,7 +30,7 @@ export interface FilterGroup {
 }
 
 
-export type BaseFileHandling = "file" | "results";
+export type BaseFileHandling = "file" | "results" | "both";
 export interface RuleConfig {
 	id: string;
 	name: string;
@@ -52,6 +52,7 @@ export interface CustomRulesSettings {
 	workInCanvas: boolean;
 	allowBaseResultExecution: boolean;
 	useDnd: boolean;
+	debug: boolean;
 	rules: RuleConfig[];
 	commands: CommandConfig[];
 }
@@ -96,8 +97,9 @@ export type CommandWithSetup = Command & {
 	settingCallback?: CommandSettingCallback
 };
 
-export type ProcessActiveViewOptions = {
+export type ProcessMarkdownViewOptions = {
 	skipCommandExecution?: boolean;
 	// from rule index
 	forceTemplateIndex?: number;
+	baseFileHandling?: BaseFileHandling;
 }

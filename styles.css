@@ -938,3 +938,43 @@ font-size: var(--metadata-input-font-size);
 .ore-rules-list-container .setting-group .setting-items .setting-item:only-child {
     margin-bottom: inherit;
 }
+
+.bases-list-group{
+    padding:0;
+    margin:0;
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    border: 1px solid red;
+    box-sizing: border-box;
+    overflow: auto;
+}
+
+.bases-list-group-list:has(li .custom-view-container){
+    padding:0;
+    margin:0;
+    display:flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: flex-start;
+    width:100%;
+    height: 100%;
+    border:1px solid blue;
+}
+
+.bases-list-entry .obsidian-custom-rule-render {
+    margin:0;
+    padding: 0;
+    width:fit-content;
+    height: fit-content;
+    max-width: 100%;
+    max-height: 100%;
+    border: 1px solid green;
+}
+
+.rule-bases-view-container {
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+    border: 1px solid var(--background-modifier-border);
+}

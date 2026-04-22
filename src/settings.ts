@@ -41,8 +41,8 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						const file = this.app.workspace.getActiveFile();
 						if (file) {
-							this.plugin.processActiveView(file).catch((e) => {
-								console.error(e);
+							this.plugin.processMarkdownView(file).catch((e) => {
+								this.plugin.debug(e);
 							});
 						}
 					}));
@@ -67,9 +67,11 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const addBaseSetting = (setting: Setting) => {
 			setting
 				.setName("Execute commands across .base files (experimental)")
-				.setDesc("Allow rules to execute across the result of .base files. This feature is a work in progress.")
+				.setDesc("Allow rules to execute across the 'rule engine' view in .base files.")
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.allowBaseResultExecution)
+					.setDisabled(!this.plugin.isBasesViewRegistered)
+					.setTooltip(this.plugin.isBasesViewRegistered ? '' : 'Rule engine view could not be registered')
 					.onChange(async (value) => {
 						this.plugin.settings.allowBaseResultExecution = value;
 						await this.plugin.saveSettings();
@@ -89,6 +91,18 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					}));
 		}
 
+		const addDebug = (setting: Setting) => {
+			setting
+				.setName("Debug")
+				.setDesc("Log debug messages to the developer tools")
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.debug)
+					.onChange(async (value) => {
+						this.plugin.settings.debug = value;
+						await this.plugin.saveSettings();
+						this.display();
+					}));
+		};
 
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
 		settingsGroup.addSetting(addGlobalEnableSetting);
@@ -98,6 +112,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		if (!Platform.isMobile) {
 			settingsGroup.addSetting(addUseDnd);
 		}
+		settingsGroup.addSetting(addDebug);
 
 		new Setting(containerEl)
 			.setHeading()
@@ -187,12 +202,12 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		};
 
 		const moveItem = (fromIndex: number, toIndex: number) => {
-			console.debug(`moveItem`, fromIndex, toIndex);
+			this.plugin.debug(`moveItem`, fromIndex, toIndex);
 			if (fromIndex < 0) return;
 			toIndex = Math.max(0, Math.min(toIndex, this.plugin.settings.rules.length - 1));
 
 			const rule = this.plugin.settings.rules.splice(fromIndex, 1)?.[0];
-			console.debug(`rule`, rule);
+			this.plugin.debug(`rule`, rule);
 			this.plugin.settings.rules.splice(toIndex, 0, rule!);
 			void this.plugin.saveSettings();
 			this.display();
@@ -267,16 +282,18 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					inputEl.style = "width: min-content;"
 					inputEl.value = String(index + 1);
 					inputEl.addEventListener("change", _evt => {
-						console.debug(_evt, inputEl);
+						this.plugin.debug(_evt, inputEl);
 						if (inputEl.value) {
 							const oldIdx = Number(inputEl.dataset.idx);
-							console.debug({ inputEl, oldIdx, newIdx: Number(inputEl.value) });
+							this.plugin.debug({ inputEl, oldIdx, newIdx: Number(inputEl.value) });
 							moveItem(oldIdx, Number(inputEl.value) - 1);
 							inputEl.dataset.idx = inputEl.value;
 						}
 					});
 				});
 			}
+		} else {
+			this.plugin.debug("no rules to execute");
 		}
 	}
 
