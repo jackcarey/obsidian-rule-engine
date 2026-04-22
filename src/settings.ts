@@ -150,7 +150,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setHeading()
 			.setName("Command configuration")
-			.setDesc("Command configuration is shared across all rules.");
+			.setDesc("Configuration of plugin commands is shared across all rules. Any command in Obsidian can be used in rules.");
 
 		const commandConfigContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
 
