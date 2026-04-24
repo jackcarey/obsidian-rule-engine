@@ -60,19 +60,48 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         const thisHash = this.currentDataHash;
         const dataChanged = this.lastDataHash !== thisHash;
 
-        for (const group of this.data.groupedData) {
-            const groupWrapper = this.containerEl.createDiv();
-            // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-            groupWrapper.style.marginBottom = "20px";
+        if (layoutMode === 'table') {
+            const table = this.containerEl.createEl('table');
+            table.setAttribute('style', `
+            width: 100%;
+            border-collapse: collapse;
+            font-size: var(--font-small);
+        `);
+            const thead = table.createEl('thead');
+            const headerRow = thead.createEl('tr');
+            order.forEach(id => {
+                const th = headerRow.createEl('th', { text: parsePropertyId(id).name });
+                th.setAttribute('style', `
+                text-align: left;
+                padding: 8px;
+                border-bottom: 2px solid var(--background-modifier-border);
+                color: var(--text-muted);
+            `);
+            });
+            const tbody = table.createEl('tbody');
+            for (let idx = 0; idx < this.data.groupedData.length; ++idx) {
+                if (idx) {
+                    tbody.append(headerRow.cloneNode(true));
+                }
+                const group = this.data.groupedData[idx];
+                if (group?.entries?.length) {
+                    this.renderGroupTableRows(tbody, group.entries, order);
+                }
+            }
+        }
 
-            if (layoutMode === 'table') {
-                this.renderTable(groupWrapper, group.entries, order);
-            } else {
+        if (layoutMode === 'grid') {
+            for (const group of this.data.groupedData) {
+                const groupWrapper = this.containerEl.createDiv();
+                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                groupWrapper.style.marginBottom = "20px";
                 this.renderGrid(groupWrapper, group.entries, order);
             }
+        }
 
-            // Command execution only takes place if the data has changed, not the order or grouping
-            if (dataChanged) {
+        // Command execution only takes place if the data has changed, not the order or grouping
+        if (dataChanged) {
+            for (const group of this.data.groupedData) {
                 for (const entry of group.entries) {
                     const { baseFileHandling, commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
                     this.plugin.executeCommands(baseFileHandling, commandIds, entry.file);
@@ -152,28 +181,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         }
     }
 
-    private renderTable(parent: HTMLElement, entries: BasesEntry[], order: string[]) {
-        const table = parent.createEl('table');
-        table.setAttribute('style', `
-            width: 100%;
-            border-collapse: collapse;
-            font-size: var(--font-small);
-        `);
-
-        const thead = table.createEl('thead');
-        const headerRow = thead.createEl('tr');
-        order.forEach(id => {
-            //@ts-expect-error
-            const th = headerRow.createEl('th', { text: parsePropertyId(id).name });
-            th.setAttribute('style', `
-                text-align: left;
-                padding: 8px;
-                border-bottom: 2px solid var(--background-modifier-border);
-                color: var(--text-muted);
-            `);
-        });
-
-        const tbody = table.createEl('tbody');
+    private renderGroupTableRows(tbody: HTMLElement, entries: BasesEntry[], order: string[]) {
         for (const entry of entries) {
             const tr = tbody.createEl('tr');
             order.forEach(id => {
