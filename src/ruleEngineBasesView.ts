@@ -114,35 +114,26 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
 
     private renderGrid(parent: HTMLElement, entries: BasesEntry[], order: string[]) {
         const widthPc = String(this.config.get("widthPercentage")) + "%";
-        const heightPc = String(this.config.get("heightPercentage")) + "%";
-        const gapPx = Number(this.config.get('cardGap'));
+        const heightVal = this.config.get("heightPercentage");
+        // If heightVal is 30, this makes the card at least 300px tall (adjust multiplier as needed)
+        const minHeightPx = heightVal ? `${Number(heightVal) * 5}px` : "auto";
+        const gapPx = Number(this.config.get('cardGap')) + 'px';
         const grid = parent.createDiv();
         // --- 2. Inlined Grid Engine ---
         grid.setAttribute('style', `
-            display: grid; !important;
-            grid-template-columns: repeat(auto-fill, ${widthPc});
-            grid-template-rows: repeat(auto-fill, ${heightPc});
-            gap: ${gapPx}px;
-            width: 100%;
-            min-height: max-content;
-            align-items: start;
-            border: 1px solid blue;
+            display: grid;
+            grid-template-columns: repeat(auto-fill,minmax(${widthPc},1fr));
+            grid-template-rows: auto;
+            gap: ${gapPx};
         `);
 
         for (const entry of entries) {
             const card = grid.createDiv();
             card.setAttribute('style', `
+                min-height: ${minHeightPx};
                 background-color: var(--background-secondary);
                 border: 1px solid var(--background-modifier-border);
                 border-radius: var(--radius-m);
-                display: flex;
-                flex-direction: column;
-                gap: 2px;
-                box-shadow: var(--shadow-s);
-                width:${widthPc};
-                height:${heightPc};
-                min-height: 3lh;
-                border: 1px solid green;
             `);
 
             const { matchedTemplate } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
