@@ -50,15 +50,13 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             width: 100%;
             height: 100%;
             overflow-y: auto;
-            padding: 15px;
+            padding:0;
+            margin:0;
             box-sizing: border-box;
         `);
 
         const layoutMode = this.config.get('layout') ?? 'table';
         const order = this.config.getOrder();
-
-        const thisHash = this.currentDataHash;
-        const dataChanged = this.lastDataHash !== thisHash;
 
         if (layoutMode === 'table') {
             const table = this.containerEl.createEl('table');
@@ -73,7 +71,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                 const th = headerRow.createEl('th', { text: parsePropertyId(id).name });
                 th.setAttribute('style', `
                 text-align: left;
-                padding: 8px;
+                padding: 4px 8px;
                 border-bottom: 2px solid var(--background-modifier-border);
                 color: var(--text-muted);
             `);
@@ -93,20 +91,23 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         if (layoutMode === 'grid') {
             for (const group of this.data.groupedData) {
                 const groupWrapper = this.containerEl.createDiv();
-                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                groupWrapper.style.marginBottom = "20px";
+                groupWrapper.style.border = `margin:0;padding:0;1px solid red`;
                 this.renderGrid(groupWrapper, group.entries, order);
             }
         }
 
-        // Command execution only takes place if the data has changed, not the order or grouping
-        if (dataChanged) {
-            for (const group of this.data.groupedData) {
-                for (const entry of group.entries) {
-                    const { baseFileHandling, commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
-                    this.plugin.executeCommands(baseFileHandling, commandIds, entry.file);
+        if (this.plugin.settings.allowBaseResultExecution) {
+            const thisHash = this.currentDataHash;
+            const dataChanged = this.lastDataHash !== thisHash;
+            // Command execution only takes place if the data has changed, not the order or grouping
+            if (dataChanged) {
+                for (const group of this.data.groupedData) {
+                    for (const entry of group.entries) {
+                        const { baseFileHandling, commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
+                        this.plugin.executeCommands(baseFileHandling, commandIds, entry.file);
+                    }
+                    this.lastDataHash = thisHash;
                 }
-                this.lastDataHash = thisHash;
             }
         }
     }
@@ -118,17 +119,18 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         const grid = parent.createDiv();
         // --- 2. Inlined Grid Engine ---
         grid.setAttribute('style', `
-            display: grid !important;
-            grid-template-columns: repeat(auto-fill, minmax(${widthPc}, 1fr));
-            grid-template-rows: repeat(auto-fill, minmax(${heightPc}, 1fr));
+            display: grid; !important;
+            grid-template-columns: repeat(auto-fill, ${widthPc});
+            grid-template-rows: repeat(auto-fill, ${heightPc});
             gap: ${gapPx}px;
             width: 100%;
+            min-height: max-content;
             align-items: start;
+            border: 1px solid blue;
         `);
 
         for (const entry of entries) {
             const card = grid.createDiv();
-            // --- 3. Inlined Card Style ---
             card.setAttribute('style', `
                 background-color: var(--background-secondary);
                 border: 1px solid var(--background-modifier-border);
@@ -137,6 +139,10 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                 flex-direction: column;
                 gap: 2px;
                 box-shadow: var(--shadow-s);
+                width:${widthPc};
+                height:${heightPc};
+                min-height: 3lh;
+                border: 1px solid green;
             `);
 
             const { matchedTemplate } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
@@ -144,38 +150,38 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             if (matchedTemplate?.length) {
                 this.plugin.injectCustomView(card, entry.file, matchedTemplate).catch(e => console.error(e));
                 continue;
-            }
+            } else {
+                // Render properties as rows inside the card
+                for (const propId of order) {
+                    // @ts-expect-error
+                    const { type, name } = parsePropertyId(propId);
+                    // @ts-expect-error
+                    const value = entry.getValue(propId);
+                    if (!value && name !== 'name') continue;
 
-            // Render properties as rows inside the card
-            for (const propId of order) {
-                // @ts-expect-error
-                const { type, name } = parsePropertyId(propId);
-                // @ts-expect-error
-                const value = entry.getValue(propId);
-                if (!value && name !== 'name') continue;
+                    const row = card.createDiv();
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                    row.style.display = "flex";
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                    row.style.justifyContent = "space-between";
+                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                    row.style.fontSize = "var(--font-small)";
 
-                const row = card.createDiv();
-                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                row.style.display = "flex";
-                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                row.style.justifyContent = "space-between";
-                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                row.style.fontSize = "var(--font-small)";
-
-                if (name === 'name' && type === 'file') {
-                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                    row.style.fontWeight = "bold";
-                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                    row.style.borderBottom = "1px solid var(--background-modifier-border)";
-                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                    row.style.marginBottom = "4px";
-                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                    row.style.paddingBottom = "4px";
-                    this.renderFileLink(row, entry);
-                } else {
-                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                    row.createSpan({ text: name, cls: 'card-label' }).style.color = "var(--text-muted)";
-                    row.createSpan({ text: value?.toString() ?? '' });
+                    if (name === 'name' && type === 'file') {
+                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                        row.style.fontWeight = "bold";
+                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                        row.style.borderBottom = "1px solid var(--background-modifier-border)";
+                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                        row.style.marginBottom = "4px";
+                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                        row.style.paddingBottom = "4px";
+                        this.renderFileLink(row, entry);
+                    } else {
+                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
+                        row.createSpan({ text: name, cls: 'card-label' }).style.color = "var(--text-muted)";
+                        row.createSpan({ text: value?.toString() ?? '' });
+                    }
                 }
             }
         }

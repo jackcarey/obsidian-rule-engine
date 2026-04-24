@@ -40,9 +40,9 @@ export function getRuleEngineViewOptions(): ViewOption[] {
                     key: 'cardGap',
                     displayName: `Gap (px)`,
                     min: 0,
-                    max: 32,
+                    max: 16,
                     step: 4,
-                    default: 8
+                    default: 0
                 },
             ]
         },

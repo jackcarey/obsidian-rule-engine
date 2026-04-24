@@ -942,15 +942,6 @@ font-size: var(--metadata-input-font-size);
 .bases-list-group-list:has(li .custom-view-container){
     padding:0;
     margin:0;
-    display:flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: flex-start;
-    min-width: 1em;
-    min-height: 1em;
-    width: fit-content;
-    height: fit-content;
-    border:1px solid blue;
 }
 
 .bases-list-entry .obsidian-custom-rule-render {
