@@ -478,19 +478,32 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	public executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null): void {
 		if (!commandIds?.length) return;
 		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file });
-		if (file) {
-			this.debug(new Error(`executing on specific files not implemented`));
-			return;
-		}
-		const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
-		if (mode === "file" || mode === "both") {
-			for (const cmd of commandObjects) {
-				const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
-				commandFn?.(false);
+		const doCmds = () => {
+			const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
+			if (mode === "file" || mode === "both") {
+				for (const cmd of commandObjects) {
+					const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
+					commandFn?.(false);
+				}
+			} else {
+				this.debug(`commands not executed for mode '${mode}'`);
 			}
+		};
+		if (file) {
+			//todo: this technically works, but it' kinda a horrible experience to have so many tabs open then close	
+			const leaf = this.app.workspace.getLeaf("split", "vertical");
+			leaf.openFile(file).then(() => {
+				doCmds();
+			}).catch(e => {
+				this.debug(e);
+			}).finally(() => {
+				leaf.detach();
+			});
+			return;
 		} else {
-			this.debug(`commands not executed for mode '${mode}'`);
+			doCmds();
 		}
+
 	}
 
 }
