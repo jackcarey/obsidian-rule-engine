@@ -158,28 +158,14 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                     const value = entry.getValue(propId);
                     if (!value && name !== 'name') continue;
 
-                    const row = card.createDiv();
-                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                    row.style.display = "flex";
-                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                    row.style.justifyContent = "space-between";
-                    // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                    row.style.fontSize = "var(--font-small)";
+                    const cardRow = card.createDiv();
+                    cardRow.classList.add(`ore-bases-grid-card`);
 
                     if (name === 'name' && type === 'file') {
-                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                        row.style.fontWeight = "bold";
-                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                        row.style.borderBottom = "1px solid var(--background-modifier-border)";
-                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                        row.style.marginBottom = "4px";
-                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                        row.style.paddingBottom = "4px";
-                        this.renderFileLink(row, entry);
+                        cardRow.classList.add(`ore-bases-grid-card-file-name`);
+                        this.renderFileLink(cardRow, entry);
                     } else {
-                        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                        row.createSpan({ text: name, cls: 'card-label' }).style.color = "var(--text-muted)";
-                        row.createSpan({ text: value?.toString() ?? '' });
+                        cardRow.createSpan({ text: value?.toString() ?? '' });
                     }
                 }
             }

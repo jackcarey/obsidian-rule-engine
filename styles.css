@@ -959,3 +959,20 @@ font-size: var(--metadata-input-font-size);
     color: var(--text-normal);
     border: 1px solid var(--background-modifier-border);
 }
+
+.ore-bases-grid-card{
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-small);
+}
+
+.ore-bases-grid-card .card-label{
+    color: var(--text-muted);
+}
+
+.ore-bases-grid-card-file-name {
+    font-weight: bold;
+    border-bottom: 1px solid var(--background-modifier-border); 
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+}
