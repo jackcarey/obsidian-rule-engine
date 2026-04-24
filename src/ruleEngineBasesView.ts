@@ -42,6 +42,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
 
     public onDataUpdated(): void {
         this.containerEl.empty();
+        this.containerEl.innerText = "Loading...";
 
         // --- 1. Container Baseline Style ---
         // Forces the view to be a vertical scrollable block, bypassing parent flex squashing.
@@ -103,8 +104,9 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             if (dataChanged) {
                 for (const group of this.data.groupedData) {
                     for (const entry of group.entries) {
-                        const { baseFileHandling, commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
-                        this.plugin.executeCommands(baseFileHandling, commandIds, entry.file);
+                        const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
+                        // always use file mode on each entry since 'results' wouldn't make sense
+                        this.plugin.executeCommands("file", commandIds, entry.file);
                     }
                     this.lastDataHash = thisHash;
                 }
