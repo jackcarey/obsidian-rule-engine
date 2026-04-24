@@ -797,7 +797,7 @@ font-size: var(--metadata-input-font-size);
 }
 
 .obsidian-custom-rule-render {
-    padding: 30px;
+    padding: 0px;
     height: 100%;
     overflow-y: auto;
     width: 100%;
