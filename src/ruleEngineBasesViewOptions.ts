@@ -22,7 +22,8 @@ export function getRuleEngineViewOptions(): ViewOption[] {
                     key: 'widthPercentage',
                     displayName: 'Width (%)',
                     min: 5,
-                    max: 100,
+                    //after 50% the cards overflow anyway
+                    max: 55,
                     step: 5,
                     default: 30
                 },
