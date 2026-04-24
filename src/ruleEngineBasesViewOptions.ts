@@ -13,6 +13,39 @@ export function getRuleEngineViewOptions(): ViewOption[] {
                 grid: 'Cards', // We map 'grid' key to 'Cards' UI text
             }
         },
+        {
+            type: 'group',
+            displayName: 'Card options',
+            items: [
+                {
+                    type: 'slider',
+                    key: 'widthPercentage',
+                    displayName: 'Width (%)',
+                    min: 5,
+                    max: 100,
+                    step: 5,
+                    default: 30
+                },
+                {
+                    type: 'slider',
+                    key: 'heightPercentage',
+                    displayName: 'Height (%)',
+                    min: 5,
+                    max: 100,
+                    step: 5,
+                    default: 30
+                },
+                {
+                    type: 'slider',
+                    key: 'cardGap',
+                    displayName: `Gap (px)`,
+                    min: 0,
+                    max: 32,
+                    step: 4,
+                    default: 8
+                },
+            ]
+        },
         // {
         //     type: 'group',
         //     displayName: 'Appearance',
