@@ -1,4 +1,4 @@
-import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf, Command, BasesView } from "obsidian";
+import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf, Command } from "obsidian";
 import { ObsidianRuleEngineSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./renderer";
