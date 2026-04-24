@@ -477,7 +477,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return allCommands;
 	}
 
-	public executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null): void {
+	public executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null, groupLeaf?: WorkspaceLeaf): void {
 		if (!commandIds?.length) return;
 		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file });
 		const doCmds = () => {
@@ -492,14 +492,23 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			}
 		};
 		if (file) {
-			//todo: this technically works, but it' kinda a horrible experience to have so many tabs open then close	
-			const leaf = this.app.workspace.getLeaf("split", "vertical");
+			const leaf = this.app.workspace.getLeaf(
+				groupLeaf ? undefined : "split",
+				groupLeaf ? undefined : "vertical"
+			);
+			leaf.setGroup('ore-leaf-group');
+			if (groupLeaf) {
+				leaf.setGroupMember(groupLeaf);
+			}
 			leaf.openFile(file).then(() => {
 				doCmds();
 			}).catch(e => {
 				this.debug(e);
 			}).finally(() => {
-				leaf.detach();
+				//todo: is this necessary?
+				setTimeout(() => {
+					leaf.detach();
+				}, 100);
 			});
 			return;
 		} else {

@@ -42,7 +42,6 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
 
     public onDataUpdated(): void {
         this.containerEl.empty();
-        this.containerEl.innerText = "Loading...";
 
         // --- 1. Container Baseline Style ---
         // Forces the view to be a vertical scrollable block, bypassing parent flex squashing.
@@ -102,14 +101,20 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             const dataChanged = this.lastDataHash !== thisHash;
             // Command execution only takes place if the data has changed, not the order or grouping
             if (dataChanged) {
+                const groupLeaf = this.app.workspace.getLeaf("split", "vertical");
+                groupLeaf.setGroup("ore-leaf-group");
                 for (const group of this.data.groupedData) {
                     for (const entry of group.entries) {
                         const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
                         // always use file mode on each entry since 'results' wouldn't make sense
-                        this.plugin.executeCommands("file", commandIds, entry.file);
+                        this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf);
                     }
                     this.lastDataHash = thisHash;
                 }
+                //todo: is this necessary?
+                setTimeout(() => {
+                    groupLeaf.detach();
+                }, 100);
             }
         }
     }
