@@ -29,7 +29,15 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     private get currentDataHash(): string {
         const dataHash = this.data.data.map(val => `${val.file.path}${val.file.stat.mtime}`).sort().join("_").toLowerCase();
         const propertyHash = this.data.properties.sort().join("_");
-        return [dataHash, propertyHash].join("_");
+        const str = [dataHash, propertyHash].join("_");
+        // FNV-1a hash
+        let hash = 0x811c9dc5; // Offset basis
+        for (let i = 0; i < str.length; i++) {
+            hash ^= str.charCodeAt(i);
+            hash = Math.imul(hash, 0x01000193); // Prime multiplier
+        }
+        // Return as an unsigned hex string (e.g., "7f3a12b4")
+        return (hash >>> 0).toString(16);
     }
 
     public onDataUpdated(): void {
