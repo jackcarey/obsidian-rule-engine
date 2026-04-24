@@ -1,12 +1,21 @@
 # Obsidian Rule Engine <img src="https://img.shields.io/github/manifest-json/v/jackcarey/obsidian-rule-engine"> <img src="https://img.shields.io/github/downloads/jackcarey/obsidian-rule-engine/total">
 
-A plugin for Obsidian that lets you define rules to automate commands and render HTML views for your notes. Transform how your notes behave and are displayed by defining custom rules that match specific files.
+A plugin for [Obsidian](https://obsidian.md/) that lets you define rules to automate commands and render HTML views for your notes. Transform how your notes behave and are displayed by defining custom rules that match specific files.
 
-_Based on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-custom-views)._
+_Expands on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-custom-views) (MIT license)._
+
+**Features**
+
+- render HTML templates on individual markdown files.
+- render HTML templates on canvas nodes.
+- render HTML templates on each `.base` item.
+- automatically run list of commands against individual files.
+- automatically run lists of commands against each `.base` item.
 
 ## Commands
 
-Rules run commands in order and only if they are available in the current context. Some commands are provided by this plugin, or you can use any command exposed in the Obsidian command palette. This allows you to automate actions when opening a note. You can also use the 'process now' command to run rules on demand.
+Any command available in the current Obsidian context will be available to include in rules. When rules execute, only commands available in that context will run.
+Rules run on individual files when they open. They run on `.base` result when they change. You can also use the 'process now' command to run rules on demand.
 
 Commands from all matching rules wll execute in order.
 
@@ -14,7 +23,12 @@ Commands from all matching rules wll execute in order.
 
 ### Provided commands
 
+By default, commands provided by this plugin are disabled. You can enable them in the plugin settings.
+
+- `Force template` - Apply a template to the current file regardless of rule automations and conditions.
+- `Restore view` - Remove any applied templates from the current file.
 - `Process now` - Check and execute automations as if the file has just been opened.
+- `Notify time` - Notifies you of the current time. Used really for validating rule conditions.
 
 ## Custom Views
 
@@ -24,12 +38,13 @@ Use the `template` field in rules to render notes using custom HTML templates. I
 
 <!-- *[GIF: Show a note with frontmatter (e.g., a movie note with title, year, rating) being displayed in a custom card view instead of the default markdown view. Show the transition from default view to custom view.]* -->
 
-The plugin's main feature is **custom views**, which allow you to:
+**Custom views** allow you to:
 
 - Create beautiful, custom HTML templates for specific notes
 - Match files using powerful filter rules (file properties, frontmatter, tags, etc.)
 - Transform data using filter chains (date formatting, text transformations, etc.)
 - Render note content as markdown within your custom templates
+- Render templates within base cards, to give you a customized overview.
 
 Perfect for creating card views, dashboards, or any custom presentation of your notes!
 
@@ -38,8 +53,8 @@ Perfect for creating card views, dashboards, or any custom presentation of your 
 #### Getting Started
 
 <!-- 1. **Enable the plugin** in **Settings → Community plugins**.
-2. Go to **Settings → Custom Views** to configure your views.
-3. Click **"Add New View"** to create your first custom view.
+2. Go to **Settings → Rule Engine** to configure your automations.
+3. Click **"Add Rule"** to create your first rule.
 4. Define **filter rules** to match which files should use this view.
 5. Write an **HTML template** to customize how those files are displayed. -->
 
