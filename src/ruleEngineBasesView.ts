@@ -24,6 +24,14 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         });
     }
 
+    private lastDataHash: string = "";
+
+    private get currentDataHash(): string {
+        const dataHash = this.data.data.map(val => `${val.file.path}${val.file.stat.mtime}`).sort().join("_").toLowerCase();
+        const propertyHash = this.data.properties.sort().join("_");
+        return [dataHash, propertyHash].join("_");
+    }
+
     public onDataUpdated(): void {
         this.containerEl.empty();
 
@@ -41,6 +49,9 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         const layoutMode = this.config.get('layout') ?? 'table';
         const order = this.config.getOrder();
 
+        const thisHash = this.currentDataHash;
+        const dataChanged = this.lastDataHash !== thisHash;
+
         for (const group of this.data.groupedData) {
             const groupWrapper = this.containerEl.createDiv();
             // eslint-disable-next-line obsidianmd/no-static-styles-assignment
@@ -52,21 +63,28 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                 this.renderGrid(groupWrapper, group.entries, order);
             }
 
-            // Command execution
-            for (const entry of group.entries) {
-                const { baseFileHandling, commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
-                this.plugin.executeCommands(baseFileHandling, commandIds, entry.file);
+            // Command execution only takes place if the data has changed, not the order or grouping
+            if (dataChanged) {
+                for (const entry of group.entries) {
+                    const { baseFileHandling, commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
+                    this.plugin.executeCommands(baseFileHandling, commandIds, entry.file);
+                }
+                this.lastDataHash = thisHash;
             }
         }
     }
 
     private renderGrid(parent: HTMLElement, entries: BasesEntry[], order: string[]) {
+        const widthPc = String(this.config.get("widthPercentage")) + "%";
+        const heightPc = String(this.config.get("heightPercentage")) + "%";
+        const gapPx = Number(this.config.get('cardGap'));
         const grid = parent.createDiv();
         // --- 2. Inlined Grid Engine ---
         grid.setAttribute('style', `
             display: grid !important;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fill, minmax(${widthPc}, 1fr));
+            grid-template-rows: repeat(auto-fill, minmax(${heightPc}, 1fr));
+            gap: ${gapPx}px;
             width: 100%;
             align-items: start;
         `);
@@ -78,10 +96,9 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                 background-color: var(--background-secondary);
                 border: 1px solid var(--background-modifier-border);
                 border-radius: var(--radius-m);
-                padding: 16px;
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
+                gap: 2px;
                 box-shadow: var(--shadow-s);
             `);
 
