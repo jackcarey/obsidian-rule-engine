@@ -96,7 +96,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             }
         }
 
-        if (this.plugin.settings.allowBaseResultExecution) {
+        if (this.plugin.settings.processBaseResultsAutomatically) {
             const thisHash = this.currentDataHash;
             const dataChanged = this.lastDataHash !== thisHash;
             // Command execution only takes place if the data has changed, not the order or grouping

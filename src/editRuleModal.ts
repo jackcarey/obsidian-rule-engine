@@ -741,7 +741,7 @@ export class EditRuleModal extends Modal {
                     .onChange(val => { this.rule.enabled = val; });
             });
 
-        if (this.plugin.settings.allowBaseResultExecution) {
+        if (this.plugin.settings.processBaseResultsAutomatically) {
             new Setting(contentEl)
                 .setName("File handling")
                 .setDesc(`How should this rule execute commands?`)
@@ -753,7 +753,7 @@ export class EditRuleModal extends Modal {
                     };
                     dd.addOptions(options);
                     dd.setValue(this.rule.baseFileHandling);
-                    dd.disabled = this.plugin.settings.allowBaseResultExecution;
+                    dd.disabled = this.plugin.settings.processBaseResultsAutomatically;
                     dd.onChange(val => {
                         const allowed = ["file", "results", "both"];
                         if (allowed.includes(val)) {

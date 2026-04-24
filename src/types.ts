@@ -50,7 +50,7 @@ export interface CustomRulesSettings {
 	enabled: boolean;
 	workInLivePreview: boolean;
 	workInCanvas: boolean;
-	allowBaseResultExecution: boolean;
+	processBaseResultsAutomatically: boolean;
 	useDnd: boolean;
 	debug: boolean;
 	rules: RuleConfig[];

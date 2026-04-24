@@ -66,14 +66,14 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 		const addBaseSetting = (setting: Setting) => {
 			setting
-				.setName("Execute commands across .base files (experimental)")
-				.setDesc("Allow rules to execute across the 'rule engine' view in .base files.")
+				.setName("Process .base files automatically")
+				.setDesc("Allow rules to execute across the 'rule engine' view in .base files automatically when data changes.")
 				.addToggle(toggle => toggle
-					.setValue(this.plugin.settings.allowBaseResultExecution)
+					.setValue(this.plugin.settings.processBaseResultsAutomatically)
 					.setDisabled(!this.plugin.isBasesViewRegistered)
 					.setTooltip(this.plugin.isBasesViewRegistered ? '' : 'Rule engine view could not be registered')
 					.onChange(async (value) => {
-						this.plugin.settings.allowBaseResultExecution = value;
+						this.plugin.settings.processBaseResultsAutomatically = value;
 						await this.plugin.saveSettings();
 					}));
 		};
@@ -91,18 +91,18 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					}));
 		}
 
-		const addDebug = (setting: Setting) => {
-			setting
-				.setName("Debug")
-				.setDesc("Log debug messages to the developer tools")
-				.addToggle(toggle => toggle
-					.setValue(this.plugin.settings.debug)
-					.onChange(async (value) => {
-						this.plugin.settings.debug = value;
-						await this.plugin.saveSettings();
-						this.display();
-					}));
-		};
+		// const addDebug = (setting: Setting) => {
+		// 	setting
+		// 		.setName("Debug")
+		// 		.setDesc("Log debug messages to the developer tools")
+		// 		.addToggle(toggle => toggle
+		// 			.setValue(this.plugin.settings.debug)
+		// 			.onChange(async (value) => {
+		// 				this.plugin.settings.debug = value;
+		// 				await this.plugin.saveSettings();
+		// 				this.display();
+		// 			}));
+		// };
 
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
 		settingsGroup.addSetting(addGlobalEnableSetting);
@@ -112,7 +112,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		if (!Platform.isMobile) {
 			settingsGroup.addSetting(addUseDnd);
 		}
-		settingsGroup.addSetting(addDebug);
+		// settingsGroup.addSetting(addDebug);
 
 		new Setting(containerEl)
 			.setHeading()
