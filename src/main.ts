@@ -479,7 +479,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 	public executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null, groupLeaf?: WorkspaceLeaf): void {
 		if (!commandIds?.length) return;
-		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file });
+		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file, groupLeaf });
 		const doCmds = () => {
 			const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
 			if (mode === "file" || mode === "both") {

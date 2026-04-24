@@ -101,6 +101,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             const dataChanged = this.lastDataHash !== thisHash;
             // Command execution only takes place if the data has changed, not the order or grouping
             if (dataChanged) {
+                this.plugin.debug(`data changed, processing commands...`)
                 const groupLeaf = this.app.workspace.getLeaf("split", "vertical");
                 groupLeaf.setGroup("ore-leaf-group");
                 for (const group of this.data.groupedData) {
