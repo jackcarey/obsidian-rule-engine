@@ -40,7 +40,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         return (hash >>> 0).toString(16);
     }
 
-    public onDataUpdated(): void {
+    public processView(ignoreDataHash = false): void {
         this.containerEl.empty();
 
         // --- 1. Container Baseline Style ---
@@ -95,12 +95,13 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             }
         }
 
-        if (this.plugin.settings.processBaseResultsAutomatically && Boolean(this.config.get('enableCommands'))) {
+        const canProcessCommands = Boolean(this.config.get('enableCommands') && (ignoreDataHash ? true : this.plugin.settings.processBaseResultsAutomatically));
+        if (canProcessCommands) {
             const thisHash = this.currentDataHash;
             const dataChanged = this.lastDataHash !== thisHash;
             // Command execution only takes place if the data has changed, not the order or grouping
-            if (dataChanged) {
-                this.plugin.debug(`data changed, processing commands...`)
+            if (dataChanged || ignoreDataHash) {
+                this.plugin.debug(`${dataChanged ? 'data changed' : ignoreDataHash ? 'ignoring data hash' : ''}- processing commands...`)
                 const groupLeaf = this.app.workspace.getLeaf("split", "vertical");
                 groupLeaf.setGroup("ore-leaf-group");
                 for (const group of this.data.groupedData) {
@@ -113,6 +114,10 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                 }
             }
         }
+    }
+
+    public onDataUpdated(): void {
+        this.processView(false);
     }
 
     private renderGrid(parent: HTMLElement, entries: BasesEntry[], order: string[]) {

@@ -21,14 +21,45 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		const addGlobalEnableSetting = (setting: Setting) => {
-			setting.setName("Enabled")
-				.setDesc("Enable rule automations")
-				.addToggle(toggle => toggle.setValue(this.plugin.settings.enabled).onChange(async (value) => {
-					this.plugin.settings.enabled = value;
+		new Setting(containerEl).setName("Enabled")
+			.setDesc("Enable rule automations")
+			.addToggle(toggle => toggle.setValue(this.plugin.settings.enabled).onChange(async (value) => {
+				this.plugin.settings.enabled = value;
+				await this.plugin.saveSettings();
+			}));
+
+		new Setting(containerEl)
+			.setHeading()
+			.setName("Rule configuration")
+			.setDesc("Rules are checked and executed in order from top to bottom. The first matching template will be used. Commands from all matching rules will execute. Drag to reorder.")
+			.addButton(btn => btn
+				.setButtonText("Add new rule")
+				.setCta()
+				.onClick(async () => {
+					const newRule: RuleConfig = {
+						id: `${Date.now()}`,
+						name: `Rule ${this.ruleCount + 1}`,
+						filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
+						template: "<h1>{{file.basename}}</h1>",
+						enabled: true,
+						commandIds: [],
+						baseFileHandling: "file"
+					};
+					this.plugin.settings.rules.push(newRule);
 					await this.plugin.saveSettings();
-				}))
-		}
+					this.display();
+
+					const newIndex = this.plugin.settings.rules.length - 1;
+					new EditRuleModal(this.app, this.plugin, newRule, newIndex, () => {
+						this.display();
+					}).open();
+				}));
+
+		const ruleListContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
+
+		this.plugin.settings.rules.forEach((rule, index) => {
+			this.renderRuleListItem(ruleListContainer, rule, index);
+		});
 
 		const addReadingModeSetting = (setting: Setting) => {
 			setting
@@ -91,61 +122,27 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					}));
 		}
 
-		// const addDebug = (setting: Setting) => {
-		// 	setting
-		// 		.setName("Debug")
-		// 		.setDesc("Log debug messages to the developer tools")
-		// 		.addToggle(toggle => toggle
-		// 			.setValue(this.plugin.settings.debug)
-		// 			.onChange(async (value) => {
-		// 				this.plugin.settings.debug = value;
-		// 				await this.plugin.saveSettings();
-		// 				this.display();
-		// 			}));
-		// };
+		const addDebug = (setting: Setting) => {
+			setting
+				.setName("Debug")
+				.setDesc("Log debug messages to the developer tools")
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.debug)
+					.onChange(async (value) => {
+						this.plugin.settings.debug = value;
+						await this.plugin.saveSettings();
+						this.display();
+					}));
+		};
 
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
-		settingsGroup.addSetting(addGlobalEnableSetting);
 		settingsGroup.addSetting(addReadingModeSetting);
 		settingsGroup.addSetting(addCanvasSetting);
 		settingsGroup.addSetting(addBaseSetting);
 		if (!Platform.isMobile) {
 			settingsGroup.addSetting(addUseDnd);
 		}
-		// settingsGroup.addSetting(addDebug);
-
-		new Setting(containerEl)
-			.setHeading()
-			.setName("Rule configuration")
-			.setDesc("Rules are checked and executed in order from top to bottom. The first matching template will be used. Commands from all matching rules will execute. Drag to reorder.")
-			.addButton(btn => btn
-				.setButtonText("Add new rule")
-				.setCta()
-				.onClick(async () => {
-					const newRule: RuleConfig = {
-						id: `${Date.now()}`,
-						name: `Rule ${this.ruleCount + 1}`,
-						filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
-						template: "<h1>{{file.basename}}</h1>",
-						enabled: true,
-						commandIds: [],
-						baseFileHandling: "file"
-					};
-					this.plugin.settings.rules.push(newRule);
-					await this.plugin.saveSettings();
-					this.display();
-
-					const newIndex = this.plugin.settings.rules.length - 1;
-					new EditRuleModal(this.app, this.plugin, newRule, newIndex, () => {
-						this.display();
-					}).open();
-				}));
-
-		const ruleListContainer = containerEl.createDiv({ cls: "ore-rules-list-container" });
-
-		this.plugin.settings.rules.forEach((rule, index) => {
-			this.renderRuleListItem(ruleListContainer, rule, index);
-		});
+		settingsGroup.addSetting(addDebug);
 
 		new Setting(containerEl)
 			.setHeading()

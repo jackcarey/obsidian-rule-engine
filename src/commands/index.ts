@@ -2,6 +2,7 @@ import ObsidianRuleEnginePlugin from "main";
 import { CommandWithSetup } from "types";
 import { forceTemplate } from "./forceTemplate";
 import { MarkdownView, Notice } from "obsidian";
+import { RuleEngineBasesView } from "ruleEngineBasesView";
 
 export type GetCommandFn = (plugin?: ObsidianRuleEnginePlugin) => CommandWithSetup;
 
@@ -19,6 +20,11 @@ const processNow: GetCommandFn = (plugin) => ({
         if (file) {
             void plugin?.processMarkdownView(file);
         }
+        const leaf = plugin?.app.workspace.getLeaf(false);
+        if (leaf?.view && leaf.view instanceof RuleEngineBasesView) {
+            (leaf.view as RuleEngineBasesView).processView(true);
+        };
+
         return true;
     },
 });
