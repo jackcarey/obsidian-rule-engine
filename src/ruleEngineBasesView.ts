@@ -176,15 +176,10 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         for (const entry of entries) {
             const tr = tbody.createEl('tr');
             order.forEach(id => {
-                const td = tr.createEl('td');
-                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                td.style.padding = "8px";
-                // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-                td.style.borderBottom = "1px solid var(--background-modifier-border-soft)";
-
-                //@ts-expect-error
+                const td = tr.createEl('td', { cls: 'ore-base-group-cell' });
+                //@ts-expect-error - ignore specific string format
                 const { type, name } = parsePropertyId(id);
-                //@ts-expect-error
+                //@ts-expect-error - ignore specific string format
                 const value = entry.getValue(id);
 
                 if (name === 'name' && type === 'file') {
@@ -201,11 +196,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     }
 
     private renderFileLink(container: HTMLElement, entry: BasesEntry) {
-        const linkEl = container.createEl('a', { text: entry.file.name });
-        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-        linkEl.style.color = "var(--text-accent)";
-        // eslint-disable-next-line obsidianmd/no-static-styles-assignment
-        linkEl.style.cursor = "pointer";
+        const linkEl = container.createEl('a', { text: entry.file.name, cls: 'ore-bases-file-link' });
 
         linkEl.onClickEvent((evt) => {
             evt.preventDefault();

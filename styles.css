@@ -976,3 +976,13 @@ font-size: var(--metadata-input-font-size);
     margin-bottom: 4px;
     padding-bottom: 4px;
 }
+
+.ore-base-group-cell {
+    padding: 8px;
+    border-bottom: 1px solid var(--background-modifier-border-soft);
+}
+
+.ore-bases-file-link {
+     color: var(--text-accent);
+     cursor: pointer;
+}

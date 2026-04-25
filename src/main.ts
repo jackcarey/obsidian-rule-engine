@@ -463,10 +463,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 	public get obsidianCommands(): Record<string, Command> {
 		// @ts-expect-error 'commands' is private
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const regularCommands: Record<string, Command> = this.app.commands.commands;
 		// @ts-expect-error 'commands' is private
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
 		const editorCommands: Record<string, Command> = this.app.commands.editorCommands;
 		const allCommands: Record<string, Command> = { ...regularCommands, ...editorCommands };
 		if (Object.keys(allCommands).length === 0) {
