@@ -954,10 +954,22 @@ font-size: var(--metadata-input-font-size);
     border: 1px solid green;
 }
 
+/* Forces the view to be a vertical scrollable block, bypassing parent flex squashing. */
 .rule-bases-view-container {
+    display: block !important;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding:0;
+    margin:0;
+    box-sizing: border-box;
     background-color: var(--background-primary);
     color: var(--text-normal);
     border: 1px solid var(--background-modifier-border);
+}
+
+.rule-bases-view-container:empty::after{
+    content: "Loading view...";
 }
 
 .ore-bases-grid-card{

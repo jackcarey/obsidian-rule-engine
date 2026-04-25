@@ -48,28 +48,11 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     }
 
     public processView(ignoreDataHash = false): void {
-        this.plugin?.debug(`processView`, { ignoreDataHash });
-        //account for base views changing quickly
-        if (!this.plugin.activeBasesView) {
-            this.plugin.activeBasesView = this;
-        }
+        const layoutMode = this.config.get('layout') ?? 'table';
+        this.plugin?.debug(`processView`, { ignoreDataHash, layoutMode });
         this.containerEl.empty();
 
-        // --- 1. Container Baseline Style ---
-        // Forces the view to be a vertical scrollable block, bypassing parent flex squashing.
-        this.containerEl.setAttribute('style', `
-            display: block !important;
-            width: 100%;
-            height: 100%;
-            overflow-y: auto;
-            padding:0;
-            margin:0;
-            box-sizing: border-box;
-        `);
-
-        const layoutMode = this.config.get('layout') ?? 'table';
         const order = this.config.getOrder();
-        this.plugin.debug(`applying layout`, layoutMode);
 
         if (layoutMode === 'table') {
             const table = this.containerEl.createEl('table');
@@ -101,7 +84,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             }
         }
 
-        if (layoutMode === 'grid' && Boolean(this.config.get('enableTemplates'))) {
+        if (layoutMode === 'grid') {
             for (const group of this.data.groupedData) {
                 const groupWrapper = this.containerEl.createDiv();
                 this.renderGrid(groupWrapper, group.entries, order);
@@ -173,7 +156,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
 
             const { matchedTemplate } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
 
-            if (matchedTemplate?.length) {
+            if (matchedTemplate?.length && Boolean(this.config.get('enableTemplates'))) {
                 this.plugin.injectCustomView(card, entry.file, matchedTemplate).catch(e => console.error(e));
                 continue;
             } else {
