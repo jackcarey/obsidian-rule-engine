@@ -25,7 +25,7 @@ const processNow: GetCommandFn = (plugin) => ({
             plugin?.debug(`leaf is RuleEngineBasesView, processing results`);
             (leaf.view as RuleEngineBasesView).processView(true);
         } else {
-            plugin?.debug(`leaf is not RuleEngineBasesView, not processing results`);
+            plugin?.debug(`leaf is not RuleEngineBasesView, not processing results`, leaf?.view);
         };
 
         return true;
