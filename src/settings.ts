@@ -64,7 +64,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const addReadingModeSetting = (setting: Setting) => {
 			setting
 				.setName("Template in live preview")
-				.setDesc("Enable to allow the rule engine in both live preview and reading view. Disable to limit them to reading view only.")
+				.setDesc("Enable to use templates in both live preview and reading view. Disable to limit them to reading view only.")
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.workInLivePreview)
 					.onChange(async (value) => {
