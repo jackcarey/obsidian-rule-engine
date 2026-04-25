@@ -124,16 +124,21 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             if (willRunCommands) {
                 this.plugin.debug(`${willRunCommands ? 'data changed' : ignoreDataHash ? 'ignoring data hash' : ''}- processing commands...`)
                 const groupLeaf = this.app.workspace.getLeaf("split", "vertical");
-                groupLeaf.setGroup("ore-leaf-group");
-                for (const group of this.data.groupedData) {
-                    for (const entry of group.entries) {
-                        const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
-                        // always use file mode on each entry since 'results' wouldn't make sense
-                        this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf);
+                try {
+                    groupLeaf.setGroup("ore-leaf-group");
+                    for (const group of this.data.groupedData) {
+                        for (const entry of group.entries) {
+                            const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
+                            // always use file mode on each entry since 'results' wouldn't make sense
+                            this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf);
+                        }
+                        this.lastDataHash = thisHash;
                     }
-                    this.lastDataHash = thisHash;
+                } catch (e) {
+                    this.plugin.debug(e);
+                } finally {
+                    groupLeaf.detach();
                 }
-                groupLeaf.detach();
             }
         }
     }

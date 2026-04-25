@@ -471,7 +471,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (Object.keys(allCommands).length === 0) {
 			this.debug('no commands found for rule-engine');
 		} else {
-			this.debug(`found ${Object.keys(allCommands).length}`, allCommands);
+			this.debug(`found ${Object.keys(allCommands).length} commands`, allCommands);
 		}
 		return allCommands;
 	}
