@@ -22,7 +22,10 @@ const processNow: GetCommandFn = (plugin) => ({
         }
         const leaf = plugin?.app.workspace.getLeaf(false);
         if (leaf?.view && leaf.view instanceof RuleEngineBasesView) {
+            plugin?.debug(`leaf is RuleEngineBasesView, processing results`);
             (leaf.view as RuleEngineBasesView).processView(true);
+        } else {
+            plugin?.debug(`leaf is not RuleEngineBasesView, not processing results`);
         };
 
         return true;
