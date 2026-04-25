@@ -15,7 +15,7 @@ _Expands on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-cu
 ## Commands
 
 Any command available in the current Obsidian context will be available to include in rules. When rules execute, only commands available in that context will run.
-Rules run on individual files when they open. They run on `.base` result when they change. You can also use the 'process now' command to run rules on demand.
+Rules are checked on individual files when they open. They are checked on `.base` results when they change. You can also use the 'process now' command to run rules on demand.
 
 Commands from all matching rules wll execute in order.
 
