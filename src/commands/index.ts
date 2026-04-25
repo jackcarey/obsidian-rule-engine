@@ -14,21 +14,25 @@ const processNow: GetCommandFn = (plugin) => ({
         if (checking) {
             return plugin && plugin.settings.enabled;
         }
+        try {
+            const file = plugin?.app.workspace.getActiveFile();
 
-        const file = plugin?.app.workspace.getActiveFile();
+            if (file) {
+                void plugin?.processMarkdownView(file);
+            }
+            const leaf = plugin?.app.workspace.getLeaf(false);
+            if (leaf?.view && leaf.view instanceof RuleEngineBasesView) {
+                plugin?.debug(`leaf is RuleEngineBasesView, processing results`);
+                (leaf.view as RuleEngineBasesView).processView(true);
+            } else {
+                plugin?.debug(`leaf is not RuleEngineBasesView, not processing results`, leaf?.view);
+            };
 
-        if (file) {
-            void plugin?.processMarkdownView(file);
+            return true;
+        } catch (e) {
+            plugin?.debug(e);
+            return false;
         }
-        const leaf = plugin?.app.workspace.getLeaf(false);
-        if (leaf?.view && leaf.view instanceof RuleEngineBasesView) {
-            plugin?.debug(`leaf is RuleEngineBasesView, processing results`);
-            (leaf.view as RuleEngineBasesView).processView(true);
-        } else {
-            plugin?.debug(`leaf is not RuleEngineBasesView, not processing results`, leaf?.view);
-        };
-
-        return true;
     },
 });
 
@@ -40,26 +44,33 @@ const resetTemplate: GetCommandFn = (plugin) => ({
         if (checking) {
             return plugin && plugin.settings.enabled;
         }
+        try {
 
-        const file = plugin?.app.workspace.getActiveFile();
+            const file = plugin?.app.workspace.getActiveFile();
 
-        if (file && plugin) {
-            const leaf = plugin.app.workspace.getLeaf(false);
-            if (leaf) {
-                if (!(leaf.view instanceof MarkdownView)) return;
-                plugin.restoreDefaultView(leaf.view);
+            if (file && plugin) {
+                const leaf = plugin.app.workspace.getLeaf(false);
+                if (leaf) {
+                    if (!(leaf.view instanceof MarkdownView)) return;
+                    plugin.restoreDefaultView(leaf.view);
+                }
             }
+            return true;
+        } catch (e) {
+            plugin?.debug(e);
+            return false;
         }
-        return true;
     }
 });
 
-const notifyTime: GetCommandFn = () => ({
+const notifyTime: GetCommandFn = (plugin) => ({
     id: "notify-time",
     name: "Notify time",
     description: "Create a notification of the current time",
     callback: () => {
-        new Notice(new Date().toISOString(), 3000);
+        const dt = new Date().toISOString();
+        plugin?.debug(`notify -time`, dt);
+        new Notice(dt, 3000);
     }
 });
 
