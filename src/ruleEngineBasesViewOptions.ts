@@ -1,8 +1,8 @@
+import ObsidianRuleEnginePlugin from "main";
 import { ViewOption } from "obsidian";
 
-export function getRuleEngineViewOptions(): ViewOption[] {
+export function getRuleEngineViewOptions(plugin: ObsidianRuleEnginePlugin): ViewOption[] {
     return [
-        //todo: could be interesting to restrict a view to specific rules, by ID
         {
             type: 'dropdown',
             key: 'layout',
@@ -12,6 +12,12 @@ export function getRuleEngineViewOptions(): ViewOption[] {
                 table: 'Table',
                 grid: 'Cards', // We map 'grid' key to 'Cards' UI text
             }
+        },
+        {
+            type: 'toggle',
+            key: 'enableCommands',
+            displayName: 'Enable commands',
+            default: true,
         },
         {
             type: 'group',

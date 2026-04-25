@@ -91,12 +91,11 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         if (layoutMode === 'grid') {
             for (const group of this.data.groupedData) {
                 const groupWrapper = this.containerEl.createDiv();
-                groupWrapper.style.border = `margin:0;padding:0;1px solid red`;
                 this.renderGrid(groupWrapper, group.entries, order);
             }
         }
 
-        if (this.plugin.settings.processBaseResultsAutomatically) {
+        if (this.plugin.settings.processBaseResultsAutomatically && this.config.get('enableCommands')) {
             const thisHash = this.currentDataHash;
             const dataChanged = this.lastDataHash !== thisHash;
             // Command execution only takes place if the data has changed, not the order or grouping
@@ -112,10 +111,6 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                     }
                     this.lastDataHash = thisHash;
                 }
-                //todo: is this necessary?
-                setTimeout(() => {
-                    groupLeaf.detach();
-                }, 100);
             }
         }
     }

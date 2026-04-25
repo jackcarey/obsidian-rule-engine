@@ -490,6 +490,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			}
 		};
 		if (file) {
+
 			const leaf = this.app.workspace.getLeaf(
 				groupLeaf ? undefined : "split",
 				groupLeaf ? undefined : "vertical"
@@ -503,10 +504,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			}).catch(e => {
 				this.debug(e);
 			}).finally(() => {
-				//todo: is this necessary?
-				setTimeout(() => {
-					leaf.detach();
-				}, 100);
+				this.debug(`leaf command execution finished`);
 			});
 			return;
 		} else {
