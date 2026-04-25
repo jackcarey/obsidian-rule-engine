@@ -747,7 +747,7 @@ export class EditRuleModal extends Modal {
                 .setDesc(`How should this rule execute commands?`)
                 .addDropdown(dd => {
                     const options: Record<BaseFileHandling, string> = {
-                        'file': 'Markdown files',
+                        'file': 'On markdown files',
                         'results': 'Across .base results',
                         'both': 'Both'
                     };
