@@ -1,8 +1,13 @@
-import ObsidianRuleEnginePlugin from "main";
 import { ViewOption } from "obsidian";
 
-export function getRuleEngineViewOptions(plugin: ObsidianRuleEnginePlugin): ViewOption[] {
+export function getRuleEngineViewOptions(): ViewOption[] {
     return [
+        {
+            type: 'toggle',
+            key: 'enableCommands',
+            displayName: 'Enable command execution',
+            default: true,
+        },
         {
             type: 'dropdown',
             key: 'layout',
@@ -14,15 +19,15 @@ export function getRuleEngineViewOptions(plugin: ObsidianRuleEnginePlugin): View
             }
         },
         {
-            type: 'toggle',
-            key: 'enableCommands',
-            displayName: 'Enable commands',
-            default: true,
-        },
-        {
             type: 'group',
             displayName: 'Card options',
             items: [
+                {
+                    type: 'toggle',
+                    key: 'enableTemplates',
+                    displayName: 'Enable rule templates',
+                    default: true,
+                },
                 {
                     type: 'slider',
                     key: 'widthPercentage',

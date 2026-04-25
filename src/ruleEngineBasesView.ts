@@ -88,14 +88,14 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             }
         }
 
-        if (layoutMode === 'grid') {
+        if (layoutMode === 'grid' && Boolean(this.config.get('enableTemplates'))) {
             for (const group of this.data.groupedData) {
                 const groupWrapper = this.containerEl.createDiv();
                 this.renderGrid(groupWrapper, group.entries, order);
             }
         }
 
-        if (this.plugin.settings.processBaseResultsAutomatically && this.config.get('enableCommands')) {
+        if (this.plugin.settings.processBaseResultsAutomatically && Boolean(this.config.get('enableCommands'))) {
             const thisHash = this.currentDataHash;
             const dataChanged = this.lastDataHash !== thisHash;
             // Command execution only takes place if the data has changed, not the order or grouping
