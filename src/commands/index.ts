@@ -20,12 +20,12 @@ const processNow: GetCommandFn = (plugin) => ({
             if (file) {
                 void plugin?.processMarkdownView(file);
             }
-            const leaf = plugin?.app.workspace.getLeaf(false);
-            if (leaf?.view && leaf.view instanceof RuleEngineBasesView) {
-                plugin?.debug(`leaf is RuleEngineBasesView, processing results`);
-                (leaf.view as RuleEngineBasesView).processView(true);
+
+            if (plugin?.activeBasesView) {
+                plugin?.debug(`activeBasesView, processing results...`, plugin.activeBasesView);
+                plugin?.activeBasesView?.processView(true);
             } else {
-                plugin?.debug(`leaf is not RuleEngineBasesView, not processing results`, leaf?.view);
+                plugin?.debug(`no activeBasesView, not processing results`);
             };
 
             return true;

@@ -72,6 +72,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	};
 
 	public isBasesViewRegistered: boolean = false;
+	public activeBasesView: RuleEngineBasesView | undefined = undefined;
 
 	async onload() {
 		await this.loadSettings();

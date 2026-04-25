@@ -40,7 +40,19 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         return (hash >>> 0).toString(16);
     }
 
+    onload(): void {
+        this.plugin.activeBasesView = this;
+    }
+    onunload(): void {
+        this.plugin.activeBasesView = undefined;
+    }
+
     public processView(ignoreDataHash = false): void {
+        this.plugin?.debug(`processView`, { ignoreDataHash });
+        //account for base views changing quickly
+        if (!this.plugin.activeBasesView) {
+            this.plugin.activeBasesView = this;
+        }
         this.containerEl.empty();
 
         // --- 1. Container Baseline Style ---
@@ -57,6 +69,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
 
         const layoutMode = this.config.get('layout') ?? 'table';
         const order = this.config.getOrder();
+        this.plugin.debug(`applying layout`, layoutMode);
 
         if (layoutMode === 'table') {
             const table = this.containerEl.createEl('table');
@@ -95,13 +108,21 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             }
         }
 
-        const canProcessCommands = Boolean(this.config.get('enableCommands') && (ignoreDataHash ? true : this.plugin.settings.processBaseResultsAutomatically));
+        const viewEnabledCommands = Boolean(this.config.get('enableCommands'));
+        const autoProcess = this.plugin.settings.processBaseResultsAutomatically;
+        const canProcessCommands = viewEnabledCommands && (ignoreDataHash || autoProcess);
+        this.plugin.debug(`canProcessCommands`, {
+            canProcessCommands,
+            viewEnabledCommands,
+            ignoreDataHash,
+            autoProcess
+        });
         if (canProcessCommands) {
             const thisHash = this.currentDataHash;
-            const dataChanged = this.lastDataHash !== thisHash;
-            // Command execution only takes place if the data has changed, not the order or grouping
-            if (dataChanged || ignoreDataHash) {
-                this.plugin.debug(`${dataChanged ? 'data changed' : ignoreDataHash ? 'ignoring data hash' : ''}- processing commands...`)
+            // Command execution only takes place automatically if the data has changed, not the order or grouping
+            const willRunCommands = ignoreDataHash || this.lastDataHash !== thisHash;
+            if (willRunCommands) {
+                this.plugin.debug(`${willRunCommands ? 'data changed' : ignoreDataHash ? 'ignoring data hash' : ''}- processing commands...`)
                 const groupLeaf = this.app.workspace.getLeaf("split", "vertical");
                 groupLeaf.setGroup("ore-leaf-group");
                 for (const group of this.data.groupedData) {
@@ -112,6 +133,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                     }
                     this.lastDataHash = thisHash;
                 }
+                groupLeaf.detach();
             }
         }
     }
