@@ -12,6 +12,8 @@ _Expands on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-cu
 - automatically run list of commands against individual files.
 - automatically run lists of commands against each `.base` item.
 
+![edit rule modal](screenshots/editRuleModal.png)
+
 ## Commands
 
 Any command available in the current Obsidian context will be available to include in rules. When rules execute, only commands available in that context will run.
@@ -30,9 +32,30 @@ By default, commands provided by this plugin are disabled. You can enable them i
 - `Process now` - Check and execute automations as if the file has just been opened.
 - `Notify time` - Notifies you of the current time. Used really for validating rule conditions.
 
+## Base files
+
+When opening or updating a Base, rules with the 'base' or 'both' file handling will execute commands and apply templates.
+
+### Table layout
+
+Execute commands against results.
+![rule engine table base view](screenshots/table_view.png)
+
+## Card layout
+
+Using the card layout you can apply matching templates to each item automatically. Since base and rule filters can differ, you can apply different templates to each card.
+
+![rule engine custom card template](screenshots/card_template.png)
+
+### Settings
+
+Configure the layout mode, toggle command execution and templates.
+
+![rule engine settings](screenshots/card_settings.png)
+
 ## Custom Views
 
-Use the `template` field in rules to render notes using custom HTML templates. If the `template` field is blank, no template will be used. The first matching template from the list of rules will be used.
+Use the `HTML template` field in rules to render notes using custom HTML templates. If the `template` field is blank, no template will be used. The first matching template from the list of rules will be used.
 
 ![output](https://github.com/user-attachments/assets/f94e92b6-93a0-42eb-a9c7-bad6bc3aa7e2)
 
@@ -295,27 +318,26 @@ You can include `<script>` tags in your templates for dynamic behavior. Scripts 
 </div>
 ```
 
-### Commands
-
-The plugin adds the following commands to the Command palette:
-
-- **Enable Custom Views** - Enable the plugin (only shown when disabled)
-- **Disable Custom Views** - Disable the plugin (only shown when enabled)
-
 ### Settings
 
-Access settings via **Settings → Custom Views**.
+Access settings via **Settings → Rule Engine**.
+
+![settings menu](screenshots/settings.png)
 
 #### Global Settings
 
-- **Work in Live Preview** - If enabled, custom views work in both reading mode and live preview mode. If disabled, custom views only work in reading mode.
+- **Template in Live Preview** - If enabled, custom views work in both reading mode and live preview mode. If disabled, custom views only work in reading mode.
+- **Template in canvas (experimental)** - Apply templates to Markdown file nodes in canvas files.
+- **Process .base files automatically** - Allow rules to execute across the 'rule engine' view in `.base` files automatically when data changes.
 
-#### View Configuration
+#### Rule Configuration
 
-Each view has:
+Each rule has:
 
 - **Name** - A descriptive name for the view
-- **Filter Rules** - Conditions that determine which files match this view
+- **Filter Conditions** - Conditions that determine which files match this view
+- **Base file handling** - Whether the rule runs against individual files, base file results, or both.
+- **Commands** - An ordered list of commands to run when a file matches the filter conditions
 - **HTML Template** - The custom HTML template to render for matching files
 
 ### Template Reference
