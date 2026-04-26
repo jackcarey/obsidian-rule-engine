@@ -55,6 +55,7 @@
 }
 
 .ore-textarea {
+    min-height: 12lh;
     height: 12lh;
     width: 100%;
     font-family: var(--font-monospace);

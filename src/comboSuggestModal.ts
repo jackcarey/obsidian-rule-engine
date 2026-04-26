@@ -1,4 +1,4 @@
-import { App, FuzzyMatch, FuzzySuggestModal, setIcon } from "obsidian";
+import { App, FuzzyMatch, FuzzySuggestModal, setIcon, Platform } from "obsidian";
 import { SuggestItem } from "types";
 
 function removeFocusClasses(button: HTMLElement | null, parent: HTMLElement | null): void {
@@ -13,6 +13,7 @@ function removeFocusClasses(button: HTMLElement | null, parent: HTMLElement | nu
 /**
  * Unified combobox modal for property and operator selection.
  * Consolidates PropertySuggestModal and OperatorSuggestModal into a single reusable class.
+ * Behaviour and styles are disabled on mobile so it works with native controls.
  */
 export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
     private items: SuggestItem[];
@@ -32,7 +33,9 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
         this.items = items;
         this.selectedValue = selectedValue;
         this.onSelect = onSelect;
-        this.anchorEl = anchorEl || null;
+        if (!Platform.isMobile) {
+            this.anchorEl = anchorEl || null;
+        }
     }
 
     getItems(): SuggestItem[] {
@@ -45,6 +48,8 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
 
     onOpen() {
         void super.onOpen();
+        //don't do the style and behaviour change on mobile
+        if (Platform.isMobile) return;
 
         // Style modal as combobox
         requestAnimationFrame(() => {
@@ -157,6 +162,10 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
     }
 
     onClose() {
+        if (Platform.isMobile) {
+            super.onClose();
+            return;
+        }
         if (this.clickOutsideHandler) {
             document.removeEventListener('mousedown', this.clickOutsideHandler);
             this.clickOutsideHandler = null;

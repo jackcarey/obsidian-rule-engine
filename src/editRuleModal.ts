@@ -837,6 +837,7 @@ export class EditRuleModal extends Modal {
             .setValue(this.rule.template)
             .onChange(val => this.rule.template = val);
         taEl.inputEl.classList.add(`ore-textarea`);
+        taEl.inputEl.rows = 12;
 
         const buttonContainer = contentEl.createDiv('modal-button-container');
         new ButtonComponent(buttonContainer)
