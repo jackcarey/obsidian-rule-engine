@@ -34,7 +34,7 @@ By default, commands provided by this plugin are disabled. You can enable them i
 
 ## Base files
 
-When opening or updating a Base, rules with the 'base' or 'both' file handling will execute commands and apply templates.
+When opening or updating a Base that uses the 'Rule Engine' view, rules with the 'base' or 'both' file handling will execute commands and apply templates.
 
 ### Table layout
 
