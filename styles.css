@@ -999,3 +999,7 @@ font-size: var(--metadata-input-font-size);
      color: var(--text-accent);
      cursor: pointer;
 }
+
+.ore-command-config-name {
+    font-weight: normal;
+}

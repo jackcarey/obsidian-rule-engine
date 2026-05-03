@@ -2,9 +2,9 @@ import ObsidianRuleEnginePlugin from "main";
 import { CommandWithSetup } from "types";
 import { forceTemplate } from "./forceTemplate";
 import { MarkdownView, Notice } from "obsidian";
-import { RuleEngineBasesView } from "ruleEngineBasesView";
+import { taskDate } from "./taskDate";
 
-export type GetCommandFn = (plugin?: ObsidianRuleEnginePlugin) => CommandWithSetup;
+export type GetCommandFn<TConfig extends Record<string, unknown> = Record<string, unknown>> = (plugin: ObsidianRuleEnginePlugin) => CommandWithSetup<TConfig>;
 
 const processNow: GetCommandFn = (plugin) => ({
     id: "check-rules",
@@ -23,7 +23,7 @@ const processNow: GetCommandFn = (plugin) => ({
 
             if (plugin?.activeBasesView) {
                 plugin?.debug(`activeBasesView, processing results...`, plugin.activeBasesView);
-                plugin?.activeBasesView?.processView(true);
+                void plugin?.activeBasesView?.processView(true);
             } else {
                 plugin?.debug(`no activeBasesView, not processing results`);
             };
@@ -74,5 +74,6 @@ const notifyTime: GetCommandFn = (plugin) => ({
     }
 });
 
-export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate, notifyTime] as const;
 
+
+export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate, notifyTime, taskDate] as const;

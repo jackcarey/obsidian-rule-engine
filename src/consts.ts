@@ -31,6 +31,7 @@ export const DEFAULT_SETTINGS: CustomRulesSettings = {
     workInLivePreview: true,
     workInCanvas: false,
     processBaseResultsAutomatically: false,
+    processOnSave: false,
     useDnd: true,
     debug: false,
     rules: [
@@ -44,7 +45,7 @@ export const DEFAULT_SETTINGS: CustomRulesSettings = {
             baseFileHandling: "file",
         }
     ],
-    commands: []
+    commands: {}
 };
 
 export const CUSTOM_RULE_CLASS = "obsidian-custom-rule-render";

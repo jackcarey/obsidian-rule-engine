@@ -8,6 +8,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     private plugin: ObsidianRuleEnginePlugin;
     private containerEl: HTMLElement;
     public hoverPopover: HoverPopover | null = null;
+    private isProcessing = false;
 
     constructor(controller: QueryController, scrollEl: HTMLElement, plugin: ObsidianRuleEnginePlugin) {
         super(controller);
@@ -47,7 +48,9 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         this.plugin.activeBasesView = undefined;
     }
 
-    public processView(ignoreDataHash = false): void {
+    public async processView(ignoreDataHash = false): Promise<void> {
+        if (this.isProcessing) return;
+
         const layoutMode = this.config.get('layout') ?? 'table';
         this.plugin?.debug(`processView`, { ignoreDataHash, layoutMode });
         this.containerEl.empty();
@@ -105,6 +108,8 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             // Command execution only takes place automatically if the data has changed, not the order or grouping
             const willRunCommands = ignoreDataHash || this.lastDataHash !== thisHash;
             if (willRunCommands) {
+                this.isProcessing = true;
+                this.lastDataHash = thisHash;
                 this.plugin.debug(`${willRunCommands ? 'data changed' : ignoreDataHash ? 'ignoring data hash' : ''}- processing commands...`)
                 const groupLeaf = this.app.workspace.getLeaf("split", "vertical");
                 try {
@@ -113,13 +118,13 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                         for (const entry of group.entries) {
                             const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
                             // always use file mode on each entry since 'results' wouldn't make sense
-                            this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf);
+                            await this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf);
                         }
-                        this.lastDataHash = thisHash;
                     }
                 } catch (e) {
                     this.plugin.debug(e);
                 } finally {
+                    this.isProcessing = false;
                     groupLeaf.detach();
                 }
             }
@@ -127,7 +132,11 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     }
 
     public onDataUpdated(): void {
-        this.processView(false);
+        void this.processView(false);
+    }
+
+    public onOpen(): void {
+        void this.processView(true);
     }
 
     private renderGrid(parent: HTMLElement, entries: BasesEntry[], order: string[]) {

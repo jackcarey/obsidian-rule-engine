@@ -95,6 +95,20 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					}));
 		};
 
+		const addProcessOnSave = (setting: Setting) => {
+			setting
+				.setName("Process on settings change")
+				.setDesc("Trigger processing of rule engine results when plugin settings or rules change.")
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.processOnSave)
+					.setDisabled(!this.plugin.isBasesViewRegistered)
+					.setTooltip(this.plugin.isBasesViewRegistered ? '' : 'Rule engine view could not be registered')
+					.onChange(async (value) => {
+						this.plugin.settings.processOnSave = value;
+						await this.plugin.saveSettings();
+					}));
+		};
+
 		const addBaseSetting = (setting: Setting) => {
 			setting
 				.setName("Process .base files automatically")
@@ -138,6 +152,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		const settingsGroup = new SettingGroup(containerEl).setHeading('Settings');
 		settingsGroup.addSetting(addReadingModeSetting);
 		settingsGroup.addSetting(addCanvasSetting);
+		settingsGroup.addSetting(addProcessOnSave);
 		settingsGroup.addSetting(addBaseSetting);
 		if (!Platform.isMobile) {
 			settingsGroup.addSetting(addUseDnd);
@@ -301,19 +316,23 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		cmdGroup.addSetting(setting => {
 			setting
 				.setName(name)
-				.setHeading()
+				.setDesc('Enabled')
 				.setDesc(description ?? '')
 				.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rules')
 				.addToggle(toggle => toggle
 					.setValue(currentConfig.enabled)
-					.onChange((value) => {
-						this.plugin.updateCommandConfig(id, { enabled: value });
-					}))
+					.onChange(async (value) => {
+						currentConfig.enabled = value;
+						await this.plugin.updateCommandConfig(id, { enabled: value }).catch(e => this.plugin.debug(e));
+					}));
+			setting.nameEl.className = 'ore-command-config-name';
 		});
 		if (settingCallback) {
-			const saveFn: CommandSaveFn = (updatedConfig) => {
-				this.plugin.updateCommandConfig(id, updatedConfig);
-			}
+			const saveFn: CommandSaveFn = async (updatedConfig) => {
+				if (updatedConfig.enabled !== undefined) currentConfig.enabled = updatedConfig.enabled;
+				if (updatedConfig.params) Object.assign(currentConfig.params, updatedConfig.params);
+				await this.plugin.updateCommandConfig(id, updatedConfig);
+			};
 			settingCallback(cmdGroup, currentConfig, saveFn);
 		}
 	}

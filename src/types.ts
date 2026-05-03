@@ -41,8 +41,10 @@ export interface RuleConfig {
 	baseFileHandling: BaseFileHandling;
 }
 
-export type CommandConfig = Record<string, unknown> & { enabled: boolean };
-
+export interface CommandConfig<T extends Record<string, unknown> = Record<string, unknown>> {
+	enabled: boolean;
+	params: T;
+};
 
 export type PropertyType = "text" | "number" | "date" | "datetime" | "list" | "checkbox" | "file" | "unknown";
 
@@ -51,10 +53,12 @@ export interface CustomRulesSettings {
 	workInLivePreview: boolean;
 	workInCanvas: boolean;
 	processBaseResultsAutomatically: boolean;
+	processOnSave: boolean;
 	useDnd: boolean;
 	debug: boolean;
 	rules: RuleConfig[];
-	commands: CommandConfig[];
+	// Use the base version of the type to allow variety
+	commands: Record<string, CommandConfig>;
 }
 
 /**
@@ -87,14 +91,14 @@ export interface SuggestItem {
 	icon?: string;
 }
 
-export type CommandSaveFn = (updatedConfig: Partial<Omit<CommandConfig, 'id'>>) => void;
-export type CommandSettingCallback = (settingGroup: SettingGroup, currentConfig: CommandConfig, saveFn: CommandSaveFn) => void
+export type CommandSaveFn = (updatedConfig: Partial<CommandConfig>) => Promise<void>;
+export type CommandSettingCallback<TConfig extends Record<string, unknown> = Record<string, unknown>> = (settingGroup: SettingGroup, currentConfig: CommandConfig<TConfig>, saveFn: CommandSaveFn) => void
 
-export type CommandWithSetup = Command & {
+export type CommandWithSetup<TConfig extends Record<string, unknown> = Record<string, unknown>> = Command & {
 	// human readable description of what the command does
 	description?: string;
 	// callback to add the command to the SettingsGroup for this command. The setting will already have a name, description, icon, and enabled toggle.
-	settingCallback?: CommandSettingCallback
+	settingCallback?: CommandSettingCallback<TConfig>;
 };
 
 export type ProcessMarkdownViewOptions = {

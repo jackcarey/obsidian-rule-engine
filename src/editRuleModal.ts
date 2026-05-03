@@ -1,8 +1,9 @@
 import { ComboboxSuggestModal } from "comboSuggestModal";
-import { TYPE_ICONS, OPERATORS } from "consts";
+import { OPERATORS } from "consts";
 import ObsidianRuleEnginePlugin from "main";
 import { App, ButtonComponent, Modal, setIcon, Setting, TextAreaComponent } from "obsidian";
 import { RuleConfig, BaseFileHandling, SuggestItem, Filter, FilterConjunction, FilterGroup, FilterOperator, PropertyDef, PropertyType } from "types";
+import { addFocusClasses } from "utils";
 
 function setupComboboxButtonHandlers(
     button: HTMLElement,
@@ -61,11 +62,6 @@ function createDeleteButton(
         onClick(e);
     };
     return deleteBtn;
-}
-
-function addFocusClasses(button: HTMLElement, parent: HTMLElement): void {
-    button.addClass("ore-has-focus");
-    parent.addClass("ore-has-focus");
 }
 
 function createFilterValueInput(
@@ -317,114 +313,7 @@ class FilterBuilder {
         public onSave: () => void,
         public onRefresh: () => void
     ) {
-        this.availableProperties = this.scanVaultProperties();
-    }
-
-    /**
-     * Gets the display label for a property key
-     */
-    getPropertyLabel(key: string): string {
-        const labelMap: Record<string, string> = {
-            "file.name": "file name",
-            "file.path": "file path",
-            "file.folder": "folder",
-            "file.size": "file size",
-            "file.ctime": "created time",
-            "file.mtime": "modified time"
-        };
-        return labelMap[key] || key;
-    }
-
-    /**
-     * Gets the icon for a property
-     */
-    getPropertyIcon(key: string, type: PropertyType): string {
-        if (key === "file tags") return "tags";
-        if (key === "aliases") return "forward";
-        if (key === "file.ctime" || key === "file.mtime") return "clock";
-        return TYPE_ICONS[type] || "pilcrow";
-    }
-
-    /**
-     * Scans the vault to find properties and INFER their types.
-     */
-    scanVaultProperties(): PropertyDef[] {
-        const app = this.plugin.app;
-        const propMap = new Map<string, PropertyType>();
-
-        // Define built-in properties in the desired order
-        const builtInProps: Array<[string, PropertyType]> = [
-            ["file", "file"],
-            ["file.name", "text"],
-            ["file.path", "text"],
-            ["file.folder", "text"],
-            ["file.ctime", "date"],
-            ["file.mtime", "date"],
-            ["file.size", "number"],
-            ["file tags", "list"],
-            ["aliases", "list"]
-        ];
-
-        // Add built-in properties
-        for (const [key, type] of builtInProps) {
-            propMap.set(key, type);
-        }
-
-        // Scan frontmatter properties
-        const files = app.vault.getMarkdownFiles();
-        for (const file of files) {
-            const cache = app.metadataCache.getFileCache(file);
-            if (cache?.frontmatter) {
-                for (const key of Object.keys(cache.frontmatter)) {
-                    if (key === "position" || key === "tags" || key === "aliases") continue;
-                    if (propMap.has(key) && propMap.get(key) !== "unknown") continue;
-                    const val = cache.frontmatter[key] as string | number | boolean | string[] | undefined;
-                    const type = this.inferType(val);
-                    propMap.set(key, type);
-                }
-            }
-        }
-
-        // Separate built-in and custom properties
-        const builtInKeys = new Set(builtInProps.map(([key]) => key));
-        const builtIn: PropertyDef[] = [];
-        const custom: PropertyDef[] = [];
-
-        for (const [key, type] of propMap.entries()) {
-            const def = { key, type };
-            if (builtInKeys.has(key)) {
-                builtIn.push(def);
-            } else {
-                custom.push(def);
-            }
-        }
-
-        // Sort built-in by the defined order, custom alphabetically
-        builtIn.sort((a, b) => {
-            const aIndex = builtInProps.findIndex(([key]) => key === a.key);
-            const bIndex = builtInProps.findIndex(([key]) => key === b.key);
-            return aIndex - bIndex;
-        });
-        custom.sort((a, b) => a.key.localeCompare(b.key));
-
-        return [...builtIn, ...custom];
-    }
-
-    inferType(val: unknown): PropertyType {
-        if (val === null || val === undefined) return "unknown";
-        if (Array.isArray(val)) return "list";
-        if (typeof val === "number") return "number";
-        if (typeof val === "boolean") return "checkbox";
-        if (typeof val === "string") {
-            if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return "date";
-            if (/^\d{4}-\d{2}-\d{2}T/.test(val)) return "datetime";
-        }
-        return "text";
-    }
-
-    getPropertyType(key: string): PropertyType {
-        const def = this.availableProperties.find(p => p.key === key);
-        return def ? def.type : "text";
+        this.availableProperties = this.plugin.scanVaultProperties();
     }
 
     render(container: HTMLElement) {
@@ -537,28 +426,28 @@ class FilterBuilder {
         const statement = row.createDiv({ cls: "ore-filter-statement" });
         const expression = statement.createDiv({ cls: "ore-filter-expression metadata-property" });
 
-        const currentType = this.getPropertyType(filter.field);
+        const currentType = this.plugin.getPropertyType(filter.field, this.availableProperties);
 
         // Track if this placeholder has been added to the conditions array
         let placeholderAdded = false;
 
         const propertyBtn = createComboboxButton(
             expression,
-            this.getPropertyLabel(filter.field),
-            this.getPropertyIcon(filter.field, currentType)
+            this.plugin.getPropertyLabel(filter.field),
+            this.plugin.getPropertyIcon(filter.field, currentType)
         );
 
         const openPropertyModal = () => {
             addFocusClasses(propertyBtn, expression);
             this.openSuggestModal(
                 this.availableProperties.map(p => ({
-                    label: this.getPropertyLabel(p.key),
+                    label: this.plugin.getPropertyLabel(p.key),
                     value: p.key,
-                    icon: this.getPropertyIcon(p.key, p.type)
+                    icon: this.plugin.getPropertyIcon(p.key, p.type)
                 })),
                 filter.field,
                 (newVal) => {
-                    const newType = this.getPropertyType(newVal);
+                    const newType = this.plugin.getPropertyType(newVal, this.availableProperties);
                     const validOps = OPERATORS[newType === "datetime" ? "date" : newType] ?? OPERATORS["text"];
                     const newOperator = validOps?.[0] as FilterOperator;
 

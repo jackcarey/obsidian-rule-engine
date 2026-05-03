@@ -1,9 +1,9 @@
 import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf, Command } from "obsidian";
 import { ObsidianRuleEngineSettingTab } from "./settings";
 import { checkRules } from "./matcher";
-import { renderTemplate } from "./renderer";
-import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS } from "./consts";
-import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessMarkdownViewOptions } from "./types";
+import { renderTemplate } from "./templateRenderer";
+import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS, TYPE_ICONS } from "./consts";
+import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessMarkdownViewOptions, PropertyDef, PropertyType } from "./types";
 import { list as commandList } from 'commands';
 import { RULE_ENGINE_BASE_VIEW_ID, RuleEngineBasesView } from "ruleEngineBasesView";
 import { getRuleEngineViewOptions } from "ruleEngineBasesViewOptions";
@@ -14,7 +14,7 @@ function isCanvasView(view: unknown): view is CanvasView {
 	return typeof view === "object" && view !== null && "canvas" in view;
 }
 export default class ObsidianRuleEnginePlugin extends Plugin {
-	settings: CustomRulesSettings = Object.assign({}, DEFAULT_SETTINGS);
+	settings: CustomRulesSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 
 	debug(...args: unknown[]) {
 		if (this.settings.debug) {
@@ -36,36 +36,35 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	 * @param id The command ID
 	 * @returns The command config from the plugin data.json
 	 */
-	getCommandConfig = (id: string): CommandConfig => {
+	getCommandConfig = <T extends Record<string, unknown>>(id: string): CommandConfig<T> => {
+		const existing = this.settings.commands?.[id] as CommandConfig<T> | undefined;
 		return {
 			enabled: false,
-			... this.settings.commands.find(cmd => cmd.id === id),
+			params: {} as T,
+			...existing,
 		};
-	}
+	};
 
 	/**
 	 * 
 	 * @param id The command ID
 	 * @param partialUpdate An object containing some settings to update in the plugin data.json
 	 */
-	updateCommandConfig = (id: string, partialUpdate: Partial<Omit<CommandConfig, 'id'>>): void => {
-		if (!this.settings.commands) {
-			this.settings.commands = [];
-		}
-		const fullConfig: CommandConfig = {
-			...this.getCommandConfig(id),
+	updateCommandConfig = async <T extends Record<string, unknown>>(id: string, partialUpdate: Partial<CommandConfig<T>>): Promise<void> => {
+		this.settings.commands = this.settings.commands || {};
+
+		const existing = this.getCommandConfig<T>(id);
+		const fullConfig: CommandConfig<T> = {
+			...existing,
 			...partialUpdate,
-			id
+			params: {
+				...existing.params,
+				...(partialUpdate.params || {})
+			}
 		};
-		const idx = this.settings.commands.findIndex(cmd => cmd.id === id);
-		if (idx !== -1) {
-			this.debug(`setting command`, idx, `to`, fullConfig);
-			this.settings.commands[idx] = fullConfig;
-		} else {
-			this.debug(`adding new command`, idx, `to`, fullConfig);
-			this.settings.commands.push(fullConfig);
-		}
-		this.saveSettings().catch(reason => {
+		this.settings.commands[id] = fullConfig as unknown as CommandConfig;
+
+		await this.saveSettings().catch(reason => {
 			this.debug(reason);
 			throw new Error(`failed to update command config`);
 		});
@@ -360,14 +359,24 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 	async loadSettings() {
 		const loadedData = await this.loadData() as Partial<CustomRulesSettings> | null;
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+		this.settings = Object.assign(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), loadedData || {});
+
+		// Ensure all available commands are initialized in settings
+		this.settings.commands = this.settings.commands || {};
+		for (const cmdFn of commandList) {
+			const cmd = cmdFn(this);
+			this.settings.commands[cmd.id] = this.getCommandConfig(cmd.id);
+		}
+
+		await this.saveSettings();
+
 		this.debug(`loaded settings`);
 	}
 
 	async saveSettings() {
 		this.debug(`saving settings`);
-		if (this.activeBasesView) {
-			this.activeBasesView.processView(true);
+		if (this.activeBasesView && this.settings.processOnSave) {
+			void this.activeBasesView.processView(true);
 		}
 		await this.saveData(this.settings);
 	}
@@ -514,7 +523,90 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		} else {
 			doCmds();
 		}
-
 	}
 
+	inferType(val: unknown): PropertyType {
+		if (val === null || val === undefined) return "unknown";
+		if (Array.isArray(val)) return "list";
+		if (typeof val === "number") return "number";
+		if (typeof val === "boolean") return "checkbox";
+		if (typeof val === "string") {
+			if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return "date";
+			if (/^\d{4}-\d{2}-\d{2}T/.test(val)) return "datetime";
+		}
+		return "text";
+	}
+
+	/**
+	 * Scans the vault to find properties and INFER their types.
+	 */
+	scanVaultProperties(): PropertyDef[] {
+
+		// Define built-in properties in the desired order
+		const builtInProps: Array<[string, PropertyType]> = [
+			["file", "file"],
+			["file.name", "text"],
+			["file.path", "text"],
+			["file.folder", "text"],
+			["file.ctime", "date"],
+			["file.mtime", "date"],
+			["file.size", "number"],
+			["file tags", "list"],
+			["aliases", "list"]
+		];
+
+		// init with built-in props
+		const propMap = new Map<string, PropertyType>(builtInProps);
+
+		// Scan frontmatter properties
+		const files = this.app.vault.getMarkdownFiles();
+		for (const file of files) {
+			const cache = this.app.metadataCache.getFileCache(file);
+			if (cache?.frontmatter) {
+				for (const key of Object.keys(cache.frontmatter)) {
+					if (key === "position" || key === "tags" || key === "aliases") continue;
+					if (propMap.has(key) && propMap.get(key) !== "unknown") continue;
+					const val = cache.frontmatter[key] as string | number | boolean | string[] | undefined;
+					const type = this.inferType(val);
+					propMap.set(key, type);
+				}
+			}
+		}
+		return Array.from(propMap.entries()).map(([key, type]) => ({ key, type }));
+	}
+
+	/**
+	  * Gets the icon for a property
+	  */
+	getPropertyIcon(key: string, type: PropertyType): string {
+		if (key === "file tags") return "tags";
+		if (key === "aliases") return "forward";
+		if (key === "file.ctime" || key === "file.mtime") return "clock";
+		return TYPE_ICONS[type] || "pilcrow";
+	}
+
+	getPropertyType(key: string, allVaultProperties?: PropertyDef[]): PropertyType {
+		// passing the property definitions here means the vault doesn't need to be searched again
+		const props = allVaultProperties?.length
+			? allVaultProperties
+			: this.scanVaultProperties();
+		const def = props.find(p => p.key === key);
+		return def ? def.type : "text";
+	}
+
+
+	/**
+	 * Gets the display label for a property key
+	 */
+	getPropertyLabel(key: string): string {
+		const labelMap: Record<string, string> = {
+			"file.name": "file name",
+			"file.path": "file path",
+			"file.folder": "folder",
+			"file.size": "file size",
+			"file.ctime": "created time",
+			"file.mtime": "modified time"
+		};
+		return labelMap[key] || key;
+	}
 }
