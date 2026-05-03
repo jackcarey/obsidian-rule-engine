@@ -45,8 +45,8 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
                         onSelect,
                         textEl.inputEl,
                     );
-                    textEl.onChange(async (value) => {
-                        await saveFn({ params: { ...params, frontmatterField: value } });
+                    textEl.inputEl.addEventListener('blur', (value) => {
+                        void saveFn({ params: { ...params, frontmatterField: value } });
                     });
                 });
         });
