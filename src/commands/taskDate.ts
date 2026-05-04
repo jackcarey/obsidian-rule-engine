@@ -1,6 +1,6 @@
 import { ComboboxSuggestModal } from "comboSuggestModal";
 import { GetCommandFn } from "commands";
-import { Editor, MarkdownView, MarkdownFileInfo, SuggestModal } from "obsidian";
+import { Editor, MarkdownView, MarkdownFileInfo } from "obsidian";
 import { SuggestItem } from "types";
 
 export const TASK_DATE_ID = 'apply-task-due-date';

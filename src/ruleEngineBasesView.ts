@@ -14,15 +14,6 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         super(controller);
         this.plugin = plugin;
         this.containerEl = scrollEl.createDiv({ cls: 'rule-bases-view-container' });
-
-        // @ts-expect-error eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-        const viewRegistry = this.app.viewRegistry;
-        console.debug(`RuleEngineBasesView viewRegistry`, {
-            viewRegistry,
-            byType: viewRegistry.getViewCreatorByType('bases-table'),
-            controller,
-            window
-        });
     }
 
     private lastDataHash: string = "";
@@ -118,7 +109,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                         for (const entry of group.entries) {
                             const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
                             // always use file mode on each entry since 'results' wouldn't make sense
-                            await this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf);
+                            this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf);
                         }
                     }
                 } catch (e) {

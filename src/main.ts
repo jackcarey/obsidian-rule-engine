@@ -14,7 +14,7 @@ function isCanvasView(view: unknown): view is CanvasView {
 	return typeof view === "object" && view !== null && "canvas" in view;
 }
 export default class ObsidianRuleEnginePlugin extends Plugin {
-	settings: CustomRulesSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+	settings: CustomRulesSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) as CustomRulesSettings;
 
 	debug(...args: unknown[]) {
 		if (this.settings.debug) {
@@ -359,7 +359,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 	async loadSettings() {
 		const loadedData = await this.loadData() as Partial<CustomRulesSettings> | null;
-		this.settings = Object.assign(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), loadedData || {});
+		this.settings = Object.assign(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), loadedData || {}) as CustomRulesSettings;
 
 		// Ensure all available commands are initialized in settings
 		this.settings.commands = this.settings.commands || {};
