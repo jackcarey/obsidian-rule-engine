@@ -44,17 +44,18 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
                 .setName('Frontmatter field')
                 .setDesc('Parse the date from a frontmatter field')
                 .addButton(buttonEl => {
-                    buttonEl.setButtonText(params.frontmatterField || 'None');
+                    buttonEl.setButtonText(params.frontmatterField?.length ? params.frontmatterField : 'None');
                     const onSelect = (value: string) => {
                         saveFn({ params: { ...params, frontmatterField: value } }).then(() => {
                             const displayText = value?.length ? value : 'None';
                             buttonEl.setButtonText(displayText);
                         }).catch(e => plugin.debug(e));
                     };
+                    const comboValue = params.frontmatterField?.length ? params.frontmatterField : '';
                     const combo = new ComboboxSuggestModal(
                         plugin?.app,
                         suggestItems,
-                        params?.frontmatterField || '',
+                        comboValue,
                         onSelect,
                         buttonEl.buttonEl,
                     );
