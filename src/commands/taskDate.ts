@@ -95,14 +95,17 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
             dtStr = titleMatch[0];
         }
 
-        // 3. Last Modified/Current Date Fallback
-        // Using native Date to avoid external libraries
-        const date = new Date(file.stat.mtime);
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
+        if (!dtStr?.length) {
+            // 3. Last Modified/Current Date Fallback
+            // Using native Date to avoid external libraries
+            const date = new Date(file.stat.mtime);
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
 
-        const targetDate = `${y}-${m}-${d}`;
+            const targetDate = `${y}-${m}-${d}`;
+            dtStr = targetDate;
+        }
 
         const lineCount = editor.lineCount();
 
@@ -120,7 +123,7 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
             const match = line.match(taskRegex);
 
             if (match) {
-                const updatedLine = `${line.trimEnd()} 📅 ${targetDate}`;
+                const updatedLine = `${line.trimEnd()} 📅 ${dtStr}`;
 
                 editor.replaceRange(
                     updatedLine,

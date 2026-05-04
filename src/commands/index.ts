@@ -74,6 +74,18 @@ const notifyTime: GetCommandFn = (plugin) => ({
     }
 });
 
+const deleteWithoutConfirmation: GetCommandFn = (plugin) => ({
+    id: "delete-without-confirmation",
+    name: "Delete current file without confirmation",
+    description: "⚠️ Use this command sparingly!",
+    callback: () => {
+        const file = plugin?.app.workspace.getActiveFile();
+        if (file) {
+            plugin?.app.fileManager.trashFile(file).catch(e => {
+                plugin?.debug(e);
+            });
+        }
+    }
+});
 
-
-export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate, notifyTime, taskDate] as const;
+export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate, notifyTime, taskDate, deleteWithoutConfirmation] as const;
