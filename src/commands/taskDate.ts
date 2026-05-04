@@ -1,6 +1,6 @@
 import { ComboboxSuggestModal } from "comboSuggestModal";
 import { GetCommandFn } from "commands";
-import { Editor, MarkdownView, MarkdownFileInfo } from "obsidian";
+import { Editor, MarkdownView, MarkdownFileInfo, SuggestModal } from "obsidian";
 import { SuggestItem } from "types";
 
 export const TASK_DATE_ID = 'apply-task-due-date';
@@ -15,27 +15,40 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
     description: 'The due date will always fall back to the last modified time of the file if the field or title are not parsed.',
     settingCallback: (settingGroup, currentConfig, saveFn) => {
         const params = currentConfig.params;
+        const propertyDefs = plugin.scanVaultProperties();
+        const propertyDefSuggestions = propertyDefs.map(def => {
+            const icon = plugin.getPropertyIcon(def.key, def.type);
+            return {
+                label: def.key,
+                value: def.key,
+                icon
+            };
+        });
+        const frontmatterFieldSuggestion: SuggestItem[] = [{
+            label: params?.frontmatterField ?? '',
+            value: params?.frontmatterField ?? ''
+        }];
+        const suggestItems: SuggestItem[] = [
+            {
+                label: 'None',
+                value: '',
+            },
+            ...propertyDefSuggestions?.length
+                ? propertyDefSuggestions
+                : params?.frontmatterField
+                    ? frontmatterFieldSuggestion
+                    : []]
+            ;
         settingGroup.addSetting(setting => {
             setting
                 .setName('Frontmatter field')
                 .setDesc('Parse the date from a frontmatter field')
-                .addText(textEl => {
-                    textEl.setValue(params.frontmatterField || '');
-                    const propertyDefs = plugin.scanVaultProperties();
-                    const suggestItems: SuggestItem[] = propertyDefs.map(def => {
-                        const icon = plugin.getPropertyIcon(def.key, def.type);
-                        return {
-                            label: def.key,
-                            value: def.key,
-                            icon
-                        };
-                    }) ?? params.frontmatterField ? [{
-                        label: params.frontmatterField ?? '',
-                        value: params.frontmatterField ?? ''
-                    }] : [];
+                .addButton(buttonEl => {
+                    buttonEl.setButtonText(params.frontmatterField || 'None');
                     const onSelect = (value: string) => {
                         saveFn({ params: { ...params, frontmatterField: value } }).then(() => {
-                            textEl.setValue(value);
+                            const displayText = value?.length ? value : 'None';
+                            buttonEl.setButtonText(displayText);
                         }).catch(e => plugin.debug(e));
                     };
                     const combo = new ComboboxSuggestModal(
@@ -43,11 +56,9 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
                         suggestItems,
                         params?.frontmatterField || '',
                         onSelect,
-                        textEl.inputEl,
+                        buttonEl.buttonEl,
                     );
-                    textEl.inputEl.addEventListener('blur', (value) => {
-                        void saveFn({ params: { ...params, frontmatterField: value } });
-                    });
+                    buttonEl.onClick(() => combo.open());
                 });
         });
         settingGroup.addSetting(setting => {
