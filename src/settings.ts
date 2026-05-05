@@ -184,9 +184,6 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 		const itemTitle = [
 			rule.name,
-			'|',
-			`☰ ${rule.commandIds.length}`,
-			rule.template?.length ? `🗎` : '🗋'
 		].filter(str => Boolean(str?.length))
 			.join(" "); // em space
 		listItem.createSpan({ cls: "ore-rule-name", text: itemTitle });

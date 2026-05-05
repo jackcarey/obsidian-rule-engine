@@ -1001,5 +1001,5 @@ font-size: var(--metadata-input-font-size);
 }
 
 .ore-command-config-name {
-    font-weight: normal;
+    font-weight: bolder;
 }
