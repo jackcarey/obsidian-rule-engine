@@ -32,6 +32,10 @@ By default, commands provided by this plugin are disabled. You can enable them i
 - `Process now` - Check and execute automations as if the file has just been opened.
 - `Notify time` - Notifies you of the current time. Used really for validating rule conditions.
 
+### Third party commands
+
+Any command available in the current Obsidian context will be available to include in rules. When rules execute, only commands available in that context will run. This means you can use commands from Obsidian itself or any other plugin. Avoid automating commands that require input when they run as these parameters cannot be selected.
+
 ## Base files
 
 When opening or updating a Base that uses the 'Rule Engine' view, rules with the 'base' or 'both' file handling will execute commands and apply templates.
