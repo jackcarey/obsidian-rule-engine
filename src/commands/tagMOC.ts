@@ -57,6 +57,8 @@ export const tagMOC: GetCommandFn<TagMOCParams> = (plugin) => ({
 
             if (effectiveMode === 'any') return tags.some(t => fTags.includes(t));
             if (effectiveMode === 'all') return tags.every(t => fTags.includes(t));
+            if (effectiveMode === 'exact') return tags.every(t => fTags.includes(t));
+            return false;
         });
 
         const links = matchingFiles
@@ -72,11 +74,12 @@ export const tagMOC: GetCommandFn<TagMOCParams> = (plugin) => ({
 
         if (headingLineIndex === -1) return;
 
-        const headingLevel = (lines[headingLineIndex].match(/^(#+)/) || ['', ''])[1].length;
+        const headingLevel = (lines[headingLineIndex]?.match(/^(#+)/) || ['', ''])[1]?.length;
         let nextHeadingLineIndex = lines.length;
         for (let i = headingLineIndex + 1; i < lines.length; i++) {
-            const match = lines[i].match(/^(#+)/);
-            if (match && match[1].length <= headingLevel) {
+            const match = lines[i]?.match(/^(#+)/);
+            const matchLength = match?.[1]?.length;
+            if (matchLength !== undefined && headingLevel !== undefined && matchLength <= headingLevel) {
                 nextHeadingLineIndex = i;
                 break;
             }

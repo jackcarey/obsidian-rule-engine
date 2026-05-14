@@ -1,4 +1,4 @@
-import { Command, SettingGroup, type TFile } from "obsidian";
+import { App, Command, SettingGroup, type TFile } from "obsidian";
 
 export type FilterOperator =
 	| "contains" | "does not contain"
