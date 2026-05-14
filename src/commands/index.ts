@@ -1,7 +1,7 @@
 import ObsidianRuleEnginePlugin from "main";
 import { CommandWithSetup } from "types";
 import { forceTemplate } from "./forceTemplate";
-import { MarkdownView, Notice } from "obsidian";
+import { MarkdownView } from "obsidian";
 import { taskDate } from "./taskDate";
 
 export type GetCommandFn<TConfig extends Record<string, unknown> = Record<string, unknown>> = (plugin: ObsidianRuleEnginePlugin) => CommandWithSetup<TConfig>;
