@@ -77,7 +77,7 @@ const notifyTime: GetCommandFn = (plugin) => ({
 const deleteWithoutConfirmation: GetCommandFn = (plugin) => ({
     id: "delete-without-confirmation",
     name: "Delete current file without confirmation",
-    description: "⚠️ Use this command sparingly!",
+    description: "⚠️ Use this command cautiously!",
     callback: () => {
         const file = plugin?.app.workspace.getActiveFile();
         if (file) {
