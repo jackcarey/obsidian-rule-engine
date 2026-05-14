@@ -3,7 +3,7 @@ import { ObsidianRuleEngineSettingTab } from "./settings";
 import { checkRules } from "./matcher";
 import { renderTemplate } from "./templateRenderer";
 import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS, TYPE_ICONS } from "./consts";
-import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessMarkdownViewOptions, PropertyDef, PropertyType } from "./types";
+import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessMarkdownViewOptions, PropertyDef, PropertyType, AppWithMetadataTypeManager } from "./types";
 import { list as commandList } from 'commands';
 import { RULE_ENGINE_BASE_VIEW_ID, RuleEngineBasesView } from "ruleEngineBasesView";
 import { getRuleEngineViewOptions } from "ruleEngineBasesViewOptions";
@@ -76,6 +76,17 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new ObsidianRuleEngineSettingTab(this.app, this));
+
+		// Ensure tag_moc properties are registered in the vault's metadata types for better type inference
+		const metadataTypeManager = (this.app as AppWithMetadataTypeManager).metadataTypeManager;
+		if (metadataTypeManager) {
+			if (!metadataTypeManager.getAssignedType("tag_moc_mode")) {
+				metadataTypeManager.setType("tag_moc_mode", "text");
+			}
+			if (!metadataTypeManager.getAssignedType("tag_moc_heading")) {
+				metadataTypeManager.setType("tag_moc_heading", "text");
+			}
+		}
 
 		if (!this.isBasesViewRegistered) {
 			this.debug(`registerBasesView`);

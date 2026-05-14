@@ -107,3 +107,14 @@ export type ProcessMarkdownViewOptions = {
 	forceTemplateIndex?: number;
 	baseFileHandling?: BaseFileHandling;
 }
+
+// Custom interfaces for internal Obsidian API access
+// This is necessary because metadataTypeManager is not exposed in obsidian.d.ts
+export interface MetadataTypeManager {
+	getAssignedType(key: string): PropertyType | undefined;
+	setType(key: string, type: PropertyType): void;
+}
+
+export interface AppWithMetadataTypeManager extends App {
+	metadataTypeManager?: MetadataTypeManager;
+}
