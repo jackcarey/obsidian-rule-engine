@@ -536,8 +536,9 @@ class FilterBuilder {
 
         if (!["is empty", "is not empty"].includes(filter.operator)) {
             const rhs = expression.createDiv({ cls: "ore-filter-rhs-container metadata-property-value" });
+            const isWithin = filter.operator === "within past" || filter.operator === "within future";
 
-            createFilterValueInput(rhs, currentType, filter.value, (val) => {
+            createFilterValueInput(rhs, isWithin ? "number" : currentType, filter.value, (val) => {
                 // If this is a placeholder, add it to the conditions array first
                 if (isPlaceholder && !placeholderAdded) {
                     parentGroup.conditions.push({ ...filter, value: val });
@@ -554,6 +555,33 @@ class FilterBuilder {
 
                 this.onSave();
             }, filter.operator);
+
+            if (isWithin) {
+                const unitSelect = rhs.createEl("select", { cls: "dropdown ore-filter-unit-select" });
+                const units = ["minutes", "hours", "days", "weeks", "months", "years"];
+                units.forEach(u => {
+                    unitSelect.createEl("option", { value: u, text: u });
+                });
+                unitSelect.value = filter.unit || "days";
+                unitSelect.onchange = () => {
+                    const unit = unitSelect.value;
+                    if (isPlaceholder && !placeholderAdded) {
+                        parentGroup.conditions.push({
+                            ...filter,
+                            unit,
+                        });
+                        placeholderAdded = true;
+                    } else if (isPlaceholder && placeholderAdded) {
+                        const conditionIndex = parentGroup.conditions.length - 1;
+                        if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
+                            (parentGroup.conditions[conditionIndex]).unit = unit;
+                        }
+                    } else {
+                        filter.unit = unit;
+                    }
+                    this.onSave();
+                };
+            }
         }
 
         const actions = expression.createDiv({ cls: "ore-filter-row-actions" });

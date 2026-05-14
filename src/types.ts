@@ -12,6 +12,7 @@ export type FilterOperator =
 	| "has tag" | "does not have tag"
 	| "has property" | "does not have property"
 	| "on" | "not on"
+	| "within past" | "within future"
 	| "before" | "on or before"
 	| "after" | "on or after";
 
@@ -21,6 +22,7 @@ export interface Filter {
 	field: string;
 	operator: FilterOperator;
 	value?: string;
+	unit?: string;
 }
 
 export interface FilterGroup {

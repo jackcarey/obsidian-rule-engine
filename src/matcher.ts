@@ -1,5 +1,60 @@
-import { App, TFile, FrontMatterCache } from "obsidian";
+import { App, TFile, FrontMatterCache, moment } from "obsidian";
 import { FilterGroup, Filter } from "./types";
+
+/**
+ * Resolves dynamic values like {{field}} or relative dates.
+ */
+function resolveDynamicValue(app: App, val: string, file: TFile, frontmatter?: FrontMatterCache): unknown {
+	if (typeof val !== "string") return val;
+	const trimmed = val.trim();
+	if (!trimmed) return val;
+
+	// 1. Handle Frontmatter/File reference {{prop}}
+	const templateRegex = /^\{\{(.+)\}\}$/;
+	const match = trimmed.match(templateRegex);
+	if (match) {
+		const key = match[1]?.trim();
+		if (key) {
+			if (key.startsWith("file.")) {
+				const fileKey = key.slice(5);
+				switch (fileKey) {
+					case "name": return file.name;
+					case "basename": return file.basename;
+					case "path": return file.path;
+					case "folder": return file.parent?.path || "";
+					case "size": return file.stat.size;
+					case "ctime": return file.stat.ctime;
+					case "mtime": return file.stat.mtime;
+					case "extension": return file.extension;
+				}
+			}
+			if (frontmatter && key in frontmatter) {
+				return frontmatter[key];
+			}
+		}
+		return val; // fallback to raw string if key not found
+	}
+
+	// 2. Handle Relative Dates
+	const lower = trimmed.toLowerCase();
+	if (["today", "now", "yesterday", "tomorrow"].includes(lower)) {
+		const m = moment();
+		if (lower === "yesterday") m.subtract(1, "days");
+		else if (lower === "tomorrow") m.add(1, "days");
+		return m.format("YYYY-MM-DD");
+	}
+
+	// Handle offsets like +7d, -1m
+	const offsetRegex = /^([+-]\d+)([dmwy])$/;
+	const offsetMatch = lower.match(offsetRegex);
+	if (offsetMatch) {
+		const amount = parseInt(String(offsetMatch[1]));
+		const unit = offsetMatch[2] as moment.unitOfTime.DurationConstructor;
+		return moment().add(amount, unit).format("YYYY-MM-DD");
+	}
+
+	return val;
+}
 
 /**
  * Evaluates the rules for a given filter group, file, and frontmatter
@@ -42,9 +97,11 @@ export function checkRules(app: App, group: FilterGroup, file: TFile, frontmatte
  * @returns True if the condition is met, false otherwise
  */
 function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: FrontMatterCache): boolean {
+	const resolvedFilterValue = String(resolveDynamicValue(app, filter.value || "", file, frontmatter) ?? "");
+
 	// Handle special "file" field operators
 	if (filter.field === "file") {
-		const filterValue = filter.value || "";
+		const filterValue = resolvedFilterValue;
 
 		switch (filter.operator) {
 			case "links to":
@@ -129,7 +186,7 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 			case "has tag":
 			case "does not have tag": {
 				const trimmedValue = filterValue.trim();
-				const filterTags = trimmedValue.split(",").map(t => t.trim()).filter(t => t.length > 0);
+				const filterTags = trimmedValue.split(",").map(t => t.trim().replace(/^#+/, "")).filter(t => t.length > 0);
 				if (filterTags.length === 0) {
 					return filter.operator === "does not have tag";
 				}
@@ -272,12 +329,9 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 
 	if (targetValue === undefined || targetValue === null) targetValue = "";
 
-	// Special handling for date operators on file.ctime and file.mtime
-	const dateOperators = ["on", "not on", "before", "on or before", "after", "on or after", "is empty", "is not empty"];
-	if ((filter.field === "file.ctime" || filter.field === "file.mtime") &&
-		dateOperators.includes(filter.operator) &&
-		typeof targetValue === "number") {
-
+	// Special handling for date operators
+	const dateOperators = ["on", "not on", "before", "on or before", "after", "on or after", "within past", "within future", "is empty", "is not empty"];
+	if (dateOperators.includes(filter.operator)) {
 		// Handle empty checks
 		if (filter.operator === "is empty") {
 			return !targetValue || targetValue === 0;
@@ -286,48 +340,40 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 			return !!targetValue && targetValue !== 0;
 		}
 
-		// Filter value is a date string (YYYY-MM-DD), but may have time component
-		// Truncate to just the date part if it's a datetime string
-		const filterDateStr = (filter.value || "").toString().split('T')[0];
+		const targetMoment = typeof targetValue === "number" ? moment(targetValue) : moment(String(targetValue));
+		if (!targetMoment.isValid()) return false;
 
-		if (!filterDateStr || filterDateStr.length === 0) {
-			// Empty filter value - can't compare
-			return false;
+		if (filter.operator === "within past" || filter.operator === "within future") {
+			const amount = parseInt(resolvedFilterValue || "0");
+			const unit = (filter.unit || "days") as moment.unitOfTime.DurationConstructor;
+			const now = moment();
+			if (filter.operator === "within past") {
+				return targetMoment.isBetween(moment().subtract(amount, unit), now, null, "[]");
+			} else {
+				return targetMoment.isBetween(now, moment().add(amount, unit), null, "[]");
+			}
 		}
 
-		// Convert timestamp to date string (YYYY-MM-DD)
-		const targetDate = new Date(targetValue);
-		const targetDateStr = targetDate.toISOString().split('T')[0];
+		const filterMoment = moment(resolvedFilterValue.split('T')[0]);
+		if (filterMoment.isValid()) {
+			const t = targetMoment.startOf('day').valueOf();
+			const f = filterMoment.startOf('day').valueOf();
 
-		// Compare dates
-		const targetDateObj = new Date(targetDateStr!);
-		const filterDateObj = new Date(filterDateStr);
-
-		// Normalize to midnight for accurate date comparison
-		targetDateObj.setHours(0, 0, 0, 0);
-		filterDateObj.setHours(0, 0, 0, 0);
-
-		switch (filter.operator) {
-			case "on":
-				return targetDateObj.getTime() === filterDateObj.getTime();
-			case "not on":
-				return targetDateObj.getTime() !== filterDateObj.getTime();
-			case "before":
-				return targetDateObj.getTime() < filterDateObj.getTime();
-			case "on or before":
-				return targetDateObj.getTime() <= filterDateObj.getTime();
-			case "after":
-				return targetDateObj.getTime() > filterDateObj.getTime();
-			case "on or after":
-				return targetDateObj.getTime() >= filterDateObj.getTime();
-			default:
-				return false;
+			switch (filter.operator) {
+				case "on": return t === f;
+				case "not on": return t !== f;
+				case "before": return t < f;
+				case "on or before": return t <= f;
+				case "after": return t > f;
+				case "on or after": return t >= f;
+			}
 		}
+		return false;
 	}
 
 	// Convert to string preserving case (case-sensitive matching)
 	const toString = (val: string | number | boolean | string[]) => String(val);
-	const filterValue = toString(filter.value || "");
+	const filterValue = resolvedFilterValue;
 
 	if (Array.isArray(targetValue)) {
 		const targetArray = targetValue;
@@ -349,7 +395,7 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 			case "contains any of":
 			case "does not contain any of": {
 				// Parse comma-separated filter values
-				const filterValues = (filter.value || "").split(",").map(v => toString(v.trim())).filter(v => v.length > 0);
+				const filterValues = resolvedFilterValue.split(",").map(v => v.trim()).filter(v => v.length > 0);
 				if (filterValues.length === 0) return filter.operator === "does not contain any of";
 				// Check if any filter value matches any target value
 				const match = filterValues.some(filterVal =>
@@ -360,7 +406,7 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 			case "contains all of":
 			case "does not contain all of": {
 				// Parse comma-separated filter values
-				const filterValues = (filter.value || "").split(",").map(v => toString(v.trim())).filter(v => v.length > 0);
+				const filterValues = resolvedFilterValue.split(",").map(v => v.trim()).filter(v => v.length > 0);
 				if (filterValues.length === 0) return filter.operator === "does not contain all of";
 				// Check if all filter values are found in the target array
 				const match = filterValues.every(filterVal =>
@@ -378,14 +424,20 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 		const targetScalar = targetValue;
 		switch (filter.operator) {
 			case "is empty":
-				return !targetScalar;
+				return targetScalar === "";
 			case "is not empty":
-				return !!targetScalar;
 			case "is":
 			case "is not": {
 				const match = toString(targetScalar) === filterValue;
 				return filter.operator === "is" ? match : !match;
 			}
+			case "=": return Number(targetScalar) === Number(filterValue);
+			case "≠": return Number(targetScalar) !== Number(filterValue);
+			case "<": return Number(targetScalar) < Number(filterValue);
+			case "≤": return Number(targetScalar) <= Number(filterValue);
+			case ">": return Number(targetScalar) > Number(filterValue);
+			case "≥": return Number(targetScalar) >= Number(filterValue);
+
 			case "contains":
 			case "does not contain": {
 				const match = toString(targetScalar).includes(filterValue);
@@ -394,7 +446,7 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 			case "contains any of":
 			case "does not contain any of": {
 				// Parse comma-separated filter values
-				const filterValues = (filter.value || "").split(",").map(v => toString(v.trim())).filter(v => v.length > 0);
+				const filterValues = resolvedFilterValue.split(",").map(v => v.trim()).filter(v => v.length > 0);
 				if (filterValues.length === 0) return filter.operator === "does not contain any of";
 				// Check if any filter value is contained in the target string
 				const match = filterValues.some(filterVal => toString(targetScalar).includes(filterVal));
@@ -403,7 +455,7 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 			case "contains all of":
 			case "does not contain all of": {
 				// Parse comma-separated filter values
-				const filterValues = (filter.value || "").split(",").map(v => toString(v.trim())).filter(v => v.length > 0);
+				const filterValues = resolvedFilterValue.split(",").map(v => v.trim()).filter(v => v.length > 0);
 				if (filterValues.length === 0) return filter.operator === "does not contain all of";
 				// Check if all filter values are contained in the target string
 				const match = filterValues.every(filterVal => toString(targetScalar).includes(filterVal));
