@@ -3,6 +3,7 @@ import { CommandWithSetup } from "types";
 import { forceTemplate } from "./forceTemplate";
 import { MarkdownView } from "obsidian";
 import { taskDate } from "./taskDate";
+import { tagMOC } from "./tagMOC";
 
 export type GetCommandFn<TConfig extends Record<string, unknown> = Record<string, unknown>> = (plugin: ObsidianRuleEnginePlugin) => CommandWithSetup<TConfig>;
 
@@ -77,4 +78,4 @@ const deleteWithoutConfirmation: GetCommandFn = (plugin) => ({
     }
 });
 
-export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate, taskDate, deleteWithoutConfirmation] as const;
+export const list: GetCommandFn[] = [processNow, forceTemplate, resetTemplate, taskDate, deleteWithoutConfirmation, tagMOC] as const;
