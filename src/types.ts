@@ -1,4 +1,15 @@
-import { Command, SettingGroup, type TFile } from "obsidian";
+import { App, Command, SettingGroup, type TFile } from "obsidian";
+
+declare module "obsidian" {
+	interface App {
+		commands: {
+			commands: Record<string, Command>;
+			editorCommands: Record<string, Command>;
+			findCommand(id: string): Command | undefined;
+			executeCommandById(id: string): boolean;
+		};
+	}
+}
 
 export type FilterOperator =
 	| "contains" | "does not contain"
