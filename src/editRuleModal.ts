@@ -616,7 +616,7 @@ export class EditRuleModal extends Modal {
                     .onChange((value) => {
                         this.rule.name = value;
                     });
-                requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
                     text.inputEl.select();
                 });
             });

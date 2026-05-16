@@ -52,7 +52,7 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
         if (Platform.isMobile) return;
 
         // Style modal as combobox
-        requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
             const modalContainer = this.modalEl.closest('.modal-container');
             if (modalContainer) {
                 modalContainer.addClass('ore-modal-container');
@@ -99,7 +99,7 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
                 };
 
                 // Initial state - use requestAnimationFrame to ensure DOM is ready
-                requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
                     updateClearButtonVisibility();
                 });
 
