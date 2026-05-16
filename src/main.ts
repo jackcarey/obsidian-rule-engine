@@ -497,7 +497,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 					commandFn?.(false);
 				}
 			} else {
-				this.debug(`commands not executed for mode '${mode}'`);
+				this.debug(`commands not executed for mode:`, mode);
 			}
 		};
 		if (file) {

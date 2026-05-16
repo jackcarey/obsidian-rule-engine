@@ -1,4 +1,4 @@
-import { App, Command, SettingGroup, type TFile } from "obsidian";
+import { Command, SettingGroup, type TFile } from "obsidian";
 
 declare module "obsidian" {
 	interface App {
