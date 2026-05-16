@@ -135,8 +135,7 @@
 .ore-parent-query-container .filter-group .filter-group-header-actions {
     --icon-size: var(--icon-s);
     --icon-stroke: var(--icon-s-stroke-width);
-    display: flex
-;
+    display: flex;
 }
 
 .ore-parent-query-container .filter-group .filter-group-statements {
@@ -807,6 +806,19 @@ font-size: var(--metadata-input-font-size);
     left: 0;
     background-color: var(--background-primary);
     z-index: 10;
+}
+
+/* In Live Preview mode, keep the editor accessible but overlay the custom view */
+.obsidian-custom-view-live-preview {
+    /* The editor is kept visible behind, so we need to ensure our view is on top */
+    z-index: 5;
+}
+
+/* Ensure the editor is accessible in Live Preview mode when custom view is active */
+.markdown-source-view:has(~ .obsidian-custom-view-render.obsidian-custom-view-live-preview) {
+    /* Keep editor visible but behind custom view */
+    position: relative;
+    z-index: 1;
 }
 
 .obsidian-custom-rule-hidden {
