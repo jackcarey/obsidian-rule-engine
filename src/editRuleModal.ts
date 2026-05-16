@@ -161,7 +161,7 @@ function createFilterValueInput(
                     clearInput();
                     updatePlaceholder();
                     // Focus back to input after creating pill
-                    setTimeout(() => focusInput(), 0);
+                    window.setTimeout(() => focusInput(), 0);
                 }
             } else if (e.key === "Backspace") {
                 // If input is empty, focus the last pill
@@ -201,9 +201,9 @@ function createFilterValueInput(
                         // Focus previous pill or input
                         if (values.length > 0) {
                             const newIndex = Math.max(0, currentIndex - 1);
-                            setTimeout(() => focusPill(newIndex), 0);
+                            window.setTimeout(() => focusPill(newIndex), 0);
                         } else {
-                            setTimeout(() => focusInput(), 0);
+                            window.setTimeout(() => focusInput(), 0);
                         }
                     }
                 } else if (e.key === "Tab" && !e.shiftKey) {
@@ -244,9 +244,9 @@ function createFilterValueInput(
                         // After deletion, focus the previous pill or input
                         if (values.length > 0) {
                             const newIndex = Math.min(index, values.length - 1);
-                            setTimeout(() => focusPill(newIndex), 0);
+                            window.setTimeout(() => focusPill(newIndex), 0);
                         } else {
-                            setTimeout(() => focusInput(), 0);
+                            window.setTimeout(() => focusInput(), 0);
                         }
                     }
                 }, (pill: HTMLElement) => {

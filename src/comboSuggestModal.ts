@@ -133,7 +133,7 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
             }
         };
 
-        setTimeout(() => {
+        window.setTimeout(() => {
             document.addEventListener('mousedown', this.clickOutsideHandler!);
         }, 0);
     }
