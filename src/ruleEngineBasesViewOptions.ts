@@ -1,6 +1,6 @@
-import { ViewOption } from "obsidian";
+import { BasesAllOptions } from "obsidian";
 
-export function getRuleEngineViewOptions(): ViewOption[] {
+export function getRuleEngineViewOptions(): BasesAllOptions[] {
     return [
         {
             type: 'toggle',
