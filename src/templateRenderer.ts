@@ -140,7 +140,7 @@ export async function renderTemplate(
 
 	const contentEl = container.querySelector(`#${contentPlaceholderId}`) as HTMLElement;
 	if (contentEl) {
-		const sizer = document.createElement("div");
+		const sizer = activeDocument.createElement("div");
 		sizer.addClass("markdown-preview-sizer");
 		sizer.addClass("markdown-preview-section");
 		contentEl.appendChild(sizer);
@@ -148,4 +148,43 @@ export async function renderTemplate(
 		await MarkdownRenderer.render(app, bodyContent, sizer, file.path, component);
 		contentEl.removeAttribute("id");
 	}
+
+	executeScripts(container);
+}
+
+/**
+ * Executes inline script tags found in the container.
+ *
+ * Scripts with a `src` attribute are intentionally ignored — loading external
+ * scripts would allow arbitrary remote code execution, which violates
+ * Obsidian's plugin guidelines.  Only inline script content (written by the
+ * user directly in their template) is evaluated, using the Function constructor
+ * rather than dynamic `<script>` element injection so that no external URLs
+ * can be loaded.
+ *
+ * @param container - The container whose inline scripts should be executed
+ */
+function executeScripts(container: HTMLElement): void {
+	const scripts = Array.from(container.querySelectorAll('script'));
+
+	scripts.forEach((script) => {
+		// Silently drop src-based scripts — external code must never be loaded.
+		if (!script.src) {
+			const code = script.textContent?.trim();
+			if (code) {
+				try {
+					// The Function constructor creates a new function in the
+					// global scope (same as an inline script would) without
+					// injecting a DOM <script> element.  `this` is bound to
+					// the container so template scripts can reference it.
+					// eslint-disable-next-line @typescript-eslint/no-implied-eval
+					const fn = new Function(code);
+					fn.call(container);
+				} catch (e) {
+					console.error('[Custom Views] Error executing template script:', e);
+				}
+			}
+		}
+		script.remove();
+	});
 }

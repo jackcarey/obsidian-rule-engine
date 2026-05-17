@@ -323,7 +323,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		let customEl = container.querySelector(`.${CUSTOM_RULE_CLASS}`) as HTMLElement;
 
 		if (!customEl) {
-			customEl = document.createElement("div");
+			customEl = activeDocument.createElement("div");
 			customEl.addClass(CUSTOM_RULE_CLASS);
 			container.appendChild(customEl);
 
@@ -332,7 +332,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				const target = evt.target as HTMLElement;
 				const link = target.closest(".internal-link");
 
-				if (link && link instanceof HTMLAnchorElement) {
+				if (link && link.instanceOf(HTMLAnchorElement)) {
 					evt.preventDefault();
 					const href = link.getAttribute("data-href") || link.getAttribute("href");
 
