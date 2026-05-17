@@ -128,8 +128,11 @@
 
 .ore-parent-query-container .filter-group .filter-group-header .conjunction.dropdown {
     border: none;
-    box-shadow: none;
+    padding-top: 0;
     background-color: transparent;
+    font-size: var(--font-ui-small);
+    box-shadow: none;
+    text-align: start;
 }
 
 .ore-parent-query-container .filter-group .filter-group-header-actions {
@@ -145,13 +148,7 @@
     flex-direction: column;
 }
 
-.ore-parent-query-container .filter-group .filter-group-header .conjunction.dropdown {
-    padding-top: 0;
-    background-color: transparent;
-    font-size: var(--font-ui-small);
-    box-shadow: none;
-    text-align: start;
-}
+
 .ore-parent-query-container .filter-group .filter-group-header .conjunction.dropdown:hover {
 	background-color: var(--background-modifier-hover);
 }
@@ -304,14 +301,11 @@
     --background-modifier-border: transparent;
     align-items: center;
     overflow: hidden;
+    font-size: var(--metadata-input-font-size);
 }
 
 .metadata-property-value .ore-multi-select-container:focus-within {
     background-color: transparent;
-}
-
-.metadata-property-value .ore-multi-select-container {
-font-size: var(--metadata-input-font-size);
 }
 
 .ore-multi-select-container:focus {
@@ -474,7 +468,6 @@ font-size: var(--metadata-input-font-size);
     color: var(--search-clear-button-color);
     cursor: var(--cursor);
     top: 0px;
-    inset-inline-end: 2px;
     bottom: 0px;
     line-height: 0;
     height: var(--input-height);
@@ -943,7 +936,6 @@ font-size: var(--metadata-input-font-size);
 }
 
 .ore-command-id-list-item{
-    width: 50%;
     width: max(50%, fit-content);
 }
 
