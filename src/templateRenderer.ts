@@ -148,36 +148,4 @@ export async function renderTemplate(
 		await MarkdownRenderer.render(app, bodyContent, sizer, file.path, component);
 		contentEl.removeAttribute("id");
 	}
-
-	// executeScripts(container);
 }
-
-// /**
-//  * Executes all script tags found in the container.
-//  * @param container - The container to execute scripts in
-//  */
-// function executeScripts(container: HTMLElement): void {
-// 	const scripts = Array.from(container.querySelectorAll('script'));
-
-// 	scripts.forEach((oldScript) => {
-// 		const newScript = document.createElement('script');
-
-// 		Array.from(oldScript.attributes).forEach((attr) => {
-// 			newScript.setAttribute(attr.name, attr.value);
-// 		});
-
-// 		if (oldScript.textContent) {
-// 			const scriptContent = oldScript.textContent.trim();
-// 			if (scriptContent) {
-// 				newScript.textContent = `(function() {\n${scriptContent}\n})();`;
-// 			}
-// 		}
-
-// 		if (oldScript.src && !oldScript.textContent) {
-// 			newScript.src = oldScript.src;
-// 		}
-
-// 		oldScript.parentNode?.insertBefore(newScript, oldScript);
-// 		oldScript.remove();
-// 	});
-// }
