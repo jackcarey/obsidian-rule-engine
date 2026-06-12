@@ -735,14 +735,32 @@ export class EditRuleModal extends Modal {
 
         new Setting(contentEl)
             .setHeading()
-            .setName("HTML template")
-            .setDesc("Leave blank for no template. Use {{mustache}} syntax for variables.");
+            .setName("HTML templates")
+            .setDesc("Leave blank for no template. Use {{mustache}} syntax for variables. Context-specific templates override the default.");
+
+        new Setting(contentEl).setName("Default template");
         const taEl = new TextAreaComponent(contentEl)
-            .setPlaceholder(`<h1>{{file.title}}</h1><main>{{file.content}}</main>`)
+            .setPlaceholder(`<h1>{{file.basename}}</h1><main>{{file.content}}</main>`)
             .setValue(this.rule.template)
             .onChange(val => this.rule.template = val);
         taEl.inputEl.classList.add(`ore-textarea`);
-        taEl.inputEl.rows = 12;
+        taEl.inputEl.rows = 8;
+
+        new Setting(contentEl).setName("Base file template").setDesc("Used when the file is rendered in a Bases query. Falls back to default.");
+        const taBaseEl = new TextAreaComponent(contentEl)
+            .setPlaceholder(`Leave blank to use default template`)
+            .setValue(this.rule.templateBase ?? "")
+            .onChange(val => this.rule.templateBase = val || undefined);
+        taBaseEl.inputEl.classList.add(`ore-textarea`);
+        taBaseEl.inputEl.rows = 4;
+
+        new Setting(contentEl).setName("Canvas template").setDesc("Used when the file is rendered in a Canvas node. Falls back to default.");
+        const taCanvasEl = new TextAreaComponent(contentEl)
+            .setPlaceholder(`Leave blank to use default template`)
+            .setValue(this.rule.templateCanvas ?? "")
+            .onChange(val => this.rule.templateCanvas = val || undefined);
+        taCanvasEl.inputEl.classList.add(`ore-textarea`);
+        taCanvasEl.inputEl.rows = 4;
 
         const buttonContainer = contentEl.createDiv('modal-button-container');
         new ButtonComponent(buttonContainer)

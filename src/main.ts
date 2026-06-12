@@ -275,9 +275,15 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				isMatch
 			});
 			if (isMatch) {
-				//only match the first template
 				if (!matchedTemplate.length) {
-					matchedTemplate = ruleConfig.template;
+					const ctx = options?.renderContext;
+					if (ctx === 'canvas' && ruleConfig.templateCanvas?.trim()) {
+						matchedTemplate = ruleConfig.templateCanvas;
+					} else if (ctx === 'base' && ruleConfig.templateBase?.trim()) {
+						matchedTemplate = ruleConfig.templateBase;
+					} else {
+						matchedTemplate = ruleConfig.template;
+					}
 				}
 				if (!options?.skipCommandExecution) {
 					commandIds = [...commandIds, ...ruleConfig.commandIds];
@@ -447,7 +453,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const {
 			matchedTemplate,
 			// commandIds, baseFileHandling
-		} = this.extractMatchingRuleParameters(file);
+		} = this.extractMatchingRuleParameters(file, { renderContext: 'canvas' });
 
 		// this.executeCommands(baseFileHandling, commandIds);
 

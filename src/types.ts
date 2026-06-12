@@ -43,11 +43,14 @@ export interface FilterGroup {
 
 
 export type BaseFileHandling = "file" | "results" | "both";
+export type RenderContext = "file" | "base" | "canvas";
 export interface RuleConfig {
 	id: string;
 	name: string;
 	filterGroup: FilterGroup;
 	template: string;
+	templateBase?: string;
+	templateCanvas?: string;
 	enabled: boolean;
 	commandIds: string[];
 	baseFileHandling: BaseFileHandling;
@@ -115,7 +118,7 @@ export type CommandWithSetup<TConfig extends Record<string, unknown> = Record<st
 
 export type ProcessMarkdownViewOptions = {
 	skipCommandExecution?: boolean;
-	// from rule index
 	forceTemplateIndex?: number;
 	baseFileHandling?: BaseFileHandling;
+	renderContext?: RenderContext;
 }
