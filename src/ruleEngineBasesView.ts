@@ -109,7 +109,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                         for (const entry of group.entries) {
                             const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
                             // always use file mode on each entry since 'results' wouldn't make sense
-                            this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf);
+                            this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf, this.plugin.getFileCommandOverrides(entry.file));
                         }
                     }
                 } catch (e) {

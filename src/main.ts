@@ -15,6 +15,7 @@ function isCanvasView(view: unknown): view is CanvasView {
 }
 export default class ObsidianRuleEnginePlugin extends Plugin {
 	settings: CustomRulesSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) as CustomRulesSettings;
+	private _callOverrides: Record<string, Partial<CommandConfig>> = {};
 
 	debug(...args: unknown[]) {
 		if (this.settings.debug) {
@@ -38,11 +39,37 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	 */
 	getCommandConfig = <T extends Record<string, unknown>>(id: string): CommandConfig<T> => {
 		const existing = this.settings.commands?.[id] as CommandConfig<T> | undefined;
+		const base: CommandConfig<T> = { enabled: false, params: {} as T, ...existing };
+		const shortId = id.includes(':') ? id.slice(id.indexOf(':') + 1) : id;
+		const override = this._callOverrides[id] ?? this._callOverrides[shortId];
+		if (!override) return base;
 		return {
-			enabled: false,
-			params: {} as T,
-			...existing,
+			...base,
+			...(override.enabled !== undefined ? { enabled: override.enabled } : {}),
+			params: { ...base.params, ...(override.params ?? {}) } as T,
 		};
+	};
+
+	getFileCommandOverrides(file: TFile): Record<string, Partial<CommandConfig>> {
+		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
+		if (!frontmatter) return {};
+		const overrides: Record<string, Partial<CommandConfig>> = {};
+		for (const key of Object.keys(frontmatter)) {
+			// ore:[cmd-id]:[setting]
+			const match = /^ore:(.+):([^:]+)$/.exec(key);
+			if (!match) continue;
+			const [, cmdId, setting] = match;
+			if (!cmdId || !setting) continue;
+			if (!overrides[cmdId]) overrides[cmdId] = {};
+			const value = frontmatter[key] as unknown;
+			if (setting === 'enabled') {
+				overrides[cmdId].enabled = value === true || value === 'true' || value === 1;
+			} else {
+				if (!overrides[cmdId].params) overrides[cmdId].params = {};
+				(overrides[cmdId].params as Record<string, unknown>)[setting] = value;
+			}
+		}
+		return overrides;
 	};
 
 	/**
@@ -289,7 +316,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file, options);
 
 		if (!options?.skipCommandExecution) {
-			this.executeCommands(baseFileHandling, commandIds);
+			this.executeCommands(baseFileHandling, commandIds, null, undefined, this.getFileCommandOverrides(file));
 		}
 
 		if (!matchedTemplate) {
@@ -486,18 +513,28 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return allCommands;
 	}
 
-	public executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null, groupLeaf?: WorkspaceLeaf): void {
+	public executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null, groupLeaf?: WorkspaceLeaf, fileOverrides?: Record<string, Partial<CommandConfig>>): void {
 		if (!commandIds?.length) return;
 		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file, groupLeaf });
 		const doCmds = () => {
-			const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
-			if (mode === "file" || mode === "both") {
-				for (const cmd of commandObjects) {
-					const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
-					commandFn?.(false);
+			const prev = this._callOverrides;
+			this._callOverrides = fileOverrides ?? {};
+			try {
+				const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
+				if (mode === "file" || mode === "both") {
+					for (const cmd of commandObjects) {
+						// Check per-file enabled override
+						const shortId = cmd.id.includes(':') ? cmd.id.slice(cmd.id.indexOf(':') + 1) : cmd.id;
+						const override = fileOverrides?.[cmd.id] ?? fileOverrides?.[shortId];
+						if (override?.enabled === false) continue;
+						const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
+						commandFn?.(false);
+					}
+				} else {
+					this.debug(`commands not executed for mode:`, mode);
 				}
-			} else {
-				this.debug(`commands not executed for mode:`, mode);
+			} finally {
+				this._callOverrides = prev;
 			}
 		};
 		if (file) {
