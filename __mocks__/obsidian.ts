@@ -36,3 +36,5 @@ export class TextComponent {}
 export class WorkspaceLeaf {}
 export const Keymap = { isModEvent: () => false };
 export function setIcon() {}
+export class TFolder { path = ""; name = ""; }
+export type FrontMatterCache = Record<string, unknown>;
