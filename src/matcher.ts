@@ -1,6 +1,10 @@
 import { App, TFile, FrontMatterCache, moment } from "obsidian";
 import { FilterGroup, Filter } from "./types";
 
+// Obsidian types moment as a namespace rather than a callable — cast for runtime use
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const momentFn = moment as any as (value?: string | number) => { subtract: (n: number, u: string) => { valueOf: () => number }; add: (n: number, u: string) => { valueOf: () => number }; valueOf: () => number; isValid: () => boolean };
+
 const RELATIVE_DATE_UNITS = new Set(["minute", "minutes", "hour", "hours", "day", "days", "week", "weeks", "month", "months"]);
 
 function parseRelativeValue(value: string): [number, moment.unitOfTime.DurationConstructor] {
@@ -296,9 +300,9 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 			if (!amt) return false;
 			const nowMs = Date.now();
 			if (filter.operator === "within past") {
-				return targetValue >= moment().subtract(amt, unit).valueOf() && targetValue <= nowMs;
+				return targetValue >= momentFn().subtract(amt, unit).valueOf() && targetValue <= nowMs;
 			}
-			return targetValue >= nowMs && targetValue <= moment().add(amt, unit).valueOf();
+			return targetValue >= nowMs && targetValue <= momentFn().add(amt, unit).valueOf();
 		}
 
 		const filterDateStr = (filter.value || "").toString().split('T')[0];
@@ -326,14 +330,14 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 	if ((filter.operator === "within past" || filter.operator === "within future") && typeof targetValue === "string" && targetValue) {
 		const [amt, unit] = parseRelativeValue(filter.value || "");
 		if (!amt) return false;
-		const parsed = moment(String(targetValue));
+		const parsed = momentFn(String(targetValue));
 		if (!parsed.isValid()) return false;
 		const targetMs = parsed.valueOf();
 		const nowMs = Date.now();
 		if (filter.operator === "within past") {
-			return targetMs >= moment().subtract(amt, unit).valueOf() && targetMs <= nowMs;
+			return targetMs >= momentFn().subtract(amt, unit).valueOf() && targetMs <= nowMs;
 		}
-		return targetMs >= nowMs && targetMs <= moment().add(amt, unit).valueOf();
+		return targetMs >= nowMs && targetMs <= momentFn().add(amt, unit).valueOf();
 	}
 
 	// Convert to string preserving case (case-sensitive matching)

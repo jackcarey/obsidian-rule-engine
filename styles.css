@@ -69,6 +69,10 @@
     overflow: hidden;
 }
 
+.ore-codemirror-container.ore-codemirror-container-sm {
+    height: 140px;
+}
+
 .ore-codemirror-container .cm-editor {
     height: 100%;
 }
