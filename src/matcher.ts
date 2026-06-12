@@ -1,5 +1,12 @@
-import { App, TFile, FrontMatterCache } from "obsidian";
+import { App, TFile, FrontMatterCache, moment } from "obsidian";
 import { FilterGroup, Filter } from "./types";
+
+function parseRelativeValue(value: string): [number, moment.unitOfTime.DurationConstructor] {
+	const parts = value.trim().split(/\s+/);
+	const amount = parseInt(parts[0] || "0");
+	const unit = (parts[1] || "days") as moment.unitOfTime.DurationConstructor;
+	return [isNaN(amount) || amount <= 0 ? 0 : amount, unit];
+}
 
 /**
  * Evaluates the rules for a given filter group, file, and frontmatter
@@ -273,56 +280,57 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 	if (targetValue === undefined || targetValue === null) targetValue = "";
 
 	// Special handling for date operators on file.ctime and file.mtime
-	const dateOperators = ["on", "not on", "before", "on or before", "after", "on or after", "is empty", "is not empty"];
+	const dateOperators = ["on", "not on", "before", "on or before", "after", "on or after", "within past", "within future", "is empty", "is not empty"];
 	if ((filter.field === "file.ctime" || filter.field === "file.mtime") &&
 		dateOperators.includes(filter.operator) &&
 		typeof targetValue === "number") {
 
-		// Handle empty checks
-		if (filter.operator === "is empty") {
-			return !targetValue || targetValue === 0;
-		}
-		if (filter.operator === "is not empty") {
-			return !!targetValue && targetValue !== 0;
+		if (filter.operator === "is empty") return !targetValue || targetValue === 0;
+		if (filter.operator === "is not empty") return !!targetValue && targetValue !== 0;
+
+		if (filter.operator === "within past" || filter.operator === "within future") {
+			const [amt, unit] = parseRelativeValue(filter.value || "");
+			if (!amt) return false;
+			const nowMs = Date.now();
+			if (filter.operator === "within past") {
+				return targetValue >= moment().subtract(amt, unit).valueOf() && targetValue <= nowMs;
+			}
+			return targetValue >= nowMs && targetValue <= moment().add(amt, unit).valueOf();
 		}
 
-		// Filter value is a date string (YYYY-MM-DD), but may have time component
-		// Truncate to just the date part if it's a datetime string
 		const filterDateStr = (filter.value || "").toString().split('T')[0];
+		if (!filterDateStr || filterDateStr.length === 0) return false;
 
-		if (!filterDateStr || filterDateStr.length === 0) {
-			// Empty filter value - can't compare
-			return false;
-		}
-
-		// Convert timestamp to date string (YYYY-MM-DD)
 		const targetDate = new Date(targetValue);
 		const targetDateStr = targetDate.toISOString().split('T')[0];
-
-		// Compare dates
 		const targetDateObj = new Date(targetDateStr!);
 		const filterDateObj = new Date(filterDateStr);
-
-		// Normalize to midnight for accurate date comparison
 		targetDateObj.setHours(0, 0, 0, 0);
 		filterDateObj.setHours(0, 0, 0, 0);
 
 		switch (filter.operator) {
-			case "on":
-				return targetDateObj.getTime() === filterDateObj.getTime();
-			case "not on":
-				return targetDateObj.getTime() !== filterDateObj.getTime();
-			case "before":
-				return targetDateObj.getTime() < filterDateObj.getTime();
-			case "on or before":
-				return targetDateObj.getTime() <= filterDateObj.getTime();
-			case "after":
-				return targetDateObj.getTime() > filterDateObj.getTime();
-			case "on or after":
-				return targetDateObj.getTime() >= filterDateObj.getTime();
-			default:
-				return false;
+			case "on": return targetDateObj.getTime() === filterDateObj.getTime();
+			case "not on": return targetDateObj.getTime() !== filterDateObj.getTime();
+			case "before": return targetDateObj.getTime() < filterDateObj.getTime();
+			case "on or before": return targetDateObj.getTime() <= filterDateObj.getTime();
+			case "after": return targetDateObj.getTime() > filterDateObj.getTime();
+			case "on or after": return targetDateObj.getTime() >= filterDateObj.getTime();
+			default: return false;
 		}
+	}
+
+	// Relative date operators for string-valued date fields (frontmatter)
+	if ((filter.operator === "within past" || filter.operator === "within future") && typeof targetValue === "string" && targetValue) {
+		const [amt, unit] = parseRelativeValue(filter.value || "");
+		if (!amt) return false;
+		const parsed = moment(String(targetValue));
+		if (!parsed.isValid()) return false;
+		const targetMs = parsed.valueOf();
+		const nowMs = Date.now();
+		if (filter.operator === "within past") {
+			return targetMs >= moment().subtract(amt, unit).valueOf() && targetMs <= nowMs;
+		}
+		return targetMs >= nowMs && targetMs <= moment().add(amt, unit).valueOf();
 	}
 
 	// Convert to string preserving case (case-sensitive matching)

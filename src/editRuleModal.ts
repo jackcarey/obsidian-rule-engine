@@ -266,6 +266,22 @@ function createFilterValueInput(
         updatePlaceholder();
 
         return multiSelectContainer;
+    } else if (operator === "within past" || operator === "within future") {
+        const parts = safeValue.split(/\s+/);
+        const amount = parts[0] || "1";
+        const unit = parts[1] || "days";
+        const wrapper = container.createDiv({ cls: "ore-relative-date-container" });
+        const numInput = wrapper.createEl("input", { type: "number", value: amount, attr: { min: "1" } });
+        numInput.addClass("ore-relative-date-amount");
+        const unitSelect = wrapper.createEl("select", { cls: "dropdown" });
+        for (const u of ["minutes", "hours", "days", "weeks", "months"]) {
+            const opt = unitSelect.createEl("option", { value: u, text: u });
+            if (u === unit) opt.selected = true;
+        }
+        const fireChange = () => onChange(`${numInput.value} ${unitSelect.value}`);
+        numInput.oninput = fireChange;
+        unitSelect.onchange = fireChange;
+        return wrapper;
     } else if (type === "date" || type === "datetime") {
         const input = container.createEl("input", {
             type: type === "datetime" ? "datetime-local" : "date",

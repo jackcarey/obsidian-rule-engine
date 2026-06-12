@@ -15,7 +15,7 @@ export const OPERATORS: Record<string, string[]> = {
     text: ["contains", "does not contain", "is", "is not", "starts with", "ends with", "contains any of", "does not contain any of", "contains all of", "does not contain all of", "is empty", "is not empty"],
     list: ["contains", "does not contain", "contains any of", "does not contain any of", "contains all of", "does not contain all of", "is empty", "is not empty"],
     number: ["=", "≠", "<", "≤", ">", "≥", "is empty", "is not empty"],
-    date: ["on", "not on", "before", "on or before", "after", "on or after", "is empty", "is not empty"],
+    date: ["on", "not on", "before", "on or before", "after", "on or after", "within past", "within future", "is empty", "is not empty"],
     checkbox: ["is"],
     file: ["links to", "does not link to", "in folder", "is not in folder", "has tag", "does not have tag", "has property", "does not have property"]
 } as const;
