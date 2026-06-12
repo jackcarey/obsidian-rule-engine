@@ -51,8 +51,8 @@ export async function renderTemplate(
 			}
 		}
 
-		// Check frontmatter (works for both file.property and property syntax)
-		if (frontmatter && frontmatter[key] !== undefined) {
+		// Check frontmatter — skip if a known file property already resolved the value
+		if (value === undefined && frontmatter && frontmatter[key] !== undefined) {
 			const frontmatterValue = frontmatter[key] as string | number | boolean | string[] | undefined;
 			value = frontmatterValue;
 		}

@@ -1,11 +1,14 @@
 import { App, TFile, FrontMatterCache, moment } from "obsidian";
 import { FilterGroup, Filter } from "./types";
 
+const RELATIVE_DATE_UNITS = new Set(["minute", "minutes", "hour", "hours", "day", "days", "week", "weeks", "month", "months"]);
+
 function parseRelativeValue(value: string): [number, moment.unitOfTime.DurationConstructor] {
 	const parts = value.trim().split(/\s+/);
 	const amount = parseInt(parts[0] || "0");
-	const unit = (parts[1] || "days") as moment.unitOfTime.DurationConstructor;
-	return [isNaN(amount) || amount <= 0 ? 0 : amount, unit];
+	const unit = parts[1] || "days";
+	if (isNaN(amount) || amount <= 0 || !RELATIVE_DATE_UNITS.has(unit)) return [0, "days"];
+	return [amount, unit as moment.unitOfTime.DurationConstructor];
 }
 
 /**

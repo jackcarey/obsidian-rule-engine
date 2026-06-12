@@ -15,6 +15,8 @@ function isCanvasView(view: unknown): view is CanvasView {
 }
 export default class ObsidianRuleEnginePlugin extends Plugin {
 	settings: CustomRulesSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) as CustomRulesSettings;
+	// Per-call command overrides set inside doCmds() and restored after — safe because
+	// JS is single-threaded: each doCmds() runs to completion before the next starts.
 	private _callOverrides: Record<string, Partial<CommandConfig>> = {};
 
 	debug(...args: unknown[]) {

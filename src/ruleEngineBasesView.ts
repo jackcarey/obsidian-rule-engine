@@ -154,7 +154,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                 border-radius: var(--radius-m);
             `);
 
-            const { matchedTemplate } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
+            const { matchedTemplate } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results", renderContext: 'base' });
 
             if (matchedTemplate?.length && Boolean(this.config.get('enableTemplates'))) {
                 this.plugin.injectCustomView(card, entry.file, matchedTemplate).catch(e => console.error(e));
