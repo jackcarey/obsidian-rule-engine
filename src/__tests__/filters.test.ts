@@ -230,6 +230,13 @@ describe("strip_tags", () => {
 	});
 });
 
+describe("split with unquoted separator", () => {
+    it("treats an unquoted non-numeric arg as a literal separator string", () => {
+        // "." is unquoted and non-numeric — hits the bare-string return path in parseFilterArg
+        expect(apply("a.b.c", "split:.")).toEqual(["a", "b", "c"]);
+    });
+});
+
 describe("filter chaining", () => {
 	it("applies filters left to right", () => {
 		expect(apply("  hello world  ", "trim | upper")).toBe("HELLO WORLD");

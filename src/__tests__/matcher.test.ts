@@ -352,6 +352,20 @@ describe("within past / within future — frontmatter date string", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Unsupported operators on array fields (return false, not an error)
+// ---------------------------------------------------------------------------
+
+describe("unsupported operators on array fields", () => {
+    const fm = { tags: ["a", "b", "c"] };
+    it("starts with — returns false for array targets", () => {
+        expect(checkRules(mockApp(), andGroup(filter("tags", "starts with", "a")), mockFile(), fm)).toBe(false);
+    });
+    it("ends with — returns false for array targets", () => {
+        expect(checkRules(mockApp(), andGroup(filter("tags", "ends with", "c")), mockFile(), fm)).toBe(false);
+    });
+});
+
+// ---------------------------------------------------------------------------
 // file tags field
 // ---------------------------------------------------------------------------
 
