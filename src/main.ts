@@ -4,7 +4,7 @@ import { checkRules } from "./matcher";
 import { renderTemplate } from "./templateRenderer";
 import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS, TYPE_ICONS } from "./consts";
 import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessMarkdownViewOptions, PropertyDef, PropertyType } from "./types";
-import { list as commandList } from 'commands';
+import { list as commandList } from './commands';
 import { RULE_ENGINE_BASE_VIEW_ID, RuleEngineBasesView } from "ruleEngineBasesView";
 import { getRuleEngineViewOptions } from "ruleEngineBasesViewOptions";
 /**
@@ -68,7 +68,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				overrides[cmdId].enabled = value === true || value === 'true' || value === 1;
 			} else {
 				if (!overrides[cmdId].params) overrides[cmdId].params = {};
-				(overrides[cmdId].params as Record<string, unknown>)[setting] = value;
+				(overrides[cmdId].params)[setting] = value;
 			}
 		}
 		return overrides;

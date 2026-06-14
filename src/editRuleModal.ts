@@ -3,8 +3,6 @@ import { OPERATORS } from "consts";
 import ObsidianRuleEnginePlugin from "main";
 import { App, ButtonComponent, Modal, setIcon, Setting } from "obsidian";
 import { RuleConfig, BaseFileHandling, SuggestItem, Filter, FilterConjunction, FilterGroup, FilterOperator, PropertyDef, PropertyType } from "types";
-import { EditorView } from "@codemirror/view";
-import { createTemplateEditor } from "./templateEditor";
 import { addFocusClasses } from "utils";
 
 function setupComboboxButtonHandlers(
@@ -602,7 +600,6 @@ class FilterBuilder {
 
 export class EditRuleModal extends Modal {
     rule: RuleConfig;
-    private _editors: EditorView[] = [];
 
     openSuggestModal(
         items: { label: string, value: string, icon?: string }[],
@@ -748,29 +745,31 @@ export class EditRuleModal extends Modal {
         const extraVars = this.plugin.scanVaultProperties()
             .map(p => ({ label: p.key, detail: `frontmatter: ${p.type}` }));
 
-        new Setting(contentEl).setName("Default template");
-        const defaultContainer = contentEl.createDiv({ cls: "ore-codemirror-container" });
-        this._editors.push(createTemplateEditor(defaultContainer, {
-            initialContent: this.rule.template,
-            onChange: val => { this.rule.template = val; },
-            extraVars,
-        }));
+        new Setting(contentEl)
+            .setName("Default template")
+            .addTextArea(ta => {
+                ta.setValue(this.rule.template)
+                    .onChange(val => { this.rule.template = val; });
+                ta.inputEl.rows = 6;
+            });
 
-        new Setting(contentEl).setName("Base file template").setDesc("Used when the file is rendered in a Bases query. Falls back to default.");
-        const baseContainer = contentEl.createDiv({ cls: "ore-codemirror-container ore-codemirror-container-sm" });
-        this._editors.push(createTemplateEditor(baseContainer, {
-            initialContent: this.rule.templateBase ?? "",
-            onChange: val => { this.rule.templateBase = val || undefined; },
-            extraVars,
-        }));
+        new Setting(contentEl)
+            .setName("Base file template")
+            .setDesc("Used when the file is rendered in a Bases query. Falls back to default.")
+            .addTextArea(ta => {
+                ta.setValue(this.rule.templateBase ?? "")
+                    .onChange(val => { this.rule.templateBase = val || undefined; });
+                ta.inputEl.rows = 4;
+            });
 
-        new Setting(contentEl).setName("Canvas template").setDesc("Used when the file is rendered in a Canvas node. Falls back to default.");
-        const canvasContainer = contentEl.createDiv({ cls: "ore-codemirror-container ore-codemirror-container-sm" });
-        this._editors.push(createTemplateEditor(canvasContainer, {
-            initialContent: this.rule.templateCanvas ?? "",
-            onChange: val => { this.rule.templateCanvas = val || undefined; },
-            extraVars,
-        }));
+        new Setting(contentEl)
+            .setName("Canvas template")
+            .setDesc("Used when the file is rendered in a Canvas node. Falls back to default.")
+            .addTextArea(ta => {
+                ta.setValue(this.rule.templateCanvas ?? "")
+                    .onChange(val => { this.rule.templateCanvas = val || undefined; });
+                ta.inputEl.rows = 4;
+            });
 
         const buttonContainer = contentEl.createDiv('modal-button-container');
         new ButtonComponent(buttonContainer)
@@ -791,8 +790,6 @@ export class EditRuleModal extends Modal {
     }
 
     onClose() {
-        this._editors.forEach(v => v.destroy());
-        this._editors = [];
         this.contentEl.empty();
     }
 }
