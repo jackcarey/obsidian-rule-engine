@@ -35,12 +35,12 @@ describe("DEFAULT_SETTINGS", () => {
 
 	it("default rules share no object references (deep-cloned filterGroup)", () => {
 		const copy = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) as typeof DEFAULT_SETTINGS;
-		copy.rules[0].filterGroup.conditions.push({
+		copy.rules[0]!.filterGroup.conditions.push({
 			type: "filter",
 			field: "test",
 			operator: "is",
 			value: "x",
 		});
-		expect(DEFAULT_SETTINGS.rules[0].filterGroup.conditions).not.toEqual(copy.rules[0].filterGroup.conditions);
+		expect(DEFAULT_SETTINGS.rules[0]!.filterGroup.conditions).not.toEqual(copy.rules[0]!.filterGroup.conditions);
 	});
 });
