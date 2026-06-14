@@ -13,7 +13,8 @@
 		"publish": "npm run lint:fix & npm run build & npm run version & npm run release",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage"
+		"test:coverage": "vitest run --coverage",
+		"test:e2e": "playwright test"
 	},
 	"keywords": [],
 	"author": "Jack Carey",
@@ -29,6 +30,7 @@
 		"@eslint/compat": "^2.0.0",
 		"@eslint/json": "^0.14.0",
 		"@lezer/highlight": "^1.2.3",
+		"@playwright/test": "^1.60.0",
 		"@types/node": "^20.19.41",
 		"@typescript-eslint/eslint-plugin": "^8.58.2",
 		"@typescript-eslint/parser": "^8.58.2",
