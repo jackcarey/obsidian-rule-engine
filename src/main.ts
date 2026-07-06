@@ -266,16 +266,12 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		let matchedTemplate = "";
 		let commandIds: string[] = [];
 
-		for (const ruleConfig of this.settings.rules) {
+		const ruleLog = this.settings.debug ? (...args: unknown[]) => this.debug(...args) : undefined;
+		for (const [ruleIndex, ruleConfig] of this.settings.rules.entries()) {
 			//default to file baseFileHandling
 			const matchingBaseHandling = ruleConfig.baseFileHandling === "both" || ruleConfig.baseFileHandling === useBaseFileHandling;
-			const isMatch = ruleConfig.enabled && matchingBaseHandling && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter);
-			this.debug(`extractMatchingRuleParameters`, {
-				ruleConfig,
-				useBaseFileHandling,
-				matchingBaseHandling,
-				isMatch
-			});
+			const isMatch = ruleConfig.enabled && matchingBaseHandling && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter, ruleLog);
+			this.debug(`Rule [${ruleIndex}] "${ruleConfig.name ?? ""}" on "${file.path}": ${isMatch ? "MATCH" : "no match"}${!ruleConfig.enabled ? " (disabled)" : !matchingBaseHandling ? " (wrong base handling)" : ""}`);
 			if (isMatch) {
 				if (!matchedTemplate.length) {
 					const ctx = options?.renderContext;
@@ -594,6 +590,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			["file.ctime", "date"],
 			["file.mtime", "date"],
 			["file.size", "number"],
+			["file.outlinks", "number"],
+			["file.inlinks", "number"],
 			["file tags", "list"],
 			["aliases", "list"]
 		];
@@ -625,6 +623,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (key === "file tags") return "tags";
 		if (key === "aliases") return "forward";
 		if (key === "file.ctime" || key === "file.mtime") return "clock";
+		if (key === "file.outlinks") return "arrow-right";
+		if (key === "file.inlinks") return "arrow-left";
 		return TYPE_ICONS[type] || "pilcrow";
 	}
 
@@ -647,6 +647,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			"file.path": "file path",
 			"file.folder": "folder",
 			"file.size": "file size",
+			"file.outlinks": "outgoing links",
+			"file.inlinks": "incoming links",
 			"file.ctime": "created time",
 			"file.mtime": "modified time"
 		};

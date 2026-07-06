@@ -23,28 +23,33 @@ function parseRelativeValue(value: string): [number, moment.unitOfTime.DurationC
  * @param frontmatter - The frontmatter of the file
  * @returns True if all conditions in the group are met, false otherwise
  */
-export function checkRules(app: App, group: FilterGroup, file: TFile, frontmatter?: FrontMatterCache): boolean {
+export function checkRules(app: App, group: FilterGroup, file: TFile, frontmatter?: FrontMatterCache, log?: (...args: unknown[]) => void): boolean {
 	if (!group || !group.conditions || group.conditions.length === 0) return true;
 
 	// Evaluate all conditions in this group
 	const results = group.conditions.map(condition => {
 		if (condition.type === "group") {
-			return checkRules(app, condition, file, frontmatter);
+			return checkRules(app, condition, file, frontmatter, log);
 		} else {
-			return evaluateFilter(app, condition, file, frontmatter);
+			const result = evaluateFilter(app, condition, file, frontmatter);
+			log?.(`  [${result ? "✓" : "✗"}] ${condition.field} ${condition.operator} "${condition.value ?? ""}"`);
+			return result;
 		}
 	});
 
 	// Combine results based on AND (every) / OR (some) / NOR (none)
+	let finalResult: boolean;
 	if (group.operator === "AND") {
-		return results.every(r => r === true);
+		finalResult = results.every(r => r === true);
 	} else if (group.operator === "OR") {
-		return results.some(r => r === true);
+		finalResult = results.some(r => r === true);
 	} else if (group.operator === "NOR") {
-		// NOR: None of the following are true (all must be false)
-		return results.every(r => r === false);
+		finalResult = results.every(r => r === false);
+	} else {
+		finalResult = true;
 	}
-	return true;
+	log?.(`  group (${group.operator ?? "AND"}): ${finalResult ? "MATCH" : "no match"}`);
+	return finalResult;
 }
 
 /**
@@ -224,6 +229,8 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 		else if (filter.field === "file.path") targetValue = file.path;
 		else if (filter.field === "file.folder") targetValue = file.parent?.path || "";
 		else if (filter.field === "file.size") targetValue = file.stat.size;
+		else if (filter.field === "file.outlinks") targetValue = Object.keys(app.metadataCache.resolvedLinks[file.path] ?? {}).length;
+		else if (filter.field === "file.inlinks") targetValue = Object.values(app.metadataCache.resolvedLinks).filter(dests => file.path in dests).length;
 		else if (filter.field === "file.ctime") targetValue = file.stat.ctime;
 		else if (filter.field === "file.mtime") targetValue = file.stat.mtime;
 		else if (filter.field === "file.extension") targetValue = file.extension;
