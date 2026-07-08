@@ -1,17 +1,18 @@
 import { App, TFile, FrontMatterCache, moment } from "obsidian";
 import { FilterGroup, Filter } from "./types";
+import { RELATIVE_DATE_UNITS } from "./consts";
 
 // Obsidian types moment as a namespace rather than a callable — cast for runtime use
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const momentFn = moment as any as (value?: string | number | Date) => { subtract: (n: number, u: string) => { valueOf: () => number }; add: (n: number, u: string) => { valueOf: () => number }; valueOf: () => number; isValid: () => boolean };
 
-const RELATIVE_DATE_UNITS = new Set(["minute", "minutes", "hour", "hours", "day", "days", "week", "weeks", "month", "months"]);
+const RELATIVE_DATE_UNITS_SET = new Set<string>(RELATIVE_DATE_UNITS);
 
 function parseRelativeValue(value: string): [number, moment.unitOfTime.DurationConstructor] {
 	const parts = value.trim().split(/\s+/);
 	const amount = parseInt(parts[0] || "0");
 	const unit = parts[1] || "days";
-	if (isNaN(amount) || amount <= 0 || !RELATIVE_DATE_UNITS.has(unit)) return [0, "days"];
+	if (isNaN(amount) || amount <= 0 || !RELATIVE_DATE_UNITS_SET.has(unit)) return [0, "days"];
 	return [amount, unit as moment.unitOfTime.DurationConstructor];
 }
 

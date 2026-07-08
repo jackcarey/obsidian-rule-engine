@@ -1,5 +1,5 @@
 import { ComboboxSuggestModal } from "comboSuggestModal";
-import { OPERATORS } from "consts";
+import { OPERATORS, RELATIVE_DATE_UNITS, RELATIVE_DATE_UNITS_PLURAL } from "consts";
 import ObsidianRuleEnginePlugin from "main";
 import { App, ButtonComponent, Modal, setIcon, Setting } from "obsidian";
 import { RuleConfig, BaseFileHandling, SuggestItem, Filter, FilterConjunction, FilterGroup, FilterOperator, PropertyDef, PropertyType } from "types";
@@ -267,10 +267,10 @@ function createFilterValueInput(
 
         return multiSelectContainer;
     } else if (operator === "within past" || operator === "within future") {
-        const validUnits = ["minutes", "hours", "days", "weeks", "months"];
+        const validUnits: readonly string[] = RELATIVE_DATE_UNITS_PLURAL;
         // Accept singular units too — matcher.ts's RELATIVE_DATE_UNITS allows them,
         // so a stored "1 minute" must not be treated as invalid and overwritten below.
-        const isValidStored = /^\d+\s+(minute|minutes|hour|hours|day|days|week|weeks|month|months)$/.test(safeValue);
+        const isValidStored = new RegExp(`^\\d+\\s+(${RELATIVE_DATE_UNITS.join("|")})$`).test(safeValue);
         const parts = isValidStored ? safeValue.split(/\s+/) : [];
         const amount = parts[0] || "1";
         const storedUnit = parts[1] || "days";

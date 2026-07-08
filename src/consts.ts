@@ -20,6 +20,14 @@ export const OPERATORS: Record<string, string[]> = {
     file: ["links to", "does not link to", "in folder", "is not in folder", "has tag", "does not have tag", "has property", "does not have property"]
 } as const;
 
+/**
+ * Single source of truth for the units accepted after a "within past"/"within future"
+ * amount (e.g. "3 days"). Singular and plural forms are both accepted when parsing a
+ * stored value; only the plural forms are offered in the UI dropdown.
+ */
+export const RELATIVE_DATE_UNITS = ["minute", "minutes", "hour", "hours", "day", "days", "week", "weeks", "month", "months"] as const;
+export const RELATIVE_DATE_UNITS_PLURAL = RELATIVE_DATE_UNITS.filter(u => u.endsWith("s"));
+
 export const DEFAULT_RULES: FilterGroup = {
     type: "group",
     operator: "AND",
