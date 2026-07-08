@@ -25,7 +25,8 @@ export type FilterOperator =
 	| "on" | "not on"
 	| "before" | "on or before"
 	| "after" | "on or after"
-	| "within past" | "within future";
+	| "within past" | "within future"
+	| "=" | "≠" | "<" | "≤" | ">" | "≥";
 
 export type FilterConjunction = "AND" | "OR" | "NOR";
 export interface Filter {

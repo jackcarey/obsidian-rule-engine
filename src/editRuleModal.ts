@@ -268,10 +268,13 @@ function createFilterValueInput(
         return multiSelectContainer;
     } else if (operator === "within past" || operator === "within future") {
         const validUnits = ["minutes", "hours", "days", "weeks", "months"];
-        const isValidStored = /^\d+\s+(minutes|hours|days|weeks|months)$/.test(safeValue);
+        // Accept singular units too — matcher.ts's RELATIVE_DATE_UNITS allows them,
+        // so a stored "1 minute" must not be treated as invalid and overwritten below.
+        const isValidStored = /^\d+\s+(minute|minutes|hour|hours|day|days|week|weeks|month|months)$/.test(safeValue);
         const parts = isValidStored ? safeValue.split(/\s+/) : [];
         const amount = parts[0] || "1";
-        const unit = parts[1] || "days";
+        const storedUnit = parts[1] || "days";
+        const unit = validUnits.includes(storedUnit) ? storedUnit : `${storedUnit}s`;
         const wrapper = container.createDiv({ cls: "ore-relative-date-container" });
         const numInput = wrapper.createEl("input", { type: "number", value: amount, attr: { min: "1" } });
         numInput.addClass("ore-relative-date-amount");
@@ -742,33 +745,34 @@ export class EditRuleModal extends Modal {
             .setName("HTML templates")
             .setDesc("Leave blank for no template. Use {{mustache}} syntax for variables. Context-specific templates override the default.");
 
-        const extraVars = this.plugin.scanVaultProperties()
-            .map(p => ({ label: p.key, detail: `frontmatter: ${p.type}` }));
-
         new Setting(contentEl)
             .setName("Default template")
             .addTextArea(ta => {
                 ta.setValue(this.rule.template)
+                    .setPlaceholder("<h1>{{file.basename}}</h1><main>{{file.content}}</main>")
                     .onChange(val => { this.rule.template = val; });
                 ta.inputEl.rows = 6;
+                ta.inputEl.addClass("ore-textarea");
             });
 
         new Setting(contentEl)
             .setName("Base file template")
-            .setDesc("Used when the file is rendered in a Bases query. Falls back to default.")
+            .setDesc("Used when the file is rendered in a bases query. Falls back to default.")
             .addTextArea(ta => {
                 ta.setValue(this.rule.templateBase ?? "")
                     .onChange(val => { this.rule.templateBase = val || undefined; });
                 ta.inputEl.rows = 4;
+                ta.inputEl.addClass("ore-textarea");
             });
 
         new Setting(contentEl)
             .setName("Canvas template")
-            .setDesc("Used when the file is rendered in a Canvas node. Falls back to default.")
+            .setDesc("Used when the file is rendered in a canvas node. Falls back to default.")
             .addTextArea(ta => {
                 ta.setValue(this.rule.templateCanvas ?? "")
                     .onChange(val => { this.rule.templateCanvas = val || undefined; });
                 ta.inputEl.rows = 4;
+                ta.inputEl.addClass("ore-textarea");
             });
 
         const buttonContainer = contentEl.createDiv('modal-button-container');

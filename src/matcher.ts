@@ -3,7 +3,7 @@ import { FilterGroup, Filter } from "./types";
 
 // Obsidian types moment as a namespace rather than a callable — cast for runtime use
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const momentFn = moment as any as (value?: string | number) => { subtract: (n: number, u: string) => { valueOf: () => number }; add: (n: number, u: string) => { valueOf: () => number }; valueOf: () => number; isValid: () => boolean };
+const momentFn = moment as any as (value?: string | number | Date) => { subtract: (n: number, u: string) => { valueOf: () => number }; add: (n: number, u: string) => { valueOf: () => number }; valueOf: () => number; isValid: () => boolean };
 
 const RELATIVE_DATE_UNITS = new Set(["minute", "minutes", "hour", "hours", "day", "days", "week", "weeks", "month", "months"]);
 
@@ -333,11 +333,15 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 		}
 	}
 
-	// Relative date operators for string-valued date fields (frontmatter)
-	if ((filter.operator === "within past" || filter.operator === "within future") && typeof targetValue === "string" && targetValue) {
+	// Relative date operators for date-valued frontmatter fields.
+	// Obsidian's YAML parser turns unquoted dates (e.g. `due: 2024-06-15`) into
+	// native Date objects rather than strings, so both must be accepted here.
+	const rawTargetValue = targetValue as unknown;
+	const isDateValue = typeof targetValue === "string" || rawTargetValue instanceof Date;
+	if ((filter.operator === "within past" || filter.operator === "within future") && isDateValue && targetValue) {
 		const [amt, unit] = parseRelativeValue(filter.value || "");
 		if (!amt) return false;
-		const parsed = momentFn(String(targetValue));
+		const parsed = momentFn(rawTargetValue instanceof Date ? rawTargetValue : String(targetValue));
 		if (!parsed.isValid()) return false;
 		const targetMs = parsed.valueOf();
 		const nowMs = Date.now();
@@ -435,6 +439,22 @@ function evaluateFilter(app: App, filter: Filter, file: TFile, frontmatter?: Fro
 				return toString(targetScalar).startsWith(filterValue);
 			case "ends with":
 				return toString(targetScalar).endsWith(filterValue);
+			case "=":
+			case "≠":
+			case "<":
+			case "≤":
+			case ">":
+			case "≥": {
+				const targetNum = Number(targetScalar);
+				const filterNum = Number(filterValue);
+				if (isNaN(targetNum) || isNaN(filterNum)) return false;
+				if (filter.operator === "=") return targetNum === filterNum;
+				if (filter.operator === "≠") return targetNum !== filterNum;
+				if (filter.operator === "<") return targetNum < filterNum;
+				if (filter.operator === "≤") return targetNum <= filterNum;
+				if (filter.operator === ">") return targetNum > filterNum;
+				return targetNum >= filterNum; // "≥"
+			}
 			default:
 				return false;
 		}

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { applyFilterChain } from "../filters";
 
 function apply(value: unknown, chain: string) {
@@ -235,6 +235,16 @@ describe("split with unquoted separator", () => {
         // "." is unquoted and non-numeric — hits the bare-string return path in parseFilterArg
         expect(apply("a.b.c", "split:.")).toEqual(["a", "b", "c"]);
     });
+});
+
+describe("filter errors", () => {
+	it("logs and leaves the value unchanged when a filter throws", () => {
+		const spy = vi.spyOn(console, "error").mockImplementation(() => { });
+		// An invalid regex pattern (unmatched bracket) makes the "replace" filter throw.
+		expect(apply("hello", 'replace:"/[/","x"')).toBe("hello");
+		expect(spy).toHaveBeenCalledOnce();
+		spy.mockRestore();
+	});
 });
 
 describe("filter chaining", () => {

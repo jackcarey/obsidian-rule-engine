@@ -201,3 +201,31 @@ describe("{{file.content}} placeholder", () => {
         expect(el.querySelector(".markdown-rendered-content")).toBeTruthy();
     });
 });
+
+// ---------------------------------------------------------------------------
+// Inline <script> execution
+// ---------------------------------------------------------------------------
+
+describe("template scripts", () => {
+    it("executes an inline script with `this` bound to the render container", async () => {
+        const el = await render("<div><script>this.setAttribute('data-executed', 'yes');</script></div>");
+        expect(el.getAttribute("data-executed")).toBe("yes");
+    });
+
+    it("removes the script element after executing it", async () => {
+        const el = await render("<div><script>void 0;</script></div>");
+        expect(el.querySelector("script")).toBeNull();
+    });
+
+    it("does not execute a script with a src attribute", async () => {
+        const el = await render('<div><script src="https://example.com/evil.js">this.setAttribute(\'data-executed\', \'yes\')</script></div>');
+        expect(el.getAttribute("data-executed")).toBeNull();
+        expect(el.querySelector("script")).toBeNull();
+    });
+
+    it("swallows errors thrown by a template script instead of crashing the render", async () => {
+        const el = await render("<div><div id=\"marker\"></div><script>throw new Error('boom');</script></div>");
+        expect(el.querySelector("#marker")).toBeTruthy();
+        expect(el.querySelector("script")).toBeNull();
+    });
+});

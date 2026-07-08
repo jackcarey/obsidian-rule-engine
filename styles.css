@@ -61,27 +61,6 @@
     font-family: var(--font-monospace);
 }
 
-.ore-codemirror-container {
-    height: 250px;
-    width: 100%;
-    border: 1px solid var(--background-modifier-border);
-    border-radius: var(--input-radius);
-    overflow: hidden;
-}
-
-.ore-codemirror-container.ore-codemirror-container-sm {
-    height: 140px;
-}
-
-.ore-codemirror-container .cm-editor {
-    height: 100%;
-}
-
-.ore-codemirror-container .cm-scroller {
-    font-family: var(--font-monospace);
-    font-size: var(--font-text-size);
-}
-
 .ore-parent-query-container {
     -webkit-app-region: no-drag;
     display: flex;

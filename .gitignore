@@ -16,6 +16,9 @@ main.js
 # Exclude sourcemaps
 *.map
 
+# test coverage output
+coverage
+
 # obsidian
 data.json
 
