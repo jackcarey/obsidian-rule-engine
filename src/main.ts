@@ -13,6 +13,14 @@ import { getRuleEngineViewOptions } from "ruleEngineBasesViewOptions";
 function isCanvasView(view: unknown): view is CanvasView {
 	return typeof view === "object" && view !== null && "canvas" in view;
 }
+
+/**
+ * Strips the "plugin-id:" prefix Obsidian adds to command ids, so overrides
+ * keyed by either the full id or the short id can both be looked up.
+ */
+function stripCommandIdPrefix(id: string): string {
+	return id.includes(':') ? id.slice(id.indexOf(':') + 1) : id;
+}
 export default class ObsidianRuleEnginePlugin extends Plugin {
 	settings: CustomRulesSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) as CustomRulesSettings;
 	// Per-call command overrides set inside doCmds() and restored after — safe because
@@ -42,7 +50,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	getCommandConfig = <T extends Record<string, unknown>>(id: string): CommandConfig<T> => {
 		const existing = this.settings.commands?.[id] as CommandConfig<T> | undefined;
 		const base: CommandConfig<T> = { enabled: false, params: {} as T, ...existing };
-		const shortId = id.includes(':') ? id.slice(id.indexOf(':') + 1) : id;
+		const shortId = stripCommandIdPrefix(id);
 		const override = this._callOverrides[id] ?? this._callOverrides[shortId];
 		if (!override) return base;
 		return {
@@ -528,7 +536,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				if (mode === "file" || mode === "both") {
 					for (const cmd of commandObjects) {
 						// Check per-file enabled override
-						const shortId = cmd.id.includes(':') ? cmd.id.slice(cmd.id.indexOf(':') + 1) : cmd.id;
+						const shortId = stripCommandIdPrefix(cmd.id);
 						const override = fileOverrides?.[cmd.id] ?? fileOverrides?.[shortId];
 						if (override?.enabled === false) continue;
 						const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
