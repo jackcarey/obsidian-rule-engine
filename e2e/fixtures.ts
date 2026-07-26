@@ -83,6 +83,16 @@ export async function openPluginSettings(page: Page, tabLabel: string): Promise<
   }, tabLabel);
 
   await page.waitForTimeout(400);
+
+  // Rule Engine's settings page has its own internal tab bar whose active tab
+  // is stored on the long-lived PluginSettingTab instance (not reset when the
+  // modal closes), so a prior test switching tabs would otherwise leak into
+  // whichever test runs next. Always reset to the default "Rules" tab here.
+  const rulesTab = page.locator(".modal-container .workspace-tab-header", { hasText: "Rules" });
+  if (await rulesTab.isVisible({ timeout: 1000 }).catch(() => false)) {
+    await rulesTab.click();
+    await page.waitForTimeout(200);
+  }
 }
 
 /** Close any open modal by pressing Escape. */

@@ -58,9 +58,37 @@ test("settings page shows Rule Engine tab and rule list", async ({ page }) => {
 test("settings shows enabled toggle and it works", async ({ page }) => {
   await openPluginSettings(page, "Rule Engine");
 
-  // The first toggle in Rule Engine settings is the Enabled toggle
-  const enabledToggle = page.locator(".modal-container .checkbox-container").first();
+  // The Enabled toggle lives in the Settings tab
+  await page.locator(".modal-container .workspace-tab-header", { hasText: "Settings" }).click();
+
+  const enabledToggle = page
+    .locator(".modal-container .setting-item", { hasText: "Enabled" })
+    .locator(".checkbox-container");
   await expect(enabledToggle).toBeVisible();
+
+  await closeModal(page);
+});
+
+test("settings tabs switch between Rules, Settings, and Command configuration", async ({ page }) => {
+  await openPluginSettings(page, "Rule Engine");
+
+  // Rules tab is shown by default
+  await expect(page.locator(".modal-container .workspace-tab-header", { hasText: "Rules" })).toHaveClass(/is-active/);
+  await expect(page.locator("button", { hasText: "Add new rule" })).toBeVisible();
+
+  // Switch to Settings tab
+  await page.locator(".modal-container .workspace-tab-header", { hasText: "Settings" }).click();
+  await expect(page.locator(".modal-container .workspace-tab-header", { hasText: "Settings" })).toHaveClass(/is-active/);
+  await expect(page.locator("button", { hasText: "Add new rule" })).not.toBeVisible();
+  await expect(page.locator(".modal-container .setting-item", { hasText: "Enabled" })).toBeVisible();
+
+  // Switch to Command configuration tab
+  await page.locator(".modal-container .workspace-tab-header", { hasText: "Command configuration" }).click();
+  await expect(
+    page.locator(".modal-container .workspace-tab-header", { hasText: "Command configuration" })
+  ).toHaveClass(/is-active/);
+  await expect(page.locator(".modal-container .setting-item", { hasText: "Enabled" })).not.toBeVisible();
+  await expect(page.locator(".modal-container", { hasText: "Any command in Obsidian can be used in rules" })).toBeVisible();
 
   await closeModal(page);
 });

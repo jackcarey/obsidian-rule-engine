@@ -671,6 +671,11 @@
     position: relative;
 }
 
+.ore-settings-tab-bar {
+    --tab-container-background: transparent;
+    margin-bottom: var(--size-4-3);
+}
+
 .ore-rules-list-container {
     display: flex;
     flex-direction: column;
