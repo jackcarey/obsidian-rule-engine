@@ -241,6 +241,70 @@ test("tag-matched file renders tag rule template", async ({ page }) => {
   await expect(page.locator(".ore-e2e-tag-rendered")).toBeVisible({ timeout: 8000 });
 });
 
+test("file with a check_date in the past renders the within-past template", async ({ page }) => {
+  await openNote(page, "within-past-check.md");
+
+  await page.evaluate(() => {
+    const leaf = window.app.workspace.getLeaf(false);
+    void (leaf as unknown as { setViewState(s: unknown): Promise<void> }).setViewState({
+      type: "markdown",
+      state: { file: "Notes/within-past-check.md", mode: "preview" },
+    });
+  });
+  await page.waitForTimeout(1500);
+
+  await expect(page.locator(".ore-e2e-within-past-rendered")).toBeVisible({ timeout: 8000 });
+  await expect(page.locator(".ore-e2e-within-future-rendered")).not.toBeVisible();
+});
+
+test("file with a check_date in the future renders the within-future template", async ({ page }) => {
+  await openNote(page, "within-future-check.md");
+
+  await page.evaluate(() => {
+    const leaf = window.app.workspace.getLeaf(false);
+    void (leaf as unknown as { setViewState(s: unknown): Promise<void> }).setViewState({
+      type: "markdown",
+      state: { file: "Notes/within-future-check.md", mode: "preview" },
+    });
+  });
+  await page.waitForTimeout(1500);
+
+  await expect(page.locator(".ore-e2e-within-future-rendered")).toBeVisible({ timeout: 8000 });
+  await expect(page.locator(".ore-e2e-within-past-rendered")).not.toBeVisible();
+});
+
+test("file with 2 resolved outgoing links renders the outlinks-count template", async ({ page }) => {
+  await openNote(page, "outlinks-check.md");
+
+  await page.evaluate(() => {
+    const leaf = window.app.workspace.getLeaf(false);
+    void (leaf as unknown as { setViewState(s: unknown): Promise<void> }).setViewState({
+      type: "markdown",
+      state: { file: "Notes/outlinks-check.md", mode: "preview" },
+    });
+  });
+  await page.waitForTimeout(1500);
+
+  await expect(page.locator(".ore-e2e-outlinks-rendered")).toBeVisible({ timeout: 8000 });
+  await expect(page.locator(".ore-e2e-inlinks-rendered")).not.toBeVisible();
+});
+
+test("file with 2 resolved incoming links renders the inlinks-count template", async ({ page }) => {
+  await openNote(page, "inlinks-check.md");
+
+  await page.evaluate(() => {
+    const leaf = window.app.workspace.getLeaf(false);
+    void (leaf as unknown as { setViewState(s: unknown): Promise<void> }).setViewState({
+      type: "markdown",
+      state: { file: "Notes/inlinks-check.md", mode: "preview" },
+    });
+  });
+  await page.waitForTimeout(1500);
+
+  await expect(page.locator(".ore-e2e-inlinks-rendered")).toBeVisible({ timeout: 8000 });
+  await expect(page.locator(".ore-e2e-outlinks-rendered")).not.toBeVisible();
+});
+
 // ── 6. Plugin settings persistence ───────────────────────────────────────────
 
 test("adding and saving a new rule persists it", async ({ page }) => {

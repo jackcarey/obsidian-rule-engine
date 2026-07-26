@@ -137,12 +137,100 @@ export default async function globalSetup() {
             commandIds: [],
             baseFileHandling: "file",
           },
+          {
+            id: "e2e-rule-within-past",
+            name: "Within Past Rule",
+            filterGroup: {
+              type: "group",
+              operator: "AND",
+              conditions: [{ type: "filter", field: "check_date", operator: "within past", value: "7 days" }],
+            },
+            template: '<div class="ore-e2e-within-past-rendered"><p>check_date within past 7 days</p></div>',
+            enabled: true,
+            commandIds: [],
+            baseFileHandling: "file",
+          },
+          {
+            id: "e2e-rule-within-future",
+            name: "Within Future Rule",
+            filterGroup: {
+              type: "group",
+              operator: "AND",
+              conditions: [{ type: "filter", field: "check_date", operator: "within future", value: "7 days" }],
+            },
+            template: '<div class="ore-e2e-within-future-rendered"><p>check_date within future 7 days</p></div>',
+            enabled: true,
+            commandIds: [],
+            baseFileHandling: "file",
+          },
+          {
+            id: "e2e-rule-outlinks",
+            name: "Outlinks Count Rule",
+            filterGroup: {
+              type: "group",
+              operator: "AND",
+              conditions: [{ type: "filter", field: "file.outlinks", operator: "=", value: "2" }],
+            },
+            template: '<div class="ore-e2e-outlinks-rendered"><p>outlinks = 2</p></div>',
+            enabled: true,
+            commandIds: [],
+            baseFileHandling: "file",
+          },
+          {
+            id: "e2e-rule-inlinks",
+            name: "Inlinks Count Rule",
+            filterGroup: {
+              type: "group",
+              operator: "AND",
+              conditions: [{ type: "filter", field: "file.inlinks", operator: "=", value: "2" }],
+            },
+            template: '<div class="ore-e2e-inlinks-rendered"><p>inlinks = 2</p></div>',
+            enabled: true,
+            commandIds: [],
+            baseFileHandling: "file",
+          },
         ],
         commands: {},
       },
       null,
       2
     )
+  );
+
+  // Notes with a relative `check_date` for the "within past"/"within future" filter rules
+  // (gitignored, so must be generated — a checked-in fixed date would go stale relative to "now").
+  // 3/5-day buffers, matching src/__tests__/matcher.test.ts, so local-midnight vs UTC-ms
+  // timezone differences (max ~26h) cannot flip the result.
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const fiveDaysFromNow = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+  writeFileSync(
+    path.join(VAULT_DIR, "Notes", "within-past-check.md"),
+    [
+      "---",
+      `description: "check_date is a few days in the past"`,
+      `check_date: ${threeDaysAgo}`,
+      "---",
+      "",
+      "# Within Past Check",
+      "",
+      "This note's check_date frontmatter property is a few days in the past.",
+      "",
+    ].join("\n")
+  );
+  writeFileSync(
+    path.join(VAULT_DIR, "Notes", "within-future-check.md"),
+    [
+      "---",
+      `description: "check_date is a few days in the future"`,
+      `check_date: ${fiveDaysFromNow}`,
+      "---",
+      "",
+      "# Within Future Check",
+      "",
+      "This note's check_date frontmatter property is a few days in the future.",
+      "",
+    ].join("\n")
   );
 
   // 3. Register e2e vault in Obsidian's global config

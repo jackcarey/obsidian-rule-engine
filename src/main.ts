@@ -655,8 +655,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			"file.path": "file path",
 			"file.folder": "folder",
 			"file.size": "file size",
-			"file.outlinks": "outgoing links",
-			"file.inlinks": "incoming links",
+			"file.outlinks": "outgoing link count",
+			"file.inlinks": "backlink count",
 			"file.ctime": "created time",
 			"file.mtime": "modified time"
 		};
