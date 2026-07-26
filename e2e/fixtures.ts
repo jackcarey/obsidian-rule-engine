@@ -26,7 +26,7 @@ type TestFixtures = { page: Page };
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   // Shared per-worker browser connection to Obsidian
   obsidianBrowser: [
-    async ({}, use) => {
+    async (_fixtures, use) => {
       const browser = await chromium.connectOverCDP(`http://localhost:${CDP_PORT}`);
       await use(browser);
       // close() disconnects CDP without killing Obsidian

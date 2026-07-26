@@ -61,7 +61,7 @@ function getObsidianPage(port: number): Promise<string> {
           if (!page) return reject(new Error("Obsidian page not found in CDP targets"));
           resolve(`http://localhost:${port}`);
         } catch (e) {
-          reject(e);
+          reject(e instanceof Error ? e : new Error(String(e)));
         }
       });
     }).on("error", reject);
@@ -259,9 +259,9 @@ export default async function globalSetup() {
   //    no debug port) and exit, so the CDP server would never start.
   console.log("[e2e] Killing any existing Obsidian instances...");
   if (process.platform === "win32") {
-    try { execSync("taskkill /f /im Obsidian.exe", { stdio: "ignore", shell: "cmd.exe" }); } catch (_) { /* not running */ }
+    try { execSync("taskkill /f /im Obsidian.exe", { stdio: "ignore", shell: "cmd.exe" }); } catch { /* not running */ }
   } else {
-    try { execSync("pkill -f obsidian", { stdio: "ignore" }); } catch (_) { /* not running */ }
+    try { execSync("pkill -f obsidian", { stdio: "ignore" }); } catch { /* not running */ }
   }
   // Give the OS a moment to release the single-instance lock file
   await new Promise((r) => setTimeout(r, 1500));

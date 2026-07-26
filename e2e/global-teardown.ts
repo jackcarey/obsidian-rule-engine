@@ -1,12 +1,12 @@
 import { execSync } from "child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
+import * as os from "os";
 import * as path from "path";
 
 const PID_FILE = path.join(__dirname, ".obsidian.pid");
 const BACKUP_FILE = path.join(__dirname, ".obsidian-json.bak");
 
 function obsidianConfigPath(): string {
-  const os = require("os") as typeof import("os");
   if (process.platform === "win32")
     return path.join(process.env.APPDATA ?? os.homedir(), "obsidian", "obsidian.json");
   if (process.platform === "darwin")
@@ -24,7 +24,7 @@ export default async function globalTeardown() {
       } else {
         process.kill(pid, "SIGTERM");
       }
-    } catch (_) { /* already dead */ }
+    } catch { /* already dead */ }
     unlinkSync(PID_FILE);
   }
 
