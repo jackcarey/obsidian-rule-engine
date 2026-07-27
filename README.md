@@ -14,6 +14,11 @@ _Expands on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-cu
 
 ![edit rule modal](screenshots/editRuleModal.png)
 
+**Permissions & behavior**
+
+- **Vault enumeration**: the plugin lists vault files (`vault.getFiles()`/`getMarkdownFiles()`) so it can match them against your configured rules — this is core to how rule matching works.
+- **Dynamic code execution**: `<script>` tags inside templates are opt-in and run via `new Function()` (see [Script Support](#script-support)). Scripts with a `src` attribute are always ignored, so templates can't load remote code.
+
 ## Commands
 
 Any command available in the current Obsidian context will be available to include in rules. When rules execute, only commands available in that context will run.
