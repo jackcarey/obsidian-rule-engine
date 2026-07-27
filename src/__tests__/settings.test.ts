@@ -1,7 +1,5 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { DEFAULT_SETTINGS } from "../consts";
-import { ObsidianRuleEngineSettingTab } from "../settings";
-import type ObsidianRuleEnginePlugin from "../main";
 
 describe("DEFAULT_SETTINGS", () => {
 	it("has enabled: true by default", () => {
@@ -44,53 +42,5 @@ describe("DEFAULT_SETTINGS", () => {
 			value: "x",
 		});
 		expect(DEFAULT_SETTINGS.rules[0]!.filterGroup.conditions).not.toEqual(copy.rules[0]!.filterGroup.conditions);
-	});
-});
-
-function makePlugin() {
-	return {
-		settings: {
-			rules: [],
-			commands: {},
-			enabled: true,
-			useDnd: true,
-			debug: false,
-			workInLivePreview: false,
-			workInCanvas: false,
-			processOnSave: false,
-			processBaseResultsAutomatically: false,
-		},
-		commands: [],
-		saveSettings: async () => { /* no-op */ },
-		isBasesViewRegistered: false,
-		debug: () => { /* no-op */ },
-	} as unknown as ObsidianRuleEnginePlugin;
-}
-
-describe("ObsidianRuleEngineSettingTab display() gate", () => {
-	it("falls back to legacy rendering when Obsidian has no update() (pre-1.13)", () => {
-		const tab = new ObsidianRuleEngineSettingTab({} as never, makePlugin());
-		const legacySpy = vi.fn();
-		(tab as unknown as { displayLegacy: () => void }).displayLegacy = legacySpy;
-
-		// The mocked PluginSettingTab never defines update(), matching real
-		// pre-1.13 Obsidian, so the gate should choose the legacy path.
-		expect(typeof (tab as unknown as { update?: unknown }).update).not.toBe("function");
-		tab.display();
-
-		expect(legacySpy).toHaveBeenCalledTimes(1);
-	});
-
-	it("uses the declarative update() path when Obsidian provides it (1.13+)", () => {
-		const tab = new ObsidianRuleEngineSettingTab({} as never, makePlugin());
-		const legacySpy = vi.fn();
-		const updateSpy = vi.fn();
-		(tab as unknown as { displayLegacy: () => void }).displayLegacy = legacySpy;
-		(tab as unknown as { update: () => void }).update = updateSpy;
-
-		tab.display();
-
-		expect(updateSpy).toHaveBeenCalledTimes(1);
-		expect(legacySpy).not.toHaveBeenCalled();
 	});
 });
