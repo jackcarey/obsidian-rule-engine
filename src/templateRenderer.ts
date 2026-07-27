@@ -143,9 +143,7 @@ export async function renderTemplate(
 
 	const contentEl = container.querySelector(`#${contentPlaceholderId}`) as HTMLElement;
 	if (contentEl) {
-		const sizer = activeDocument.createElement("div");
-		sizer.addClass("markdown-preview-sizer");
-		sizer.addClass("markdown-preview-section");
+		const sizer = activeDocument.createDiv({ cls: ["markdown-preview-sizer", "markdown-preview-section"] });
 		contentEl.appendChild(sizer);
 
 		await MarkdownRenderer.render(app, bodyContent, sizer, file.path, component);
@@ -180,7 +178,7 @@ function executeScripts(container: HTMLElement): void {
 					// global scope (same as an inline script would) without
 					// injecting a DOM <script> element.  `this` is bound to
 					// the container so template scripts can reference it.
-					// eslint-disable-next-line @typescript-eslint/no-implied-eval
+					// eslint-disable-next-line @typescript-eslint/no-implied-eval -- template scripts are a documented feature; src-based scripts are already blocked above
 					const fn = new Function(code);
 					fn.call(container);
 				} catch (e) {
