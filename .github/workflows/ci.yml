@@ -44,10 +44,14 @@ jobs:
       - env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --title "Release ${GITHUB_REF_NAME}" \
-            --generate-notes \
-            main.js manifest.json styles.css
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists, skipping."
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              --title "Release ${GITHUB_REF_NAME}" \
+              --generate-notes \
+              main.js manifest.json styles.css
+          fi
 
   auto-version:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -99,10 +103,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag=$(node -p "require('./package.json').version")
-          gh release create "$tag" \
-            --title "Release $tag" \
-            --generate-notes \
-            main.js manifest.json styles.css
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists, skipping."
+          else
+            gh release create "$tag" \
+              --title "Release $tag" \
+              --generate-notes \
+              main.js manifest.json styles.css
+          fi
       - name: Open release PR into main and enable auto-merge
         if: steps.bump.outputs.bump != ''
         env:
