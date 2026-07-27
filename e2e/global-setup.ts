@@ -76,7 +76,7 @@ function restoreObsidianConfig(configPath: string): void {
 
 export default async function globalSetup() {
   // 1. Build plugin
-  console.log("[e2e] Building plugin...");
+  console.debug("[e2e] Building plugin...");
   execSync("npm run build", { cwd: REPO_ROOT, stdio: "inherit" });
 
   // 2. Copy built artifacts to vault plugin dir
@@ -257,7 +257,7 @@ export default async function globalSetup() {
   // 4. Kill ALL existing Obsidian processes — Electron's single-instance lock would
   //    forward our --remote-debugging-port to the already-running instance (which has
   //    no debug port) and exit, so the CDP server would never start.
-  console.log("[e2e] Killing any existing Obsidian instances...");
+  console.debug("[e2e] Killing any existing Obsidian instances...");
   if (process.platform === "win32") {
     try { execSync("taskkill /f /im Obsidian.exe", { stdio: "ignore", shell: "cmd.exe" }); } catch { /* not running */ }
   } else {
@@ -267,7 +267,7 @@ export default async function globalSetup() {
   await new Promise((r) => setTimeout(r, 1500));
 
   // 5. Launch Obsidian
-  console.log(`[e2e] Launching Obsidian with CDP port ${CDP_PORT}...`);
+  console.debug(`[e2e] Launching Obsidian with CDP port ${CDP_PORT}...`);
   const args = [`--remote-debugging-port=${CDP_PORT}`];
   if (process.platform === "linux") args.push("--no-sandbox", "--disable-gpu");
 
@@ -281,7 +281,7 @@ export default async function globalSetup() {
 
   // 6. Wait for CDP, dismiss the vault-trust dialog, and verify the plugin loaded
   try {
-    console.log("[e2e] Waiting for Obsidian to start...");
+    console.debug("[e2e] Waiting for Obsidian to start...");
     await waitForCDP(CDP_PORT);
     await getObsidianPage(CDP_PORT);
 
@@ -300,19 +300,19 @@ export default async function globalSetup() {
     // Click "Trust author and enable plugins" so community plugins actually load.
     const trustBtn = obsidianPage.locator("button", { hasText: "Trust author and enable plugins" });
     if (await trustBtn.isVisible({ timeout: 8000 }).catch(() => false)) {
-      console.log("[e2e] Dismissing vault trust dialog...");
+      console.debug("[e2e] Dismissing vault trust dialog...");
       await trustBtn.click();
     }
 
     // Wait for the rule-engine plugin to finish loading
-    console.log("[e2e] Waiting for plugin to load...");
+    console.debug("[e2e] Waiting for plugin to load...");
     await obsidianPage.waitForFunction(
       () => !!window.app?.plugins?.plugins?.["rule-engine"],
       { timeout: 20000 }
     );
 
     await browser.close();
-    console.log("[e2e] Obsidian ready.");
+    console.debug("[e2e] Obsidian ready.");
   } catch (err) {
     restoreObsidianConfig(configPath);
     throw err;
