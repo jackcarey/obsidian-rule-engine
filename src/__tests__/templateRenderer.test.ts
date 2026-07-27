@@ -4,14 +4,22 @@ import type { App, TFile, Component } from "obsidian";
 
 // activeDocument is an Obsidian global used inside renderTemplate
 beforeAll(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (globalThis as any).activeDocument = document;
+    (globalThis as unknown as { activeDocument: Document }).activeDocument = document;
     // Polyfill Obsidian's HTMLElement extensions used by renderTemplate
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(HTMLElement.prototype as any).addClass) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (HTMLElement.prototype as any).addClass = function (...cls: string[]) {
+    const proto = HTMLElement.prototype as unknown as { addClass?: (...cls: string[]) => void };
+    if (!proto.addClass) {
+        proto.addClass = function (this: HTMLElement, ...cls: string[]) {
             this.classList.add(...cls);
+        };
+    }
+    const nodeProto = Node.prototype as unknown as { createDiv?: (o?: string | { cls?: string | string[] }) => HTMLDivElement };
+    if (!nodeProto.createDiv) {
+        nodeProto.createDiv = function (this: Node, o?: string | { cls?: string | string[] }) {
+            const doc = this instanceof Document ? this : this.ownerDocument;
+            const div = doc!.createElement("div");
+            const cls = typeof o === "string" ? o : o?.cls;
+            if (cls) div.addClass(...(Array.isArray(cls) ? cls : [cls]));
+            return div;
         };
     }
 });
