@@ -56,16 +56,6 @@ export default defineConfig([
 		},
 	},
 	{
-		files: ["src/settings.ts"],
-		rules: {
-			// getSettingDefinitions()/update() are feature-detected at runtime
-			// (typeof this.update === "function") and only used when the
-			// installed Obsidian supports them; a display() fallback covers
-			// everyone else. The linter can't see that guard, only minAppVersion.
-			"obsidianmd/no-unsupported-api": "off",
-		},
-	},
-	{
 		files: ["__mocks__/**/*.ts"],
 		rules: {
 			// this file is the obsidian mock, so it must import the real moment package
