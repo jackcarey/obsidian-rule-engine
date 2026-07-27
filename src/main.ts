@@ -56,7 +56,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return {
 			...base,
 			...(override.enabled !== undefined ? { enabled: override.enabled } : {}),
-			params: { ...base.params, ...(override.params ?? {}) } as T,
+			params: { ...base.params, ...(override.params ?? {}) },
 		};
 	};
 
@@ -99,7 +99,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				...(partialUpdate.params || {})
 			}
 		};
-		this.settings.commands[id] = fullConfig as unknown as CommandConfig;
+		this.settings.commands[id] = fullConfig;
 
 		await this.saveSettings().catch(reason => {
 			this.debug(reason);

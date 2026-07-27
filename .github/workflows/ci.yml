@@ -59,7 +59,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -86,14 +85,13 @@ jobs:
             bump="patch"
           fi
           echo "bump=$bump" >> "$GITHUB_OUTPUT"
-      - name: Bump version and tag on a release branch
+      - name: Bump version, commit, and tag
         if: steps.bump.outputs.bump != ''
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "automation/release-${{ github.run_id }}"
           npm version "${{ steps.bump.outputs.bump }}" -m "chore(release): %s"
-          git push origin "automation/release-${{ github.run_id }}" --follow-tags
+          git push origin HEAD:main --follow-tags
       - name: Build
         if: steps.bump.outputs.bump != ''
         run: npm run build
@@ -111,13 +109,3 @@ jobs:
               --generate-notes \
               main.js manifest.json styles.css
           fi
-      - name: Open release PR into main and enable auto-merge
-        if: steps.bump.outputs.bump != ''
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
-        run: |
-          tag=$(node -p "require('./package.json').version")
-          gh pr create --base main --head "automation/release-${{ github.run_id }}" \
-            --title "chore(release): $tag" \
-            --body "Automated version bump to $tag."
-          gh pr merge --auto --merge --delete-branch "automation/release-${{ github.run_id }}"

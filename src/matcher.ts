@@ -3,8 +3,7 @@ import { FilterGroup, Filter } from "./types";
 import { RELATIVE_DATE_UNITS } from "./consts";
 
 // Obsidian types moment as a namespace rather than a callable — cast for runtime use
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const momentFn = moment as any as (value?: string | number | Date) => { subtract: (n: number, u: string) => { valueOf: () => number }; add: (n: number, u: string) => { valueOf: () => number }; valueOf: () => number; isValid: () => boolean };
+const momentFn = moment as unknown as (value?: string | number | Date) => { subtract: (n: number, u: string) => { valueOf: () => number }; add: (n: number, u: string) => { valueOf: () => number }; valueOf: () => number; isValid: () => boolean };
 
 const RELATIVE_DATE_UNITS_SET = new Set<string>(RELATIVE_DATE_UNITS);
 
