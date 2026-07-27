@@ -16,6 +16,7 @@ export default defineConfig({
 		},
 	},
 	resolve: {
+		tsconfigPaths: true,
 		alias: {
 			// Redirect all `import ... from 'obsidian'` to our mock
 			obsidian: resolve(__dirname, "__mocks__/obsidian.ts"),
