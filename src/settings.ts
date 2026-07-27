@@ -1,8 +1,9 @@
-import { App, PluginSettingTab, Setting, SettingGroup, setIcon, Platform } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingGroup, setIcon, Platform, SettingDefinitionItem } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup, CommandWithSetup, CommandSaveFn } from "./types";
 import { DEFAULT_RULES } from "./consts";
 import { EditRuleModal } from "editRuleModal";
+
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	plugin: ObsidianRuleEnginePlugin;
 	private draggedElement: HTMLElement | null = null;
@@ -18,7 +19,248 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		return this.plugin.settings.rules.length ?? 0;
 	}
 
+	/**
+	 * getSettingDefinitions()/update() only exist on Obsidian 1.13+ (currently
+	 * Catalyst early access, not yet stable). Feature-detect at runtime rather
+	 * than gating on minAppVersion, so the plugin keeps working on whatever
+	 * Obsidian version is actually installed.
+	 */
+	private get supportsDeclarativeSettings(): boolean {
+		return typeof this.update === "function";
+	}
+
+	/** Single entry point Obsidian calls to render the tab, on every version. */
 	display(): void {
+		if (this.supportsDeclarativeSettings) {
+			this.update();
+		} else {
+			this.displayLegacy();
+		}
+	}
+
+	/** Re-render after a change, whichever rendering mode is active. */
+	private refresh(): void {
+		if (this.supportsDeclarativeSettings) {
+			this.update();
+		} else {
+			this.displayLegacy();
+		}
+	}
+
+	// ── Declarative rendering (Obsidian 1.13+) ──────────────────────────────
+
+	getControlValue(key: string): unknown {
+		return (this.plugin.settings as unknown as Record<string, unknown>)[key];
+	}
+
+	async setControlValue(key: string, value: unknown): Promise<void> {
+		(this.plugin.settings as unknown as Record<string, unknown>)[key] = value;
+		await this.plugin.saveSettings();
+
+		if (key === "workInLivePreview") {
+			const file = this.app.workspace.getActiveFile();
+			if (file) {
+				this.plugin.processMarkdownView(file).catch((e) => this.plugin.debug(e));
+			}
+		} else if (key === "workInCanvas") {
+			if (value) {
+				this.plugin.processAllCanvasNodes();
+			} else {
+				this.plugin.restoreAllCanvasNodes();
+			}
+		}
+	}
+
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: "Enabled",
+				desc: "Enable rule automations",
+				control: { type: "toggle", key: "enabled" },
+			},
+			...this.getRulesDefinitions(),
+			...this.getSettingsDefinitions(),
+			...this.getCommandsDefinitions(),
+		];
+	}
+
+	private getRulesDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: "Rule configuration",
+				desc: "Rules are checked and executed in order from top to bottom. The first matching template will be used. Commands from all matching rules will execute.",
+				render: (setting) => { setting.setHeading(); },
+			},
+			{
+				type: "list",
+				emptyState: "No rules yet.",
+				onReorder: this.plugin.settings.useDnd ? (oldIndex, newIndex) => {
+					const rule = this.plugin.settings.rules.splice(oldIndex, 1)?.[0];
+					this.plugin.settings.rules.splice(newIndex, 0, rule!);
+					void this.plugin.saveSettings();
+					this.refresh();
+				} : undefined,
+				onDelete: (index) => {
+					this.plugin.settings.rules.splice(index, 1);
+					void this.plugin.saveSettings();
+					this.refresh();
+				},
+				addItem: {
+					name: "Add new rule",
+					action: () => {
+						const newRule: RuleConfig = {
+							id: `${Date.now()}`,
+							name: `Rule ${this.ruleCount + 1}`,
+							filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
+							template: "<h1>{{file.basename}}</h1>",
+							enabled: true,
+							commandIds: [],
+							baseFileHandling: "file"
+						};
+						this.plugin.settings.rules.push(newRule);
+						void this.plugin.saveSettings();
+						this.refresh();
+
+						const newIndex = this.plugin.settings.rules.length - 1;
+						new EditRuleModal(this.app, this.plugin, newRule, newIndex, () => {
+							this.refresh();
+						}).open();
+					},
+				},
+				items: this.plugin.settings.rules.map((rule, index) => ({
+					name: rule.name,
+					render: (setting: Setting) => {
+						const summary = [
+							`${rule.commandIds.length} command${rule.commandIds.length === 1 ? "" : "s"}`,
+							rule.template?.length ? "has template" : "no template",
+						].join(" · ");
+						setting
+							.setName(rule.name)
+							.setDesc(summary)
+							.addButton(btn => btn
+								.setIcon("pencil")
+								.setTooltip("Edit rule")
+								.onClick(() => {
+									new EditRuleModal(this.app, this.plugin, rule, index, () => {
+										this.refresh();
+									}).open();
+								}));
+					},
+				})),
+			},
+		];
+	}
+
+	private getSettingsDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				type: "group",
+				heading: "Settings",
+				items: [
+					{
+						name: "Template in live preview",
+						desc: "Enable to use templates in both live preview and reading view. Disable to limit them to reading view only.",
+						control: { type: "toggle", key: "workInLivePreview" },
+					},
+					{
+						name: "Template in canvas (experimental)",
+						desc: "Apply templates to Markdown file nodes in canvas files",
+						control: { type: "toggle", key: "workInCanvas" },
+					},
+					{
+						name: "Process on settings change",
+						desc: "Trigger processing of rule engine results when plugin settings or rules change.",
+						render: (setting) => {
+							setting
+								.setTooltip(this.plugin.isBasesViewRegistered ? "" : "Rule engine view could not be registered")
+								.addToggle(toggle => toggle
+									.setValue(this.plugin.settings.processOnSave)
+									.setDisabled(!this.plugin.isBasesViewRegistered)
+									.onChange(async (value) => {
+										this.plugin.settings.processOnSave = value;
+										await this.plugin.saveSettings();
+									}));
+						},
+					},
+					{
+						name: "Process .base files automatically",
+						desc: "Allow rules to execute across the 'rule engine' view in .base files automatically when data changes.",
+						render: (setting) => {
+							setting
+								.setTooltip(this.plugin.isBasesViewRegistered ? "" : "Rule engine view could not be registered")
+								.addToggle(toggle => toggle
+									.setValue(this.plugin.settings.processBaseResultsAutomatically)
+									.setDisabled(!this.plugin.isBasesViewRegistered)
+									.onChange(async (value) => {
+										this.plugin.settings.processBaseResultsAutomatically = value;
+										await this.plugin.saveSettings();
+									}));
+						},
+					},
+					{
+						name: "Drag and drop",
+						desc: "Use drag and drop in lists when your device supports it.",
+						visible: () => !Platform.isMobile,
+						control: { type: "toggle", key: "useDnd" },
+					},
+					{
+						name: "Debug",
+						desc: "Log debug messages to the developer tools",
+						control: { type: "toggle", key: "debug" },
+					},
+				],
+			},
+		];
+	}
+
+	private getCommandsDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				name: "Command configuration",
+				desc: "Any command in Obsidian can be used in rules. Configuration of rule engine commands is shared across all rules.",
+				render: (setting) => { setting.setHeading(); },
+			},
+			{
+				type: "group",
+				items: this.plugin.commands
+					.sort((a, b) => a.name.localeCompare(b.name))
+					.map(cmdConfig => {
+						const { id, name, description, settingCallback } = cmdConfig;
+						return {
+							name,
+							desc: description ?? "",
+							render: (setting: Setting, group: SettingGroup) => {
+								const currentConfig = this.plugin.getCommandConfig(id);
+								setting
+									.setName(name)
+									.setDesc(description ?? "")
+									.setTooltip("Toggle whether or not this command appears in the Obsidian palette and can be used in rules")
+									.addToggle(toggle => toggle
+										.setValue(currentConfig.enabled)
+										.onChange(async (value) => {
+											currentConfig.enabled = value;
+											await this.plugin.updateCommandConfig(id, { enabled: value }).catch(e => this.plugin.debug(e));
+										}));
+								setting.nameEl.className = "ore-command-config-name";
+
+								if (settingCallback) {
+									const saveFn: CommandSaveFn = async (updatedConfig) => {
+										if (updatedConfig.enabled !== undefined) currentConfig.enabled = updatedConfig.enabled;
+										if (updatedConfig.params) Object.assign(currentConfig.params, updatedConfig.params);
+										await this.plugin.updateCommandConfig(id, updatedConfig);
+									};
+									settingCallback(group, currentConfig, saveFn);
+								}
+							},
+						};
+					}),
+			},
+		];
+	}
+
+	// ── Legacy imperative rendering (Obsidian < 1.13) ───────────────────────
+
+	private displayLegacy(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 
@@ -62,7 +304,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 
 			header.onclick = () => {
 				this.activeTab = tab.id;
-				this.display();
+				this.refresh();
 			};
 		});
 	}
@@ -87,11 +329,11 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					};
 					this.plugin.settings.rules.push(newRule);
 					await this.plugin.saveSettings();
-					this.display();
+					this.refresh();
 
 					const newIndex = this.plugin.settings.rules.length - 1;
 					new EditRuleModal(this.app, this.plugin, newRule, newIndex, () => {
-						this.display();
+						this.refresh();
 					}).open();
 				}));
 
@@ -181,7 +423,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.useDnd = value;
 						await this.plugin.saveSettings();
-						this.display();
+						this.refresh();
 					}));
 		}
 
@@ -194,7 +436,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.debug = value;
 						await this.plugin.saveSettings();
-						this.display();
+						this.refresh();
 					}));
 		};
 
@@ -239,7 +481,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			`☰ ${rule.commandIds.length}`,
 			rule.template?.length ? `🗎` : '🗋'
 		].filter(str => Boolean(str?.length))
-			.join(" "); // em space
+			.join(" "); // em space
 		listItem.createSpan({ cls: "ore-rule-name", text: itemTitle });
 
 		const actionsContainer = listItem.createDiv({ cls: "ore-rule-actions" });
@@ -250,7 +492,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		editBtn.onclick = (e) => {
 			e.stopPropagation();
 			new EditRuleModal(this.app, this.plugin, rule, index, () => {
-				this.display();
+				this.refresh();
 			}).open();
 		};
 
@@ -261,7 +503,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			e.stopPropagation();
 			this.plugin.settings.rules.splice(index, 1);
 			await this.plugin.saveSettings();
-			this.display();
+			this.refresh();
 		};
 
 		const moveItem = (fromIndex: number, toIndex: number) => {
@@ -273,7 +515,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			this.plugin.debug(`rule`, rule);
 			this.plugin.settings.rules.splice(toIndex, 0, rule!);
 			void this.plugin.saveSettings();
-			this.display();
+			this.refresh();
 		}
 
 		if (ruleCount > 1) {
@@ -334,7 +576,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 					this.plugin.settings.rules.splice(targetIndex, 0, draggedRule!);
 
 					void this.plugin.saveSettings();
-					this.display();
+					this.refresh();
 				});
 			} else {
 				listItem.createEl('input', { cls: "ore-rule-move-input" }, (inputEl) => {
