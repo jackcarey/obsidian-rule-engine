@@ -35,8 +35,6 @@ export default defineConfig([
 			"obsidianmd/prefer-active-doc": "off",
 			// createDiv()/createEl() are Obsidian-injected globals not present in jsdom
 			"obsidianmd/prefer-create-el": "off",
-			// no cross-window concern in a plain jsdom test environment
-			"obsidianmd/prefer-instanceof": "off",
 		},
 	},
 	{
@@ -46,6 +44,15 @@ export default defineConfig([
 			// the call site); this rule can't be suppressed inline (obsidianmd/*
 			// disables are banned), so it's scoped off for this file instead.
 			"obsidianmd/rule-custom-message": "off",
+		},
+	},
+	{
+		files: ["src/main.ts", "src/templateRenderer.ts"],
+		rules: {
+			// The suggested activeWindow.createDiv() doesn't type-check against
+			// this obsidian.d.ts (no createDiv on Window), and activeDocument.createDiv()
+			// broke real rendering in e2e tests — keeping createElement + addClass here.
+			"obsidianmd/prefer-create-el": "off",
 		},
 	},
 	{

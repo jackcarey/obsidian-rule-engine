@@ -12,16 +12,6 @@ beforeAll(() => {
             this.classList.add(...cls);
         };
     }
-    const nodeProto = Node.prototype as unknown as { createDiv?: (o?: string | { cls?: string | string[] }) => HTMLDivElement };
-    if (!nodeProto.createDiv) {
-        nodeProto.createDiv = function (this: Node, o?: string | { cls?: string | string[] }) {
-            const doc = this instanceof Document ? this : this.ownerDocument;
-            const div = doc!.createElement("div");
-            const cls = typeof o === "string" ? o : o?.cls;
-            if (cls) div.addClass(...(Array.isArray(cls) ? cls : [cls]));
-            return div;
-        };
-    }
 });
 
 function makeApp(opts: {

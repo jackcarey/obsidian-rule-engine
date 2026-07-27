@@ -143,7 +143,9 @@ export async function renderTemplate(
 
 	const contentEl = container.querySelector(`#${contentPlaceholderId}`) as HTMLElement;
 	if (contentEl) {
-		const sizer = activeDocument.createDiv({ cls: ["markdown-preview-sizer", "markdown-preview-section"] });
+		const sizer = activeDocument.createElement("div");
+		sizer.addClass("markdown-preview-sizer");
+		sizer.addClass("markdown-preview-section");
 		contentEl.appendChild(sizer);
 
 		await MarkdownRenderer.render(app, bodyContent, sizer, file.path, component);
