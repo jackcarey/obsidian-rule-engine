@@ -66,6 +66,10 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			heading: "Rule configuration",
 			cls: "ore-rule-list",
 			emptyState: "No rules yet.",
+			search: {
+				placeholder: "Search rules...",
+				match: (def, query) => def.name.toLowerCase().includes(query.toLowerCase()),
+			},
 			onReorder: (oldIndex, newIndex) => {
 				const rule = this.plugin.settings.rules.splice(oldIndex, 1)?.[0];
 				this.plugin.debug(`reorder rule`, { oldIndex, newIndex, rule });
