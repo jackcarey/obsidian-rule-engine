@@ -26,7 +26,7 @@ Rules are checked on individual files when they open. They are checked on `.base
 
 Commands from all matching rules wll execute in order.
 
-<img width="714" height="431" alt="image" src="https://github.com/user-attachments/assets/640d0d21-8ec7-426a-8332-f52752fd35ce" />
+![commands section](screenshots/commands.png)
 
 ### Provided commands
 
@@ -348,9 +348,10 @@ Each rule has:
 - **Filter Conditions** - Conditions that determine which files match this view
 - **Base file handling** - Whether the rule runs against individual files, base file results, or both.
 - **Commands** - An ordered list of commands to run when a file matches the filter conditions
-- **Default template** - The HTML template to render for matching files
-- **Base file template** - Override template used when the file is rendered inside a `.base` query card. Falls back to the default template if blank.
-- **Canvas template** - Override template used when the file is rendered as a Canvas node. Falls back to the default template if blank.
+- **HTML template** - The HTML template to render for matching files
+- **Enable for file** - Apply the template when the file is rendered as a normal Markdown note
+- **Enable for base views** - Also apply the template when the file is rendered inside a `.base` query
+- **Enable for canvas** - Also apply the template when the file is rendered as a Canvas node
 
 #### Per-file Command Overrides
 
