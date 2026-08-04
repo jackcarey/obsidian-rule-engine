@@ -47,15 +47,6 @@ export default defineConfig([
 		},
 	},
 	{
-		files: ["src/main.ts", "src/templateRenderer.ts"],
-		rules: {
-			// The suggested activeWindow.createDiv() doesn't type-check against
-			// this obsidian.d.ts (no createDiv on Window), and activeDocument.createDiv()
-			// broke real rendering in e2e tests — keeping createElement + addClass here.
-			"obsidianmd/prefer-create-el": "off",
-		},
-	},
-	{
 		files: ["__mocks__/**/*.ts"],
 		rules: {
 			// this file is the obsidian mock, so it must import the real moment package

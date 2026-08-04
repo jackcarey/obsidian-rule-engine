@@ -6,10 +6,36 @@ import type { App, TFile, Component } from "obsidian";
 beforeAll(() => {
     (globalThis as unknown as { activeDocument: Document }).activeDocument = document;
     // Polyfill Obsidian's HTMLElement extensions used by renderTemplate
-    const proto = HTMLElement.prototype as unknown as { addClass?: (...cls: string[]) => void };
+    type DomElementInfo = { cls?: string | string[]; attr?: Record<string, string | number | boolean | null> };
+    const proto = HTMLElement.prototype as unknown as {
+        addClass?: (...cls: string[]) => void;
+        createEl?: (tag: string, o?: DomElementInfo | string) => HTMLElement;
+        createDiv?: (o?: DomElementInfo | string) => HTMLDivElement;
+    };
     if (!proto.addClass) {
         proto.addClass = function (this: HTMLElement, ...cls: string[]) {
             this.classList.add(...cls);
+        };
+    }
+    if (!proto.createEl) {
+        proto.createEl = function (this: HTMLElement, tag: string, o?: DomElementInfo | string) {
+            const el = document.createElement(tag);
+            const opts = typeof o === "string" ? { cls: o } : o;
+            if (opts?.cls) {
+                el.classList.add(...(Array.isArray(opts.cls) ? opts.cls : [opts.cls]));
+            }
+            if (opts?.attr) {
+                for (const [key, value] of Object.entries(opts.attr)) {
+                    if (value !== null) el.setAttribute(key, String(value));
+                }
+            }
+            this.appendChild(el);
+            return el;
+        };
+    }
+    if (!proto.createDiv) {
+        proto.createDiv = function (this: HTMLElement, o?: DomElementInfo | string) {
+            return this.createEl("div", o);
         };
     }
 });

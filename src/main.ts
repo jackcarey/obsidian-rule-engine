@@ -377,9 +377,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		let customEl = container.querySelector(`.${CUSTOM_RULE_CLASS}`) as HTMLElement;
 
 		if (!customEl) {
-			customEl = activeDocument.createElement("div");
-			customEl.addClass(CUSTOM_RULE_CLASS);
-			container.appendChild(customEl);
+			customEl = container.createDiv({ cls: CUSTOM_RULE_CLASS });
 
 			this.debug(`injectCustomView`, `new customEl`, customEl);
 			this.registerDomEvent(customEl, "click", (evt: MouseEvent) => {
