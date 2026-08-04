@@ -95,7 +95,6 @@ export default async function globalSetup() {
         workInCanvas: false,
         processBaseResultsAutomatically: false,
         processOnSave: false,
-        useDnd: true,
         debug: false,
         rules: [
           {
