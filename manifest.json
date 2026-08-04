@@ -1,7 +1,7 @@
 {
 	"id": "rule-engine",
 	"name": "Rule Engine",
-	"version": "2.1.1",
+	"version": "2.1.2",
 	"minAppVersion": "1.13.0",
 	"description": "Run commands and create custom HTML views for your notes based on filter rules. Transform how your vault behaves and how notes are displayed.",
 	"author": "Jack Carey",
