@@ -7,12 +7,12 @@ export default defineConfig({
 		environment: "jsdom",
 		globals: true,
 		// Where to find test files
-		include: ["src/__tests__/**/*.test.ts"],
+		include: ["tests/unit/**/*.test.ts"],
 		coverage: {
 			provider: "v8",
 			reporter: ["text", "html"],
 			include: ["src/**/*.ts"],
-			exclude: ["src/main.ts", "src/settings.ts", "src/__tests__/**"],
+			exclude: ["src/main.ts", "src/settings.ts"],
 		},
 	},
 	resolve: {

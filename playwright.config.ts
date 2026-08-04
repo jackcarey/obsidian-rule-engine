@@ -17,19 +17,19 @@ import { defineConfig } from "@playwright/test";
  *   npm run build && npx playwright test
  */
 export default defineConfig({
-  testDir: "./e2e/tests",
+  testDir: "./tests/e2e",
   timeout: 60_000,
   expect: { timeout: 10_000 },
   // Single worker: Obsidian is a single app instance shared across all tests
   workers: 1,
   fullyParallel: false,
-  reporter: [["list"], ["html", { open: "never", outputFolder: "e2e/playwright-report" }]],
-  globalSetup: "./e2e/global-setup.ts",
-  globalTeardown: "./e2e/global-teardown.ts",
+  reporter: [["list"], ["html", { open: "never", outputFolder: "tests/e2e/playwright-report" }]],
+  globalSetup: "./tests/e2e/global-setup.ts",
+  globalTeardown: "./tests/e2e/global-teardown.ts",
   use: {
     // No browser launch config — we use connectOverCDP in fixtures
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
-  outputDir: "e2e/test-results",
+  outputDir: "tests/e2e/test-results",
 });

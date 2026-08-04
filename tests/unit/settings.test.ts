@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_SETTINGS } from "../consts";
+import { DEFAULT_SETTINGS } from "../../src/consts";
 
 describe("DEFAULT_SETTINGS", () => {
 	it("has enabled: true by default", () => {
