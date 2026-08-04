@@ -15,6 +15,22 @@ function isCanvasView(view: unknown): view is CanvasView {
 }
 
 /**
+ * Hides/shows the underlying markdown source/preview view so our custom
+ * template can be shown instead. Set directly as an inline style rather than
+ * via a CSS class — `container` is sometimes the source/preview view itself
+ * (canvas nodes) and sometimes an ancestor of it (normal file views), so a
+ * single descendant selector can't reliably target both.
+ */
+function toggleMarkdownVisibility(container: HTMLElement, hidden: boolean): void {
+	const targets = container.matches(".markdown-source-view, .markdown-preview-view")
+		? [container]
+		: Array.from(container.querySelectorAll<HTMLElement>(".markdown-source-view, .markdown-preview-view"));
+	for (const el of targets) {
+		el.toggle(!hidden);
+	}
+}
+
+/**
  * Strips the "plugin-id:" prefix Obsidian adds to command ids, so overrides
  * keyed by either the full id or the short id can both be looked up.
  */
@@ -385,11 +401,13 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		this.debug(`injectCustomView`, `rendering template`);
 		await renderTemplate(this.app, template, file, customEl, this);
 		container.addClass(HIDE_MARKDOWN_CLASS);
+		toggleMarkdownVisibility(container, true);
 	}
 
 	restoreDefaultView(view: MarkdownView) {
 		const container = view.contentEl;
 		container.removeClass(HIDE_MARKDOWN_CLASS);
+		toggleMarkdownVisibility(container, false);
 		const customEl = container.querySelector(`.${CUSTOM_RULE_CLASS}`);
 		this.debug(`restoring default view`);
 		if (customEl) customEl.remove();
@@ -511,6 +529,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		this.debug(`restoreCanvasNode`);
 		previewContainer.removeClass(HIDE_MARKDOWN_CLASS);
+		toggleMarkdownVisibility(previewContainer, false);
 		const customEl = previewContainer.querySelector(`.${CUSTOM_RULE_CLASS}`);
 		if (customEl) customEl.remove();
 	}

@@ -14,6 +14,9 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         super(controller);
         this.plugin = plugin;
         this.containerEl = scrollEl.createDiv({ cls: 'rule-bases-view-container' });
+        // Set inline rather than via CSS — the parent flex container squashes
+        // this view otherwise, and only an inline style reliably wins here.
+        this.containerEl.setCssStyles({ display: 'block' });
     }
 
     private lastDataHash: string = "";

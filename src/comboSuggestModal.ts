@@ -53,28 +53,31 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
         //don't do the style and behaviour change on mobile
         if (Platform.isMobile) return;
 
-        // Style modal as combobox
+        // Style modal as combobox. Positioning/background are set as inline
+        // styles rather than CSS classes — Obsidian sets its own inline
+        // position/margin/transform/display for the modal open/close
+        // animation, and only a later inline-style write (not a stylesheet
+        // rule, however specific) can reliably override that.
         window.requestAnimationFrame(() => {
-            const modalContainer = this.modalEl.closest('.modal-container');
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- tsc disagrees with eslint's type-narrowing here: closest() returns Element, and setCssStyles/hide/show are HTMLElement-only, so the cast is genuinely required for tsc to compile.
+            const modalContainer = this.modalEl.closest('.modal-container') as HTMLElement | null;
             if (modalContainer) {
                 modalContainer.addClass('ore-modal-container');
                 modalContainer.removeClass('mod-dim');
-                const modalBg = modalContainer.querySelector('.modal-bg');
-                if (modalBg) {
-                    (modalBg as HTMLElement).addClass('ore-modal-bg-hidden');
-                }
+                modalContainer.setCssStyles({ background: 'transparent' });
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- see above
+                const modalBg = modalContainer.querySelector('.modal-bg') as HTMLElement | null;
+                modalBg?.hide();
             }
         });
 
         this.modalEl.addClass("ore-suggestion-container", "ore-combobox");
+        this.modalEl.setCssStyles({ position: 'fixed', margin: '0', transform: 'none' });
 
         // Position relative to anchor element
         if (this.anchorEl) {
             const rect = this.anchorEl.getBoundingClientRect();
-            this.modalEl.addClass('ore-combobox-positioned');
-            // Use CSS custom properties for dynamic positioning (setProperty is acceptable for CSS variables)
-            this.modalEl.style.setProperty('--ore-combobox-left', `${rect.left}px`);
-            this.modalEl.style.setProperty('--ore-combobox-top', `${rect.bottom + 5}px`);
+            this.modalEl.setCssStyles({ left: `${rect.left}px`, top: `${rect.bottom + 5}px` });
         }
 
         // Style input and container
@@ -89,15 +92,7 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
                 // Show/hide clear button based on input text
                 const updateClearButtonVisibility = () => {
                     const clearButton = promptEl.querySelector('.search-input-clear-button') as HTMLElement;
-                    if (clearButton) {
-                        if (input.value.trim().length > 0) {
-                            clearButton.removeClass('ore-clear-button-hidden');
-                            clearButton.addClass('ore-clear-button-visible');
-                        } else {
-                            clearButton.removeClass('ore-clear-button-visible');
-                            clearButton.addClass('ore-clear-button-hidden');
-                        }
-                    }
+                    clearButton?.toggle(input.value.trim().length > 0);
                 };
 
                 // Initial state - use requestAnimationFrame to ensure DOM is ready
@@ -180,14 +175,18 @@ export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {
             removeFocusClasses(this.anchorEl, expression);
         }
 
-        const modalContainer = this.modalEl.closest('.modal-container');
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- see the matching cast in onOpen()
+        const modalContainer = this.modalEl.closest('.modal-container') as HTMLElement | null;
         if (modalContainer) {
             modalContainer.removeClass('ore-modal-container');
             modalContainer.addClass('mod-dim');
-            const modalBg = modalContainer.querySelector('.modal-bg');
-            if (modalBg) {
-                (modalBg as HTMLElement).removeClass('ore-modal-bg-hidden');
-            }
+            // These elements are reused by Obsidian across modals, so the
+            // inline styles we set in onOpen() must be cleared here — removing
+            // our marker class alone wouldn't undo them.
+            modalContainer.setCssStyles({ background: '' });
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- see above
+            const modalBg = modalContainer.querySelector('.modal-bg') as HTMLElement | null;
+            modalBg?.show();
         }
         super.onClose();
     }
