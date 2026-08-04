@@ -40,7 +40,6 @@ export const DEFAULT_SETTINGS: CustomRulesSettings = {
     workInCanvas: false,
     processBaseResultsAutomatically: false,
     processOnSave: false,
-    useDnd: true,
     debug: false,
     rules: [
         {
@@ -48,6 +47,9 @@ export const DEFAULT_SETTINGS: CustomRulesSettings = {
             name: 'Rule 1',
             filterGroup: JSON.parse(JSON.stringify(DEFAULT_RULES)) as FilterGroup,
             template: "<h1>{{file.basename}}</h1> <main>{{file.content}}</main>",
+            enableTemplateForFile: true,
+            enableTemplateForBase: false,
+            enableTemplateForCanvas: false,
             enabled: true,
             commandIds: [],
             baseFileHandling: "file",

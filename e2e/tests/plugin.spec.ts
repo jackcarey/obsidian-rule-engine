@@ -1,4 +1,4 @@
-import { closeModal, expect, openEditRuleModal, openNote, openPluginSettings, test } from "../fixtures";
+import { closeModal, closeSettings, expect, openEditRuleModal, openNote, openPluginSettings, test } from "../fixtures";
 
 // ── 1. Plugin bootstrap ───────────────────────────────────────────────────────
 
@@ -42,64 +42,92 @@ test("no rule-engine console errors on load", async ({ page }) => {
 // ── 2. Settings UI ────────────────────────────────────────────────────────────
 
 test("settings page shows Rule Engine tab and rule list", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
 
-  // Should show the "Add new rule" button
-  const addBtn = page.locator("button", { hasText: "Add new rule" });
+  // Should show the "Add new rule" affordance (icon-only button on desktop)
+  const addBtn = settingsPage.locator('[aria-label="Add new rule"]');
   await expect(addBtn).toBeVisible();
 
   // Should show at least 2 rules from our data.json
-  const ruleItems = page.locator(".ore-rule-list-item");
+  const ruleItems = settingsPage.locator(".ore-rule-list .setting-item");
   expect(await ruleItems.count()).toBeGreaterThan(1);
 
-  await closeModal(page);
+  await closeSettings(settingsPage, page);
 });
 
 test("settings shows enabled toggle and it works", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
 
-  // The Enabled toggle lives in the Settings tab
-  await page.locator(".modal-container .workspace-tab-header", { hasText: "Settings" }).click();
-
-  const enabledToggle = page
-    .locator(".modal-container .setting-item", { hasText: "Enabled" })
+  const enabledToggle = settingsPage
+    .locator(".setting-item")
+    .filter({ has: settingsPage.locator(".setting-item-name", { hasText: /^Enabled$/ }) })
     .locator(".checkbox-container");
   await expect(enabledToggle).toBeVisible();
 
-  await closeModal(page);
+  await closeSettings(settingsPage, page);
 });
 
-test("settings tabs switch between Rules, Settings, and Command configuration", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
+test("settings page shows all sections without navigation", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
 
-  // Rules tab is shown by default
-  await expect(page.locator(".modal-container .workspace-tab-header", { hasText: "Rules" })).toHaveClass(/is-active/);
-  await expect(page.locator("button", { hasText: "Add new rule" })).toBeVisible();
+  // No tab bar anymore — Rules, Settings, and Command configuration are all
+  // visible on one scrollable page.
+  await expect(settingsPage.locator(".setting-item-heading", { hasText: "Rule configuration" })).toBeVisible();
+  await expect(settingsPage.locator('[aria-label="Add new rule"]')).toBeVisible();
 
-  // Switch to Settings tab
-  await page.locator(".modal-container .workspace-tab-header", { hasText: "Settings" }).click();
-  await expect(page.locator(".modal-container .workspace-tab-header", { hasText: "Settings" })).toHaveClass(/is-active/);
-  await expect(page.locator("button", { hasText: "Add new rule" })).not.toBeVisible();
-  await expect(page.locator(".modal-container .setting-item", { hasText: "Enabled" })).toBeVisible();
+  await expect(settingsPage.locator(".setting-item-name", { hasText: /^Enabled$/ })).toBeVisible();
 
-  // Switch to Command configuration tab
-  await page.locator(".modal-container .workspace-tab-header", { hasText: "Command configuration" }).click();
-  await expect(
-    page.locator(".modal-container .workspace-tab-header", { hasText: "Command configuration" })
-  ).toHaveClass(/is-active/);
-  await expect(page.locator(".modal-container .setting-item", { hasText: "Enabled" })).not.toBeVisible();
-  await expect(page.locator(".modal-container", { hasText: "Any command in Obsidian can be used in rules" })).toBeVisible();
+  await expect(settingsPage.locator(".setting-item-heading", { hasText: "Command configuration" })).toBeVisible();
 
-  await closeModal(page);
+  await closeSettings(settingsPage, page);
+});
+
+test("command configuration — shows each command's ID and a per-file-overrides note", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+
+  const processNowRow = settingsPage.locator(".setting-item", { hasText: "Process now" });
+  await expect(processNowRow.locator(".ore-command-config-id")).toHaveText("id: check-rules");
+
+  await expect(settingsPage.locator(".setting-item-name", { hasText: "Per-file overrides" })).toBeVisible();
+  await expect(settingsPage.locator(".setting-item", { hasText: "Per-file overrides" })).toContainText("ore:<command id>:<setting>");
+
+  await closeSettings(settingsPage, page);
+});
+
+test("rule list — delete a rule via the list's delete button", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+
+  // "Folder Rule" is disabled and unused by any template-rendering test, so it's
+  // safe to permanently remove within this shared, single-worker Obsidian session.
+  const ruleRows = settingsPage.locator('.ore-rule-list .setting-item:has([aria-label="Edit rule"])');
+  const countBefore = await ruleRows.count();
+
+  const folderRuleRow = ruleRows.filter({ hasText: "Folder Rule" });
+  await expect(folderRuleRow).toHaveCount(1);
+  await folderRuleRow.locator('[aria-label="Delete"]').click();
+  await settingsPage.waitForTimeout(400);
+
+  expect(await ruleRows.count()).toBe(countBefore - 1);
+  await expect(ruleRows.filter({ hasText: "Folder Rule" })).toHaveCount(0);
+
+  const persistedNames = await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ name: string }> };
+    };
+    return plugin?.settings?.rules?.map((r) => r.name) ?? [];
+  });
+  expect(persistedNames).not.toContain("Folder Rule");
+
+  await closeSettings(settingsPage, page);
 });
 
 // ── 3. Edit Rule Modal ────────────────────────────────────────────────────────
 
 test("edit rule modal opens with correct sections", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
-  await openEditRuleModal(page, 0);
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
 
-  const modal = page.locator(".ore-edit-rule-modal");
+  const modal = settingsPage.locator(".ore-edit-rule-modal");
   await expect(modal).toBeVisible();
 
   // Rule name input
@@ -111,108 +139,301 @@ test("edit rule modal opens with correct sections", async ({ page }) => {
   // Commands heading
   await expect(modal.locator(".setting-item-name", { hasText: "Commands" })).toBeVisible();
 
-  // HTML templates heading
-  await expect(modal.locator(".setting-item-name", { hasText: "HTML templates" })).toBeVisible();
+  // HTML template heading
+  await expect(modal.locator(".setting-item-name", { hasText: "HTML template" })).toBeVisible();
 
-  await closeModal(page);
-  await closeModal(page);
+  // Enable-for-context toggles
+  await expect(modal.locator(".setting-item-name", { hasText: "Enable for file" })).toBeVisible();
+  await expect(modal.locator(".setting-item-name", { hasText: "Enable for base views" })).toBeVisible();
+  await expect(modal.locator(".setting-item-name", { hasText: "Enable for canvas" })).toBeVisible();
+
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
 });
 
-test("edit rule modal has editable template textareas", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
-  await openEditRuleModal(page, 0);
+test("edit rule modal has an editable template textarea", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
 
-  const modal = page.locator(".ore-edit-rule-modal");
+  const modal = settingsPage.locator(".ore-edit-rule-modal");
 
-  // Three textareas: default, base file, canvas
-  const textareas = modal.locator("textarea");
-  expect(await textareas.count()).toBeGreaterThan(0);
-
-  // Default template textarea should have our e2e template content
-  const firstTextarea = textareas.first();
-  await expect(firstTextarea).toBeVisible();
-  const value = await firstTextarea.inputValue();
+  const textarea = modal.locator("textarea").first();
+  await expect(textarea).toBeVisible();
+  const value = await textarea.inputValue();
   expect(value).toContain("ore-e2e-rendered");
 
   // Should be editable
-  await firstTextarea.fill('<div class="ore-e2e-updated">updated</div>');
-  await expect(firstTextarea).toHaveValue('<div class="ore-e2e-updated">updated</div>');
+  await textarea.fill('<div class="ore-e2e-updated">updated</div>');
+  await expect(textarea).toHaveValue('<div class="ore-e2e-updated">updated</div>');
 
   // Cancel to avoid persisting the change
-  await page.locator(".ore-edit-rule-modal button", { hasText: "Cancel" }).click();
-  await closeModal(page);
+  await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Cancel" }).click();
+  await closeSettings(settingsPage, page);
+});
+
+test("edit rule modal — enable for file/base/canvas toggles default correctly and persist", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+
+  const modal = settingsPage.locator(".ore-edit-rule-modal");
+  const fileToggle = modal
+    .locator(".setting-item", { hasText: "Enable for file" })
+    .locator(".checkbox-container");
+  const baseToggle = modal
+    .locator(".setting-item", { hasText: "Enable for base views" })
+    .locator(".checkbox-container");
+  const canvasToggle = modal
+    .locator(".setting-item", { hasText: "Enable for canvas" })
+    .locator(".checkbox-container");
+
+  // Defaults: enabled for file, disabled for base/canvas
+  await expect(fileToggle).toHaveClass(/is-enabled/);
+  await expect(baseToggle).not.toHaveClass(/is-enabled/);
+  await expect(canvasToggle).not.toHaveClass(/is-enabled/);
+
+  // Flip all three
+  await fileToggle.click();
+  await baseToggle.click();
+  await canvasToggle.click();
+  await expect(fileToggle).not.toHaveClass(/is-enabled/);
+  await expect(baseToggle).toHaveClass(/is-enabled/);
+  await expect(canvasToggle).toHaveClass(/is-enabled/);
+
+  await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
+  await settingsPage.waitForTimeout(300);
+
+  const rules = await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: {
+        rules: Array<{ enableTemplateForFile: boolean; enableTemplateForBase: boolean; enableTemplateForCanvas: boolean }>;
+      };
+    };
+    return plugin?.settings?.rules ?? [];
+  });
+  expect(rules[0]?.enableTemplateForFile).toBe(false);
+  expect(rules[0]?.enableTemplateForBase).toBe(true);
+  expect(rules[0]?.enableTemplateForCanvas).toBe(true);
+
+  // Restore — rule 0's template rendering in the normal file view is relied
+  // on by the "matched file renders custom template" test later in this run.
+  await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: {
+        rules: Array<{ enableTemplateForFile: boolean; enableTemplateForBase: boolean; enableTemplateForCanvas: boolean }>;
+      };
+      saveSettings(): Promise<void>;
+    };
+    const rule = plugin.settings.rules[0];
+    if (rule) {
+      rule.enableTemplateForFile = true;
+      rule.enableTemplateForBase = false;
+      rule.enableTemplateForCanvas = false;
+    }
+    void plugin.saveSettings();
+  });
+
+  await closeSettings(settingsPage, page);
 });
 
 test("edit rule modal rule name is editable", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
-  await openEditRuleModal(page, 0);
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
 
-  const nameInput = page.locator(".ore-edit-rule-modal input[type=text]").first();
+  const nameInput = settingsPage.locator(".ore-edit-rule-modal input[type=text]").first();
   await nameInput.fill("Renamed Rule");
   await expect(nameInput).toHaveValue("Renamed Rule");
 
   // Cancel — don't save
-  await page.locator(".ore-edit-rule-modal button", { hasText: "Cancel" }).click();
-  await closeModal(page);
+  await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Cancel" }).click();
+  await closeSettings(settingsPage, page);
 });
 
 // ── 4. Filter Builder ─────────────────────────────────────────────────────────
 
 test("filter builder shows existing filter condition", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
-  await openEditRuleModal(page, 0);
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
 
   // Rule 0 has a "file.name contains matched" filter
-  const filterRow = page.locator(".filter-row");
+  const filterRow = settingsPage.locator(".filter-row");
   expect(await filterRow.count()).toBeGreaterThan(0);
 
-  await closeModal(page);
-  await closeModal(page);
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
 });
 
 test("filter builder — add a new filter", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
-  await openEditRuleModal(page, 0);
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
 
-  const countBefore = await page.locator(".filter-row").count();
+  const countBefore = await settingsPage.locator(".filter-row").count();
 
   // Click "Add filter" button
-  const addFilterBtn = page.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
+  const addFilterBtn = settingsPage.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
   await addFilterBtn.click();
-  await page.waitForTimeout(300);
+  await settingsPage.waitForTimeout(300);
 
   // A new filter row should appear
-  const countAfter = await page.locator(".filter-row").count();
+  const countAfter = await settingsPage.locator(".filter-row").count();
   expect(countAfter).toBeGreaterThan(countBefore);
 
-  await closeModal(page);
-  await closeModal(page);
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
 });
 
 test("filter builder — delete a filter", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
   // Use rule index 1 (tag rule) which has 1 filter, so deletion leaves 0 conditions (placeholder)
-  await openEditRuleModal(page, 1);
+  await openEditRuleModal(settingsPage, 1);
 
-  const modal = page.locator(".ore-edit-rule-modal");
+  const modal = settingsPage.locator(".ore-edit-rule-modal");
 
   // Click add filter to ensure at least 1 explicit filter row
   const addBtn = modal.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
   await addBtn.click();
-  await page.waitForTimeout(300);
+  await settingsPage.waitForTimeout(300);
 
   const rowsBefore = await modal.locator(".filter-row").count();
 
   // Click the first delete (trash) button in a filter row
   const deleteBtn = modal.locator(".filter-row .clickable-icon").first();
   await deleteBtn.click();
-  await page.waitForTimeout(300);
+  await settingsPage.waitForTimeout(300);
 
   const rowsAfter = await modal.locator(".filter-row").count();
   expect(rowsAfter).toBeLessThan(rowsBefore);
 
-  await closeModal(page);
-  await closeModal(page);
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder — property input accepts free text not in the suggestion list", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+
+  const propertyInput = settingsPage.locator(".filter-row .ore-property-input").first();
+  await propertyInput.fill("some.unindexed.property");
+  // Blur without picking a suggestion
+  await settingsPage.keyboard.press("Tab");
+  await settingsPage.waitForTimeout(300);
+
+  await expect(propertyInput).toHaveValue("some.unindexed.property");
+
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder — operator dropdown changes and persists the filter's operator", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+
+  // Rule 0's filter is "file.name contains matched" — operator is a direct
+  // child <select> of .ore-filter-expression (the relative-date/multi-select
+  // dropdowns, if any, live nested inside .ore-filter-rhs-container instead).
+  const operatorSelect = settingsPage.locator(".ore-filter-expression > select.dropdown").first();
+  await expect(operatorSelect).toHaveValue("contains");
+
+  await operatorSelect.selectOption("does not contain");
+  await expect(operatorSelect).toHaveValue("does not contain");
+
+  await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
+  await settingsPage.waitForTimeout(300);
+
+  const persisted = await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ filterGroup: { conditions: Array<{ operator?: string }> } }> };
+    };
+    return plugin?.settings?.rules?.[0]?.filterGroup?.conditions?.[0]?.operator;
+  });
+  expect(persisted).toBe("does not contain");
+
+  // Restore — rule 0 matching "file.name contains matched" is relied on by
+  // the template-rendering tests later in this run.
+  await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ filterGroup: { conditions: Array<{ operator?: string }> } }> };
+      saveSettings(): Promise<void>;
+    };
+    const condition = plugin.settings.rules[0]?.filterGroup?.conditions?.[0];
+    if (condition) condition.operator = "contains";
+    void plugin.saveSettings();
+  });
+
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder — conjunction dropdown changes AND/OR/NOR and persists", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+
+  const conjunctionSelect = settingsPage.locator(".filter-group-header select.conjunction").first();
+  await expect(conjunctionSelect).toHaveValue("and");
+
+  await conjunctionSelect.selectOption("or");
+  await expect(conjunctionSelect).toHaveValue("or");
+
+  await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
+  await settingsPage.waitForTimeout(300);
+
+  const persisted = await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ filterGroup: { operator: string } }> };
+    };
+    return plugin?.settings?.rules?.[0]?.filterGroup?.operator;
+  });
+  expect(persisted).toBe("OR");
+
+  // Restore, for consistency with the other filter-builder mutation tests.
+  await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ filterGroup: { operator: string } }> };
+      saveSettings(): Promise<void>;
+    };
+    const group = plugin.settings.rules[0]?.filterGroup;
+    if (group) group.operator = "AND";
+    void plugin.saveSettings();
+  });
+
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder — relative-date unit dropdown changes and persists", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  // "Within Past Rule" — filter is check_date "within past" "7 days". Index 2,
+  // not 3: the earlier "delete Folder Rule" test (section 2) already removed
+  // the rule that originally sat between "Tag Rule" and this one.
+  await openEditRuleModal(settingsPage, 2);
+
+  const unitSelect = settingsPage.locator(".ore-relative-date-container select.dropdown").first();
+  await expect(unitSelect).toHaveValue("days");
+
+  await unitSelect.selectOption("weeks");
+  await expect(unitSelect).toHaveValue("weeks");
+
+  await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
+  await settingsPage.waitForTimeout(300);
+
+  const persisted = await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ filterGroup: { conditions: Array<{ value?: string }> } }> };
+    };
+    return plugin?.settings?.rules?.[2]?.filterGroup?.conditions?.[0]?.value;
+  });
+  expect(persisted).toBe("7 weeks");
+
+  // Restore — the within-past template-rendering test later in this run
+  // depends on this rule's stored "7 days" value.
+  await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ filterGroup: { conditions: Array<{ value?: string }> } }> };
+      saveSettings(): Promise<void>;
+    };
+    const condition = plugin.settings.rules[2]?.filterGroup?.conditions?.[0];
+    if (condition) condition.value = "7 days";
+    void plugin.saveSettings();
+  });
+
+  await closeSettings(settingsPage, page);
 });
 
 // ── 5. Template Rendering ─────────────────────────────────────────────────────
@@ -336,21 +557,21 @@ test("file with 2 resolved incoming links renders the inlinks-count template", a
 // ── 6. Plugin settings persistence ───────────────────────────────────────────
 
 test("adding and saving a new rule persists it", async ({ page }) => {
-  await openPluginSettings(page, "Rule Engine");
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
 
-  const countBefore = await page.locator(".ore-rule-list-item").count();
+  const countBefore = await settingsPage.locator(".ore-rule-list .setting-item").count();
 
   // Click "Add new rule"
-  await page.locator("button", { hasText: "Add new rule" }).click();
-  await page.waitForSelector(".ore-edit-rule-modal", { timeout: 5000 });
+  await settingsPage.locator('[aria-label="Add new rule"]').click();
+  await settingsPage.waitForSelector(".ore-edit-rule-modal", { timeout: 5000 });
 
   // Set a unique name and save
-  const nameInput = page.locator(".ore-edit-rule-modal input[type=text]").first();
+  const nameInput = settingsPage.locator(".ore-edit-rule-modal input[type=text]").first();
   await nameInput.fill("Persisted Test Rule");
-  await page.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
-  await page.waitForTimeout(500);
+  await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
+  await settingsPage.waitForTimeout(500);
 
-  const countAfter = await page.locator(".ore-rule-list-item").count();
+  const countAfter = await settingsPage.locator(".ore-rule-list .setting-item").count();
   expect(countAfter).toBe(countBefore + 1);
 
   // Verify plugin settings reflect the new rule
@@ -362,5 +583,5 @@ test("adding and saving a new rule persists it", async ({ page }) => {
   });
   expect(ruleNames).toContain("Persisted Test Rule");
 
-  await closeModal(page);
+  await closeSettings(settingsPage, page);
 });

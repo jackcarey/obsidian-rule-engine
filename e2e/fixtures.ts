@@ -67,50 +67,84 @@ export async function openNote(page: Page, filename: string): Promise<void> {
   await page.waitForTimeout(800);
 }
 
-/** Open Obsidian Settings then navigate to a named plugin/tab. */
-export async function openPluginSettings(page: Page, tabLabel: string): Promise<void> {
-  // Use command palette to open settings reliably
+/**
+ * Open Obsidian Settings then navigate to a named plugin/tab, and return the
+ * Page the settings UI actually rendered into.
+ *
+ * As of Obsidian 1.13, Settings opens in its own popout OS window (a second
+ * CDP target/Page) rather than as a `.modal-container` overlay in the main
+ * window. That popout is a singleton — `setting.open()` re-shows the same
+ * window on subsequent calls instead of creating a new one, so callers must
+ * always use the returned Page for further interaction, not the original
+ * `page` passed in.
+ */
+export async function openPluginSettings(page: Page, tabLabel: string): Promise<Page> {
+  const context = page.context();
+
   await page.evaluate(() => {
     (window.app as unknown as { setting: { open(): void } }).setting?.open();
   });
-  await page.waitForSelector(".modal-container", { timeout: 10000 });
+
+  let settingsPage = context.pages().find((p) => p !== page);
+  if (!settingsPage) {
+    settingsPage = await context
+      .waitForEvent("page", { timeout: 5000 })
+      .catch(() => undefined);
+  }
+  // Fallback: some platforms/older Obsidian versions render settings inline
+  // in the main window instead of a popout.
+  if (!settingsPage) {
+    await page.waitForSelector(".modal-container", { timeout: 10000 });
+    settingsPage = page;
+  } else {
+    await settingsPage.waitForSelector(".mod-settings", { timeout: 10000 });
+  }
 
   // Click the tab in the vertical nav
-  await page.evaluate((label) => {
+  await settingsPage.evaluate((label) => {
     const items = Array.from(document.querySelectorAll<HTMLElement>(".vertical-tab-nav-item"));
     const tab = items.find((el) => el.textContent?.trim() === label);
     if (!tab) throw new Error(`Settings tab not found: ${label}`);
     tab.click();
   }, tabLabel);
 
-  await page.waitForTimeout(400);
-
-  // Rule Engine's settings page has its own internal tab bar whose active tab
-  // is stored on the long-lived PluginSettingTab instance (not reset when the
-  // modal closes), so a prior test switching tabs would otherwise leak into
-  // whichever test runs next. Always reset to the default "Rules" tab here.
-  const rulesTab = page.locator(".modal-container .workspace-tab-header", { hasText: "Rules" });
-  if (await rulesTab.isVisible({ timeout: 1000 }).catch(() => false)) {
-    await rulesTab.click();
-    await page.waitForTimeout(200);
-  }
+  await settingsPage.waitForTimeout(400);
+  return settingsPage;
 }
 
-/** Close any open modal by pressing Escape. */
+/** Close any open modal (or nested modal within the settings window) by pressing Escape. */
 export async function closeModal(page: Page): Promise<void> {
   await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
 }
 
-/** Click the edit (pencil) icon on the nth rule in the Rule Engine settings list. */
+/**
+ * Close the settings window opened by {@link openPluginSettings}. If it's a
+ * separate popout page, closes that window; if settings rendered inline in
+ * the main page (fallback case), just presses Escape instead of closing the
+ * whole Obsidian window.
+ */
+export async function closeSettings(settingsPage: Page, mainPage: Page): Promise<void> {
+  if (settingsPage !== mainPage) {
+    await settingsPage.close().catch(() => undefined);
+  } else {
+    await closeModal(settingsPage);
+  }
+}
+
+/**
+ * Click the edit (pencil) icon on the nth rule in the Rule Engine settings
+ * list. The list's "Add new rule" affordance renders as the first
+ * `.setting-item` row (it has no edit button), so this selects directly by
+ * edit-button presence rather than indexing into all `.setting-item` rows.
+ */
 export async function openEditRuleModal(page: Page, ruleIndex = 0): Promise<void> {
   await page.evaluate((idx) => {
-    const actions = document.querySelectorAll<HTMLElement>(".ore-rule-actions");
-    const actionEl = actions[idx];
-    if (!actionEl) throw new Error(`Rule at index ${idx} not found`);
-    // First clickable-icon in the actions is the edit button
-    const editBtn = actionEl.querySelector<HTMLElement>("button, .clickable-icon");
-    if (!editBtn) throw new Error("Edit button not found in rule actions");
+    const editButtons = document.querySelectorAll<HTMLElement>(
+      '.ore-rule-list .setting-item button[aria-label="Edit rule"]'
+    );
+    const editBtn = editButtons[idx];
+    if (!editBtn) throw new Error(`Rule at index ${idx} not found`);
     editBtn.click();
   }, ruleIndex);
   await page.waitForSelector(".ore-edit-rule-modal", { timeout: 5000 });

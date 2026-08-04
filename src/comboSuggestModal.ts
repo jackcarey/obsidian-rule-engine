@@ -11,8 +11,10 @@ function removeFocusClasses(button: HTMLElement | null, parent: HTMLElement | nu
 }
 
 /**
- * Unified combobox modal for property and operator selection.
- * Consolidates PropertySuggestModal and OperatorSuggestModal into a single reusable class.
+ * Combobox-styled fuzzy suggest modal, currently used for the rule command
+ * picker (property and operator selection moved to built-in Obsidian
+ * components — a text input with AbstractInputSuggest, and DropdownComponent,
+ * respectively — since those don't need fuzzy search over an open-ended list).
  * Behaviour and styles are disabled on mobile so it works with native controls.
  */
 export class ComboboxSuggestModal extends FuzzySuggestModal<SuggestItem> {

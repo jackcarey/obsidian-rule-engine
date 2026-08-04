@@ -1,67 +1,42 @@
 import { ComboboxSuggestModal } from "comboSuggestModal";
 import { OPERATORS, RELATIVE_DATE_UNITS, RELATIVE_DATE_UNITS_PLURAL } from "consts";
 import ObsidianRuleEnginePlugin from "main";
-import { App, ButtonComponent, Modal, setIcon, Setting } from "obsidian";
+import { AbstractInputSuggest, App, ButtonComponent, DropdownComponent, ExtraButtonComponent, Modal, setIcon, Setting } from "obsidian";
 import { RuleConfig, BaseFileHandling, SuggestItem, Filter, FilterConjunction, FilterGroup, FilterOperator, PropertyDef, PropertyType } from "types";
-import { addFocusClasses } from "utils";
-
-function setupComboboxButtonHandlers(
-    button: HTMLElement,
-    _parent: HTMLElement,
-    onOpen: () => void
-): void {
-    button.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onOpen();
-    };
-
-    button.onkeydown = (e) => {
-        if (e.key === " " || e.key === "Spacebar") {
-            e.preventDefault();
-            e.stopPropagation();
-            onOpen();
-        }
-    };
-}
 
 /**
- * Helper functions for UI component creation
+ * Built-in type-ahead suggester for the filter property field, attached to a
+ * plain text input. Unlike the old fuzzy-modal picker, the input stays
+ * editable — an unrecognised typed value is still committed as-is, so users
+ * can reference properties the vault scan hasn't indexed yet.
  */
-function createComboboxButton(
-    container: HTMLElement,
-    label: string,
-    icon?: string
-): HTMLElement {
-    const button = container.createDiv({ cls: "ore-combobox-button", attr: { tabindex: "0" } });
-
-    if (icon) {
-        const iconEl = button.createDiv({ cls: "ore-combobox-button-icon" });
-        setIcon(iconEl, icon);
+class PropertySuggest extends AbstractInputSuggest<PropertyDef> {
+    constructor(
+        app: App,
+        inputEl: HTMLInputElement,
+        private plugin: ObsidianRuleEnginePlugin,
+        private properties: PropertyDef[],
+        private onPick: (prop: PropertyDef) => void
+    ) {
+        super(app, inputEl);
     }
 
-    const labelEl = button.createDiv({ cls: "ore-combobox-button-label" });
-    labelEl.innerText = label;
-    setIcon(button.createDiv({ cls: "ore-combobox-button-chevron" }), "chevrons-up-down");
+    protected getSuggestions(query: string): PropertyDef[] {
+        const q = query.toLowerCase();
+        return this.properties.filter(p => this.plugin.getPropertyLabel(p.key).toLowerCase().includes(q));
+    }
 
-    return button;
-}
+    renderSuggestion(prop: PropertyDef, el: HTMLElement): void {
+        const iconEl = el.createSpan({ cls: "ore-combobox-button-icon" });
+        setIcon(iconEl, this.plugin.getPropertyIcon(prop.key, prop.type));
+        el.createSpan({ text: this.plugin.getPropertyLabel(prop.key) });
+    }
 
-function createDeleteButton(
-    container: HTMLElement,
-    onClick: (e: MouseEvent) => void,
-    additionalClasses: string = ""
-): HTMLElement {
-    const deleteBtn = container.createEl("button", {
-        cls: `clickable-icon ${additionalClasses}`.trim(),
-        attr: { "aria-label": "Remove filter" }
-    });
-    setIcon(deleteBtn, "trash-2");
-    deleteBtn.onclick = (e) => {
-        e.stopPropagation();
-        onClick(e);
-    };
-    return deleteBtn;
+    selectSuggestion(prop: PropertyDef, _evt: MouseEvent | KeyboardEvent): void {
+        this.setValue(this.plugin.getPropertyLabel(prop.key));
+        this.close();
+        this.onPick(prop);
+    }
 }
 
 function createFilterValueInput(
@@ -278,14 +253,12 @@ function createFilterValueInput(
         const wrapper = container.createDiv({ cls: "ore-relative-date-container" });
         const numInput = wrapper.createEl("input", { type: "number", value: amount, attr: { min: "1" } });
         numInput.addClass("ore-relative-date-amount");
-        const unitSelect = wrapper.createEl("select", { cls: "dropdown" });
-        for (const u of validUnits) {
-            const opt = unitSelect.createEl("option", { value: u, text: u });
-            if (u === unit) opt.selected = true;
-        }
-        const fireChange = () => onChange(`${numInput.value} ${unitSelect.value}`);
+        const unitDropdown = new DropdownComponent(wrapper);
+        unitDropdown.addOptions(Object.fromEntries(validUnits.map(u => [u, u])));
+        unitDropdown.setValue(unit);
+        const fireChange = () => onChange(`${numInput.value} ${unitDropdown.getValue()}`);
         numInput.oninput = fireChange;
-        unitSelect.onchange = fireChange;
+        unitDropdown.onChange(fireChange);
         // Sync stored value to defaults if the stored value was not a valid relative format
         if (!isValidStored) window.setTimeout(fireChange, 0);
         return wrapper;
@@ -364,34 +337,22 @@ class FilterBuilder {
             "not": "NOR"
         };
 
-        const select = header.createEl("select", {
-            cls: "conjunction dropdown",
-            attr: { value: valueMap[group.operator] || "and" }
+        const conjunctionDropdown = new DropdownComponent(header);
+        conjunctionDropdown.selectEl.addClass("conjunction");
+        conjunctionDropdown.addOptions({
+            and: labelMap["AND"]!,
+            or: labelMap["OR"]!,
+            not: labelMap["NOR"]!,
         });
-
-        select.createEl("option", {
-            attr: { value: "and" },
-            text: labelMap["AND"]
-        });
-        select.createEl("option", {
-            attr: { value: "or" },
-            text: labelMap["OR"]
-        });
-        select.createEl("option", {
-            attr: { value: "not" },
-            text: labelMap["NOR"]
-        });
-
-        select.value = valueMap[group.operator] || "and";
-
-        select.onchange = () => {
-            const val = reverseValueMap[select.value];
+        conjunctionDropdown.setValue(valueMap[group.operator] || "and");
+        conjunctionDropdown.onChange((newVal) => {
+            const val = reverseValueMap[newVal];
             if (val) {
                 group.operator = val;
                 this.onSave();
                 this.onRefresh();
             }
-        };
+        });
 
 
         const statementsContainer = groupDiv.createDiv({ cls: "filter-group-statements" });
@@ -422,11 +383,14 @@ class FilterBuilder {
                     const h = rowWrapper.querySelector(".filter-group-header");
                     if (h) {
                         const headerActionsDiv = h.createDiv({ cls: "filter-group-header-actions" });
-                        createDeleteButton(headerActionsDiv, () => {
-                            group.conditions.splice(index, 1);
-                            this.onSave();
-                            this.onRefresh();
-                        });
+                        new ExtraButtonComponent(headerActionsDiv)
+                            .setIcon("trash-2")
+                            .setTooltip("Remove filter")
+                            .onClick(() => {
+                                group.conditions.splice(index, 1);
+                                this.onSave();
+                                this.onRefresh();
+                            });
                     }
                 } else {
                     this.renderFilterRow(rowWrapper, condition, group, index);
@@ -435,14 +399,22 @@ class FilterBuilder {
         }
 
         const actionsDiv = groupDiv.createDiv({ cls: "filter-group-actions" });
-        this.createSimpleBtn(actionsDiv, "plus", "Add filter", () => {
-            group.conditions.push({ type: "filter", field: "file", operator: "links to", value: "" });
-            this.onSave(); this.onRefresh();
-        });
-        this.createSimpleBtn(actionsDiv, "plus", "Add filter group", () => {
-            group.conditions.push({ type: "group", operator: "AND", conditions: [] });
-            this.onSave(); this.onRefresh();
-        });
+        new ButtonComponent(actionsDiv)
+            .setIcon("plus")
+            .setButtonText("Add filter")
+            .onClick(() => {
+                group.conditions.push({ type: "filter", field: "file", operator: "links to", value: "" });
+                this.onSave(); this.onRefresh();
+            })
+            .buttonEl.addClass("ore-text-icon-button");
+        new ButtonComponent(actionsDiv)
+            .setIcon("plus")
+            .setButtonText("Add filter group")
+            .onClick(() => {
+                group.conditions.push({ type: "group", operator: "AND", conditions: [] });
+                this.onSave(); this.onRefresh();
+            })
+            .buttonEl.addClass("ore-text-icon-button");
     }
 
     renderFilterRow(row: HTMLElement, filter: Filter, parentGroup: FilterGroup, index: number, isPlaceholder: boolean = false) {
@@ -454,58 +426,58 @@ class FilterBuilder {
         // Track if this placeholder has been added to the conditions array
         let placeholderAdded = false;
 
-        const propertyBtn = createComboboxButton(
-            expression,
-            this.plugin.getPropertyLabel(filter.field),
-            this.plugin.getPropertyIcon(filter.field, currentType)
-        );
+        const commitFieldChange = (newVal: string) => {
+            const newType = this.plugin.getPropertyType(newVal, this.availableProperties);
+            const validOps = OPERATORS[newType === "datetime" ? "date" : newType] ?? OPERATORS["text"];
+            const newOperator = validOps?.[0] as FilterOperator;
 
-        const openPropertyModal = () => {
-            addFocusClasses(propertyBtn, expression);
-            this.openSuggestModal(
-                this.availableProperties.map(p => ({
-                    label: this.plugin.getPropertyLabel(p.key),
-                    value: p.key,
-                    icon: this.plugin.getPropertyIcon(p.key, p.type)
-                })),
-                filter.field,
-                (newVal) => {
-                    const newType = this.plugin.getPropertyType(newVal, this.availableProperties);
-                    const validOps = OPERATORS[newType === "datetime" ? "date" : newType] ?? OPERATORS["text"];
-                    const newOperator = validOps?.[0] as FilterOperator;
+            // If this is a placeholder, add it to the conditions array
+            if (isPlaceholder && !placeholderAdded) {
+                parentGroup.conditions.push({
+                    type: "filter",
+                    field: newVal,
+                    operator: newOperator,
+                    value: ""
+                });
+                placeholderAdded = true;
+            } else if (isPlaceholder && placeholderAdded) {
+                // Update the filter in the conditions array
+                const conditionIndex = parentGroup.conditions.length - 1;
+                if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
+                    const conditionFilter = parentGroup.conditions[conditionIndex];
+                    conditionFilter.field = newVal;
+                    conditionFilter.operator = newOperator;
+                    conditionFilter.value = "";
+                }
+            } else {
+                filter.field = newVal;
+                filter.operator = newOperator;
+                filter.value = "";
+            }
 
-                    // If this is a placeholder, add it to the conditions array
-                    if (isPlaceholder && !placeholderAdded) {
-                        parentGroup.conditions.push({
-                            type: "filter",
-                            field: newVal,
-                            operator: newOperator,
-                            value: ""
-                        });
-                        placeholderAdded = true;
-                    } else if (isPlaceholder && placeholderAdded) {
-                        // Update the filter in the conditions array
-                        const conditionIndex = parentGroup.conditions.length - 1;
-                        if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
-                            const conditionFilter = parentGroup.conditions[conditionIndex];
-                            conditionFilter.field = newVal;
-                            conditionFilter.operator = newOperator;
-                            conditionFilter.value = "";
-                        }
-                    } else {
-                        filter.field = newVal;
-                        filter.operator = newOperator;
-                        filter.value = "";
-                    }
-
-                    this.onSave();
-                    this.onRefresh();
-                },
-                propertyBtn
-            );
+            this.onSave();
+            this.onRefresh();
         };
 
-        setupComboboxButtonHandlers(propertyBtn, statement, openPropertyModal);
+        const propertyInput = expression.createEl("input", {
+            type: "text",
+            value: this.plugin.getPropertyLabel(filter.field),
+            cls: "ore-property-input",
+        });
+        const propertySuggest = new PropertySuggest(
+            this.plugin.app,
+            propertyInput,
+            this.plugin,
+            this.availableProperties,
+            (prop) => commitFieldChange(prop.key)
+        );
+        propertySuggest.onSelect((prop) => commitFieldChange(prop.key));
+        propertyInput.addEventListener("blur", () => {
+            const typed = propertyInput.value.trim();
+            if (typed.length > 0 && typed !== this.plugin.getPropertyLabel(filter.field)) {
+                commitFieldChange(typed);
+            }
+        });
 
         let opsKey = currentType;
         if (currentType === "datetime") opsKey = "date";
@@ -514,37 +486,28 @@ class FilterBuilder {
 
         const validOps = OPERATORS[opsKey] as FilterOperator[];
 
-        const operatorBtn = createComboboxButton(expression, filter.operator);
+        const operatorDropdown = new DropdownComponent(expression);
+        operatorDropdown.addOptions(Object.fromEntries(validOps.map(op => [op, op])));
+        operatorDropdown.setValue(filter.operator);
+        operatorDropdown.onChange((newVal) => {
+            const operator = newVal as FilterOperator;
+            // If this is a placeholder, add it to the conditions array first
+            if (isPlaceholder && !placeholderAdded) {
+                parentGroup.conditions.push({ ...filter, operator });
+                placeholderAdded = true;
+            } else if (isPlaceholder && placeholderAdded) {
+                // Update the filter in the conditions array (it's the last one we added)
+                const conditionIndex = parentGroup.conditions.length - 1;
+                if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
+                    parentGroup.conditions[conditionIndex].operator = operator;
+                }
+            } else {
+                filter.operator = operator;
+            }
 
-        const openOperatorModal = () => {
-            addFocusClasses(operatorBtn, expression);
-            this.openSuggestModal(
-                validOps.map(op => ({ label: op, value: op })),
-                filter.operator,
-                (newVal) => {
-                    const operator = newVal as FilterOperator;
-                    // If this is a placeholder, add it to the conditions array first
-                    if (isPlaceholder && !placeholderAdded) {
-                        parentGroup.conditions.push({ ...filter, operator });
-                        placeholderAdded = true;
-                    } else if (isPlaceholder && placeholderAdded) {
-                        // Update the filter in the conditions array (it's the last one we added)
-                        const conditionIndex = parentGroup.conditions.length - 1;
-                        if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
-                            parentGroup.conditions[conditionIndex].operator = operator;
-                        }
-                    } else {
-                        filter.operator = operator;
-                    }
-
-                    this.onSave();
-                    this.onRefresh();
-                },
-                operatorBtn
-            );
-        };
-
-        setupComboboxButtonHandlers(operatorBtn, statement, openOperatorModal);
+            this.onSave();
+            this.onRefresh();
+        });
 
         const handleDelete = () => {
             if (isPlaceholder) {
@@ -580,24 +543,7 @@ class FilterBuilder {
         }
 
         const actions = expression.createDiv({ cls: "ore-filter-row-actions" });
-        createDeleteButton(actions, handleDelete);
-    }
-
-    openSuggestModal(
-        items: { label: string, value: string, icon?: string }[],
-        selectedValue: string,
-        onSelect: (val: string) => void,
-        anchorEl?: HTMLElement
-    ) {
-        const modal = new ComboboxSuggestModal(this.plugin.app, items, selectedValue, onSelect, anchorEl);
-        modal.open();
-    }
-
-    createSimpleBtn(container: HTMLElement, icon: string, text: string, onClick: () => void) {
-        const btn = container.createDiv({ cls: "ore-text-icon-button", attr: { tabindex: "0" } });
-        setIcon(btn.createSpan({ cls: "ore-text-button-icon" }), icon);
-        btn.createSpan({ cls: "ore-text-button-label", text: text });
-        btn.onclick = (e) => { e.stopPropagation(); onClick(); };
+        new ExtraButtonComponent(actions).setIcon("trash-2").setTooltip("Remove filter").onClick(handleDelete);
     }
 }
 
@@ -628,6 +574,7 @@ export class EditRuleModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
+        this.modalEl.addClass("ore-edit-rule-modal-window");
         contentEl.empty();
         contentEl.addClass("ore-edit-rule-modal");
 
@@ -742,38 +689,39 @@ export class EditRuleModal extends Modal {
 
         new Setting(contentEl)
             .setHeading()
-            .setName("HTML templates")
-            .setDesc("Leave blank for no template. Use {{mustache}} syntax for variables. Context-specific templates override the default.");
+            .setName("HTML template")
+            .setDesc("Leave blank for no template. Use {{mustache}} syntax for variables.");
 
         new Setting(contentEl)
-            .setName("Default template")
+            .setName("Template")
             .addTextArea(ta => {
                 ta.setValue(this.rule.template)
                     .setPlaceholder("<h1>{{file.basename}}</h1><main>{{file.content}}</main>")
                     .onChange(val => { this.rule.template = val; });
-                ta.inputEl.rows = 6;
+                ta.inputEl.rows = 8;
                 ta.inputEl.addClass("ore-textarea");
             });
 
         new Setting(contentEl)
-            .setName("Base file template")
-            .setDesc("Used when the file is rendered in a bases query. Falls back to default.")
-            .addTextArea(ta => {
-                ta.setValue(this.rule.templateBase ?? "")
-                    .onChange(val => { this.rule.templateBase = val || undefined; });
-                ta.inputEl.rows = 4;
-                ta.inputEl.addClass("ore-textarea");
-            });
+            .setName("Enable for file")
+            .setDesc("Apply this template when the file is rendered as a normal Markdown note.")
+            .addToggle(toggle => toggle
+                .setValue(this.rule.enableTemplateForFile)
+                .onChange(val => { this.rule.enableTemplateForFile = val; }));
 
         new Setting(contentEl)
-            .setName("Canvas template")
-            .setDesc("Used when the file is rendered in a canvas node. Falls back to default.")
-            .addTextArea(ta => {
-                ta.setValue(this.rule.templateCanvas ?? "")
-                    .onChange(val => { this.rule.templateCanvas = val || undefined; });
-                ta.inputEl.rows = 4;
-                ta.inputEl.addClass("ore-textarea");
-            });
+            .setName("Enable for base views")
+            .setDesc("Also apply this template when the file is rendered in a bases query.")
+            .addToggle(toggle => toggle
+                .setValue(this.rule.enableTemplateForBase)
+                .onChange(val => { this.rule.enableTemplateForBase = val; }));
+
+        new Setting(contentEl)
+            .setName("Enable for canvas")
+            .setDesc("Also apply this template when the file is rendered as a canvas node.")
+            .addToggle(toggle => toggle
+                .setValue(this.rule.enableTemplateForCanvas)
+                .onChange(val => { this.rule.enableTemplateForCanvas = val; }));
 
         const buttonContainer = contentEl.createDiv('modal-button-container');
         new ButtonComponent(buttonContainer)
