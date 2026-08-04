@@ -50,8 +50,9 @@ export interface RuleConfig {
 	name: string;
 	filterGroup: FilterGroup;
 	template: string;
-	templateBase?: string;
-	templateCanvas?: string;
+	enableTemplateForFile: boolean;
+	enableTemplateForBase: boolean;
+	enableTemplateForCanvas: boolean;
 	enabled: boolean;
 	commandIds: string[];
 	baseFileHandling: BaseFileHandling;
@@ -70,7 +71,6 @@ export interface CustomRulesSettings {
 	workInCanvas: boolean;
 	processBaseResultsAutomatically: boolean;
 	processOnSave: boolean;
-	useDnd: boolean;
 	debug: boolean;
 	rules: RuleConfig[];
 	// Use the base version of the type to allow variety
