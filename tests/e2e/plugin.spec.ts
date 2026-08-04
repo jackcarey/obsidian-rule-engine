@@ -1,4 +1,4 @@
-import { closeModal, closeSettings, expect, openEditRuleModal, openNote, openPluginSettings, test } from "../fixtures";
+import { closeModal, closeSettings, expect, openEditRuleModal, openNote, openPluginSettings, test } from "./fixtures";
 
 // ── 1. Plugin bootstrap ───────────────────────────────────────────────────────
 

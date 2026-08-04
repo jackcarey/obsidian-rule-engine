@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { applyFilterChain } from "../filters";
+import { applyFilterChain } from "../../src/filters";
 
 function apply(value: unknown, chain: string) {
 	return applyFilterChain(value as Parameters<typeof applyFilterChain>[0], chain);

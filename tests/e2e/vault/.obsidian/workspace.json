@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Notes/rich-frontmatter.md",
+                "file": "Notes/inlinks-check.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "rich-frontmatter"
+              "title": "inlinks-check"
             }
           }
         ]
@@ -41,7 +41,9 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
               },
               "icon": "lucide-folder-closed",
               "title": "Files"
@@ -185,9 +187,12 @@
   },
   "active": "0bab95444b0ed4a2",
   "lastOpenFiles": [
+    "Notes/outlinks-check.md",
+    "Notes/within-future-check.md",
+    "Notes/within-past-check.md",
+    "Notes/rich-frontmatter.md",
     "Notes/other-file.md",
     "Notes/matched-file.md",
-    "Notes/rich-frontmatter.md",
     "Notes/unmatched-file.md"
   ]
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { renderTemplate } from "../templateRenderer";
+import { renderTemplate } from "../../src/templateRenderer";
 import type { App, TFile, Component } from "obsidian";
 
 // activeDocument is an Obsidian global used inside renderTemplate

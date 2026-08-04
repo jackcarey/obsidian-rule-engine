@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { checkRules } from "../matcher";
-import type { FilterGroup, Filter } from "../types";
+import { checkRules } from "../../src/matcher";
+import type { FilterGroup, Filter } from "../../src/types";
 
 // ---------------------------------------------------------------------------
 // Mock helpers

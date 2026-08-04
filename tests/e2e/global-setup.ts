@@ -5,8 +5,8 @@ import * as http from "http";
 import * as os from "os";
 import * as path from "path";
 
-const REPO_ROOT = path.join(__dirname, "..");
-const VAULT_DIR = path.join(REPO_ROOT, "e2e", "vault");
+const REPO_ROOT = path.join(__dirname, "..", "..");
+const VAULT_DIR = path.join(__dirname, "vault");
 const PLUGIN_DIR = path.join(VAULT_DIR, ".obsidian", "plugins", "rule-engine");
 const PID_FILE = path.join(__dirname, ".obsidian.pid");
 const BACKUP_FILE = path.join(__dirname, ".obsidian-json.bak");

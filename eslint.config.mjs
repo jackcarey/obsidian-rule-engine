@@ -4,7 +4,7 @@ import obsidianmd from "eslint-plugin-obsidianmd";
 
 export default defineConfig([
 	{
-		ignores: ["node_modules/**", "main.js", "coverage/**", "e2e/**", "*.config.mjs", "vitest.config.ts", "version-bump.mjs"],
+		ignores: ["node_modules/**", "main.js", "coverage/**", "tests/e2e/**", "*.config.mjs", "vitest.config.ts", "version-bump.mjs"],
 	},
 	...obsidianmd.configs.recommended,
 	{
@@ -28,7 +28,7 @@ export default defineConfig([
 	},
 	// Test files run under vitest/jsdom, not inside Obsidian
 	{
-		files: ["src/__tests__/**/*.ts"],
+		files: ["tests/unit/**/*.ts"],
 		rules: {
 			"obsidianmd/no-global-this": "off",
 			"obsidianmd/no-tfile-tfolder-cast": "off",
