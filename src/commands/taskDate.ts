@@ -1,4 +1,5 @@
 import { ComboboxSuggestModal } from "comboSuggestModal";
+import { addOverrideHint } from "commandSettingsModal";
 import { GetCommandFn } from "commands";
 import { Editor, MarkdownView, MarkdownFileInfo } from "obsidian";
 import { SuggestItem } from "types";
@@ -42,7 +43,9 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
         settingGroup.addSetting(setting => {
             setting
                 .setName('Frontmatter field')
-                .setDesc('Parse the date from a frontmatter field')
+                .setDesc('Parse the date from a frontmatter field');
+            addOverrideHint(setting, TASK_DATE_ID, 'frontmatterField');
+            setting
                 .addButton(buttonEl => {
                     buttonEl.setButtonText(params.frontmatterField?.length ? params.frontmatterField : 'None');
                     const onSelect = (value: string) => {
@@ -73,6 +76,7 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
                     });
 
                 });
+            addOverrideHint(setting, TASK_DATE_ID, 'parseTitle');
         });
     },
     editorCallback: (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {

@@ -1,4 +1,5 @@
 import { ComboboxSuggestModal } from "comboSuggestModal";
+import { addOverrideHint } from "commandSettingsModal";
 import { GetCommandFn } from "commands";
 import ObsidianRuleEnginePlugin from "main";
 import { Notice, TFile } from "obsidian";
@@ -54,6 +55,7 @@ export const semanticTags: GetCommandFn<SemanticTagsParams> = (plugin) => ({
 					);
 					buttonEl.onClick(() => combo.open());
 				});
+			addOverrideHint(setting, SEMANTIC_TAGS_ID, "frontmatterField");
 		});
 
 		settingGroup.addSetting(setting => {
@@ -71,25 +73,31 @@ export const semanticTags: GetCommandFn<SemanticTagsParams> = (plugin) => ({
 						}
 					});
 				});
+			addOverrideHint(setting, SEMANTIC_TAGS_ID, "maxTags");
 		});
 
 		settingGroup.addSetting(setting => {
 			const descFor = (percent: number) =>
 				`When there's room to add tags, how much of that room goes to tags already used elsewhere in the vault vs new tags invented from this file's own content. Currently ${percent}% from existing vault tags.`;
+			// setDesc() empties descEl on every call, so the override hint has to
+			// be re-added each time it's called, not just once after setup.
+			const updateDesc = (percent: number) => {
+				setting.setDesc(descFor(percent));
+				addOverrideHint(setting, SEMANTIC_TAGS_ID, "vocabularyWeight");
+			};
 			const weightPercentEl = { current: Math.round((params.vocabularyWeight ?? DEFAULT_VOCABULARY_WEIGHT) * 100) };
-			setting
-				.setName("Existing vault tags vs invented tags")
-				.setDesc(descFor(weightPercentEl.current))
-				.addSlider(slider => {
-					slider
-						.setLimits(0, 100, 5)
-						.setValue(weightPercentEl.current)
-						.onChange(async value => {
-							weightPercentEl.current = value;
-							setting.setDesc(descFor(value));
-							await saveFn({ params: { ...params, vocabularyWeight: value / 100 } });
-						});
-				});
+			setting.setName("Existing vault tags vs invented tags");
+			updateDesc(weightPercentEl.current);
+			setting.addSlider(slider => {
+				slider
+					.setLimits(0, 100, 5)
+					.setValue(weightPercentEl.current)
+					.onChange(async value => {
+						weightPercentEl.current = value;
+						updateDesc(value);
+						await saveFn({ params: { ...params, vocabularyWeight: value / 100 } });
+					});
+			});
 		});
 	},
 	checkCallback: (checking: boolean) => {

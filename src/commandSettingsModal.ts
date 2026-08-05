@@ -1,5 +1,15 @@
-import { App, Modal, SettingGroup } from "obsidian";
+import { App, Modal, Setting, SettingGroup } from "obsidian";
 import { CommandConfig, CommandSaveFn, CommandSettingCallback } from "types";
+
+/**
+ * Appends the per-file frontmatter override key (`ore:<command-id>:<param>`,
+ * see the "Per-file overrides" note in settings.ts) below a setting's
+ * description, so users configuring a command's params can see exactly what
+ * to write in a note's frontmatter to override that specific setting.
+ */
+export function addOverrideHint(setting: Setting, commandId: string, paramKey: string): void {
+	setting.descEl.createDiv({ cls: "ore-command-config-id", text: `ore:${commandId}:${paramKey}` });
+}
 
 /**
  * Hosts a command's `settingCallback` in its own modal.

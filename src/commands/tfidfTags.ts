@@ -1,4 +1,5 @@
 import { ComboboxSuggestModal } from "comboSuggestModal";
+import { addOverrideHint } from "commandSettingsModal";
 import { GetCommandFn } from "commands";
 import ObsidianRuleEnginePlugin from "main";
 import { Notice, TFile } from "obsidian";
@@ -53,12 +54,13 @@ export const tfidfTags: GetCommandFn<TfidfTagsParams> = (plugin) => ({
 					);
 					buttonEl.onClick(() => combo.open());
 				});
+			addOverrideHint(setting, TFIDF_TAGS_ID, "frontmatterField");
 		});
 
 		settingGroup.addSetting(setting => {
 			setting
 				.setName("Max tags")
-				.setDesc("Maximum number of tags kept in the field once existing and new tags are merged.")
+				.setDesc("Ceiling on the field's total tag count. Existing tags are never removed to enforce this - it only caps how many new tags get added.")
 				.addText(text => {
 					text.inputEl.type = "number";
 					text.inputEl.min = "1";
@@ -70,6 +72,7 @@ export const tfidfTags: GetCommandFn<TfidfTagsParams> = (plugin) => ({
 						}
 					});
 				});
+			addOverrideHint(setting, TFIDF_TAGS_ID, "maxTags");
 		});
 
 		settingGroup.addSetting(setting => {
@@ -85,6 +88,7 @@ export const tfidfTags: GetCommandFn<TfidfTagsParams> = (plugin) => ({
 							await saveFn({ params: { ...params, corpusScope: value } });
 						});
 				});
+			addOverrideHint(setting, TFIDF_TAGS_ID, "corpusScope");
 		});
 	},
 	checkCallback: (checking: boolean) => {
