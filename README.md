@@ -19,6 +19,7 @@ _Expands on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-cu
 - **Vault enumeration**: the plugin lists vault files (`vault.getFiles()`/`getMarkdownFiles()`) so it can match them against your configured rules — this is core to how rule matching works.
 - **Dynamic code execution**: `<script>` tags inside templates are opt-in and run via `new Function()` (see [Script Support](#script-support)). Scripts with a `src` attribute are always ignored, so templates can't load remote code.
 - **On-demand ML model download**: the `Generate semantic tags` command downloads a small ([MiniLM](https://huggingface.co/Xenova/all-MiniLM-L6-v2)) model from Hugging Face the first time it's used, then caches it locally so later runs (and future Obsidian sessions) work offline — see [Tag generation commands](#tag-generation-commands).
+- **File deletion**: the `Delete current file without confirmation` command trashes the active file immediately, with no confirmation prompt — it's disabled by default like all provided commands, but enable it deliberately.
 
 ## Commands
 
@@ -36,13 +37,25 @@ By default, commands provided by this plugin are disabled. You can enable them i
 - `Force template` - Apply a template to the current file regardless of rule automations and conditions.
 - `Restore view` - Remove any applied templates from the current file.
 - `Process now` - Check and execute automations as if the file has just been opened.
+- `Fill emoji task due dates` - Add a 📅 due-date emoji to unchecked task lines in the current file that don't already have one. See [Task due dates](#task-due-dates).
 - `Generate TF-IDF tags` - Score the current file's words against other notes and append the most distinctive terms to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
 - `Generate semantic tags` - Match the current file's content against tags already used in your vault, using a small embedding model (downloaded on first use), and append the closest matches to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
 - `Generate automatic MOC` - Build a "map of content" list of notes sharing tags with the current file, under a heading. See [Automatic MOC](#automatic-moc).
+- `Delete current file without confirmation` - ⚠️ Immediately trashes the active file with no confirmation prompt. There's no undo through the plugin itself.
 
 ### Third party commands
 
 Any command available in the current Obsidian context will be available to include in rules. When rules execute, only commands available in that context will run. This means you can use commands from Obsidian itself or any other plugin. Avoid automating commands that require input when they run as these parameters cannot be selected.
+
+### Task due dates
+
+**`Fill emoji task due dates`** scans the current file's unchecked task lines (`- [ ] ...`) and appends a `📅 YYYY-MM-DD` due date to any that don't already have one, in the [Tasks plugin](https://publish.obsidian.md/tasks/)'s emoji format.
+
+- **Frontmatter field** - an optional frontmatter field to read the due date from (default: none).
+- **Parse from title** - if enabled and the frontmatter field is empty or unset, falls back to a `YYYY-MM-DD` date found in the file's title.
+- If neither source yields a date, it falls back to the file's last-modified time.
+
+Unlike the other provided commands, this one only works on the note currently open in the editor, so it can't be triggered automatically through rule automations — run it manually from the command palette or a hotkey.
 
 ### Tag generation commands
 
