@@ -38,6 +38,7 @@ By default, commands provided by this plugin are disabled. You can enable them i
 - `Process now` - Check and execute automations as if the file has just been opened.
 - `Generate TF-IDF tags` - Score the current file's words against other notes and append the most distinctive terms to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
 - `Generate semantic tags` - Match the current file's content against tags already used in your vault, using a small bundled embedding model, and append the closest matches to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
+- `Generate automatic MOC` - Build a "map of content" list of notes sharing tags with the current file, under a heading. See [Automatic MOC](#automatic-moc).
 
 ### Third party commands
 
@@ -62,6 +63,20 @@ Both commands write to the same kind of frontmatter list field (`tags` by defaul
 - **Frontmatter field** and **Max tags** - same as above.
 - **Existing vault tags vs invented tags** - a 0-100% slider. Whenever there's room to add tags, this controls where they come from: at 100%, every new tag is one already used elsewhere in your vault (keeps your tagging vocabulary consistent, never invents new words — this is closer to how `Generate TF-IDF tags` sources its candidates, though scored differently); at 0%, new tags are instead invented from the current file's own distinctive content (the same TF-IDF scoring `Generate TF-IDF tags` uses), even if nothing like them exists elsewhere in the vault yet. Values in between blend the two.
 - The first run after starting Obsidian takes a moment while the model loads; subsequent runs are fast.
+
+### Automatic MOC
+
+**`Generate automatic MOC`** builds a live "map of content" — a bullet list of links to other notes sharing tags with the current file — under a heading in the current file's body.
+
+- **Mode** - `any` (notes sharing at least one tag with the current file) or `all` (notes that have *every* one of the current file's tags).
+- **Heading** - which heading to place the list under, matched case-insensitively. If it doesn't exist yet, it's created automatically at the end of the file, one level deeper than the file's last heading (or `##` if the file has no headings at all).
+
+Unlike the tag generation commands above, this list is **fully regenerated every run**, not appended to — since it's entirely derived from the vault's current tags rather than anything you typed, keeping it always up to date matters more than preserving history. Two things follow from that:
+
+- Links to notes that no longer match are dropped automatically the next time it runs.
+- **Everything else under that heading gets overwritten too.** Don't write your own notes in the same section as the generated list — put them elsewhere in the file, or under a different heading.
+
+If the current file has no tags, the command does nothing (silently - no heading gets created, nothing gets touched).
 
 ## Base files
 
