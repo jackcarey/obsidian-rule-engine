@@ -85,6 +85,32 @@ async function waitForTags(
   return tags;
 }
 
+/** Counts entries in the Cache Storage bucket @huggingface/transformers writes downloaded model files to. */
+async function getTransformersCacheEntryCount(page: Page): Promise<number> {
+  return page.evaluate(async () => {
+    const cache = await caches.open("transformers-cache");
+    const keys = await cache.keys();
+    return keys.length;
+  });
+}
+
+/**
+ * Disables then re-enables the plugin via Obsidian's plugin manager, which
+ * re-reads and re-executes main.js from scratch - a fresh module scope, so
+ * semanticModel.ts's module-level `extractorPromise` is back to `null`
+ * afterwards, same as a genuinely fresh Obsidian session would see.
+ */
+async function reloadPlugin(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    const plugins = window.app.plugins as unknown as {
+      disablePlugin(id: string): Promise<void>;
+      enablePlugin(id: string): Promise<void>;
+    };
+    await plugins.disablePlugin("rule-engine");
+    await plugins.enablePlugin("rule-engine");
+  });
+}
+
 test.beforeEach(async ({ page }) => {
   await setFrontmatterTags(page, FIXTURE_NOTE, ["existing-tag"]);
 });
@@ -205,4 +231,43 @@ test("generate semantic tags — already at/over the max: adds nothing and remov
 
   const tags = await getFrontmatterTags(page, FIXTURE_NOTE);
   expect(tags).toEqual(overCapacity);
+});
+
+test("generate semantic tags — downloaded model files land in Cache Storage", async ({ page }) => {
+  test.setTimeout(150000);
+  await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 10, vocabularyWeight: 1 });
+  await openNote(page, FIXTURE_NOTE);
+
+  await runCommand(page, SEMANTIC_COMMAND_ID);
+  await waitForTags(page, FIXTURE_NOTE, (t) => !!t && t.length > 1, 120000);
+
+  // config.json, tokenizer.json, tokenizer_config.json, special_tokens_map.json,
+  // vocab.txt, and the quantized onnx weights - env.fetch's retry wrapper hands
+  // every one of these back through the library's normal cache-write path, so
+  // this is proof the files actually came over the network rather than through
+  // some other path that happened to also produce tags.
+  const cachedFileCount = await getTransformersCacheEntryCount(page);
+  expect(cachedFileCount).toBeGreaterThanOrEqual(5);
+});
+
+test("generate semantic tags — reuses the cached model after a plugin reload instead of re-downloading", async ({ page }) => {
+  test.setTimeout(150000);
+  // A prior test has already populated Cache Storage; reloading the plugin
+  // resets the in-memory extractorPromise, so the next run below can only
+  // stay fast if it reads the model back from Cache Storage.
+  await reloadPlugin(page);
+  await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 10, vocabularyWeight: 1 });
+  await openNote(page, FIXTURE_NOTE);
+
+  const start = Date.now();
+  await runCommand(page, SEMANTIC_COMMAND_ID);
+  const tags = await waitForTags(page, FIXTURE_NOTE, (t) => !!t && t.length > 1, 45000);
+  const elapsedMs = Date.now() - start;
+
+  expect(tags).toContain("existing-tag");
+  // A cold download of ~35MB plus WASM instantiation reliably takes far
+  // longer than this even on a slow CI runner; finishing within it is strong
+  // evidence the reloaded plugin's model load came from Cache Storage rather
+  // than the network.
+  expect(elapsedMs).toBeLessThan(45000);
 });
