@@ -194,6 +194,8 @@
     "Notes/rich-frontmatter.md",
     "Notes/other-file.md",
     "Notes/matched-file.md",
+    "Notes/moc-no-tags.md",
+    "Notes/moc-source.md",
     "Notes/tag-generation-fixture.md",
     "Notes/unmatched-file.md"
   ]
