@@ -82,7 +82,7 @@ export const tfidfTags: GetCommandFn<TfidfTagsParams> = (plugin) => ({
 						.addOption("linked", "Linked notes (forward + back links)")
 						.setValue(params.corpusScope ?? DEFAULT_CORPUS_SCOPE)
 						.onChange(async value => {
-							await saveFn({ params: { ...params, corpusScope: value as TfidfCorpusScope } });
+							await saveFn({ params: { ...params, corpusScope: value } });
 						});
 				});
 		});

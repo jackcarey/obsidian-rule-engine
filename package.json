@@ -45,5 +45,9 @@
 	"dependencies": {
 		"@huggingface/transformers": "^4.2.0",
 		"nanoid": "^5.1.6"
+	},
+	"overrides": {
+		"sharp": "^0.35.0",
+		"adm-zip": "^0.6.0"
 	}
 }
