@@ -19,11 +19,6 @@ main.js
 # test coverage output
 coverage
 
-# Downloaded/copied semantic-tagging model assets, fetched by
-# scripts/fetch-model-assets.mjs and embedded into main.js at build time.
-# Not committed - see README for how to (re)fetch or update the model.
-src/assets/model/
-
 # obsidian
 data.json
 
