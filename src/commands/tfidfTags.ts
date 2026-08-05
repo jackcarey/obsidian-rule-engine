@@ -112,7 +112,7 @@ async function runTfidfTagging(plugin: ObsidianRuleEnginePlugin, file: TFile, pa
 			corpusScope,
 			maxCandidates: maxTags * 2,
 		});
-		const mergeOptions: TagMergeOptions = { maxCount: maxTags, weight: 1 };
+		const mergeOptions: TagMergeOptions = { maxCount: maxTags };
 		const { addedTags } = await appendFrontmatterTags(plugin.app, file, fieldKey, candidates, mergeOptions);
 		new Notice(addedTags.length
 			? `Added ${addedTags.length} tag${addedTags.length === 1 ? "" : "s"} to "${fieldKey}"`

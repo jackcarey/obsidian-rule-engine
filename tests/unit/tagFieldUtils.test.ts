@@ -91,14 +91,28 @@ describe("getFrontmatterTagList", () => {
 // ---------------------------------------------------------------------------
 
 describe("mergeTagLists", () => {
-	it("keeps all existing tags and fills remaining capacity with new ones by default (weight=1)", () => {
+	it("keeps all existing tags and fills remaining capacity with new ones", () => {
 		const result = mergeTagLists(["a", "b"], ["c", "d", "e"], { maxCount: 4 });
 		expect(result).toEqual(["a", "b", "c", "d"]);
 	});
 
-	it("never exceeds maxCount", () => {
-		const result = mergeTagLists(["a", "b", "c"], ["d", "e"], { maxCount: 3 });
-		expect(result.length).toBeLessThanOrEqual(3);
+	it("adds exactly up to the ceiling: 6 existing + maxCount 10 adds 4 new", () => {
+		const existing = ["e1", "e2", "e3", "e4", "e5", "e6"];
+		const candidates = ["n1", "n2", "n3", "n4", "n5", "n6"];
+		const result = mergeTagLists(existing, candidates, { maxCount: 10 });
+		expect(result).toEqual([...existing, "n1", "n2", "n3", "n4"]);
+	});
+
+	it("adds nothing and removes nothing when already at or over the ceiling: 11 existing + maxCount 10 adds 0", () => {
+		const existing = Array.from({ length: 11 }, (_, i) => `e${i}`);
+		const result = mergeTagLists(existing, ["n1", "n2"], { maxCount: 10 });
+		expect(result).toEqual(existing);
+		expect(result.length).toBe(11);
+	});
+
+	it("never removes existing tags even when maxCount is 0", () => {
+		const result = mergeTagLists(["a", "b"], ["c"], { maxCount: 0 });
+		expect(result).toEqual(["a", "b"]);
 	});
 
 	it("does not duplicate a candidate that already exists (case-insensitive)", () => {
@@ -106,33 +120,13 @@ describe("mergeTagLists", () => {
 		expect(result).toEqual(["Movies", "action"]);
 	});
 
-	it("weight=0 prioritizes new candidates, backfilling with existing tags if room remains", () => {
-		const result = mergeTagLists(["old"], ["new"], { maxCount: 3, weight: 0 });
-		expect(result).toEqual(["new", "old"]);
-	});
-
-	it("weight=0 can drop existing tags once at capacity", () => {
-		const result = mergeTagLists(["old1", "old2", "old3"], ["new1", "new2", "new3"], { maxCount: 3, weight: 0 });
-		expect(result).toEqual(["new1", "new2", "new3"]);
-	});
-
-	it("weight=0.5 splits capacity between existing and new", () => {
-		const result = mergeTagLists(["e1", "e2", "e3", "e4"], ["n1", "n2", "n3", "n4"], { maxCount: 4, weight: 0.5 });
-		expect(result).toEqual(["e1", "e2", "n1", "n2"]);
-	});
-
-	it("never drops existing tags when maxCount has room for everything, even at weight=0", () => {
-		const result = mergeTagLists(["e1", "e2", "e3"], ["n1"], { maxCount: 4, weight: 0 });
-		expect(result.slice().sort()).toEqual(["e1", "e2", "e3", "n1"].sort());
-	});
-
 	it("normalizes both existing and candidate tags", () => {
 		const result = mergeTagLists(["#Old Tag"], ["#New Tag"], { maxCount: 4 });
 		expect(result).toEqual(["Old-Tag", "New-Tag"]);
 	});
 
-	it("returns an empty array when maxCount is 0", () => {
-		expect(mergeTagLists(["a"], ["b"], { maxCount: 0 })).toEqual([]);
+	it("returns an empty array when both inputs are empty", () => {
+		expect(mergeTagLists([], [], { maxCount: 10 })).toEqual([]);
 	});
 
 	it("drops empty/blank candidates after normalization", () => {

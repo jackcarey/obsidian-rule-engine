@@ -47,20 +47,20 @@ Any command available in the current Obsidian context will be available to inclu
 
 Both commands write to the same kind of frontmatter list field (`tags` by default) and share the same append/limit logic:
 
-- They **append**, never overwrite — your existing tags are always merged with the newly generated ones, never replaced.
-- A **max tags** setting caps how many tags the field can hold after merging.
+- They **append**, never overwrite — your existing tags are always kept in full; the commands only ever add to them, never remove or replace them.
+- A **max tags** setting is a ceiling on the field's total tag count, not a target to hit. It only limits how many *new* tags get added — e.g. with max tags set to 10, a file with 6 existing tags gets up to 4 new ones added, while a file that already has 11 gets 0 added (and still keeps all 11 — the limit never trims what's already there).
 - Values are normalized before being written (no `#` prefix, spaces become dashes, `/` hierarchy separators are preserved).
 
 **`Generate TF-IDF tags`** scores the words in the current file against a corpus of other notes (TF-IDF: term frequency × inverse document frequency) and appends the highest-scoring terms.
 
 - **Frontmatter field** - which list field to write to (default `tags`).
-- **Max tags** - the cap described above.
+- **Max tags** - the ceiling described above.
 - **Compare against** - `Whole vault` (most accurate, scans every note) or `Linked notes` (faster on large vaults — only the current file's forward links and backlinks).
 
-**`Generate semantic tags`** uses a small (~23 MB) bundled embedding model ([Xenova/all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2), quantized) to compare the current file's content against every tag already used elsewhere in your vault, and appends the closest semantic matches. Because it draws from your existing tag vocabulary rather than inventing new words, it tends to keep your tagging consistent. The model runs entirely locally — nothing is downloaded or sent anywhere, and it works offline.
+**`Generate semantic tags`** uses a small (~23 MB) bundled embedding model ([Xenova/all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2), quantized) to find new tags for the current file, up to the max tags ceiling. The model runs entirely locally — nothing is downloaded or sent anywhere, and it works offline.
 
 - **Frontmatter field** and **Max tags** - same as above.
-- **Existing vs new tag weight** - a 0-100% slider controlling how much of the max-tags limit is reserved for your existing tags vs newly suggested ones once the field is full. At 100%, all of your existing tags are kept first, filling only leftover room with new suggestions (this is how `Generate TF-IDF tags` always behaves). At 0%, new suggestions are prioritized, and only backfilled with existing tags if room remains — meaning, if there isn't room for everything, some existing tags can be dropped from the field at low weight values.
+- **Existing vault tags vs invented tags** - a 0-100% slider. Whenever there's room to add tags, this controls where they come from: at 100%, every new tag is one already used elsewhere in your vault (keeps your tagging vocabulary consistent, never invents new words — this is closer to how `Generate TF-IDF tags` sources its candidates, though scored differently); at 0%, new tags are instead invented from the current file's own distinctive content (the same TF-IDF scoring `Generate TF-IDF tags` uses), even if nothing like them exists elsewhere in the vault yet. Values in between blend the two.
 - The first run after starting Obsidian takes a moment while the model loads; subsequent runs are fast.
 
 ## Base files

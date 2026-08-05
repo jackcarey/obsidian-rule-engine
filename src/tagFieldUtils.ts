@@ -1,15 +1,12 @@
 import { App, TFile } from "obsidian";
 
 export interface TagMergeOptions {
-	/** Maximum number of tags the frontmatter field may hold once merged. */
-	maxCount: number;
 	/**
-	 * Fraction (0-1) of `maxCount` slots reserved for the file's existing tags
-	 * ahead of newly generated candidates. 1 (default) always keeps every
-	 * existing tag that fits before adding anything new; 0 prioritizes new
-	 * candidates and only backfills with leftover existing tags if room remains.
+	 * Ceiling on the field's total tag count. Existing tags are never removed
+	 * to enforce this - it only limits how many new candidates get added. If
+	 * the field already has this many tags (or more), nothing is added.
 	 */
-	weight?: number;
+	maxCount: number;
 }
 
 /**
@@ -42,14 +39,12 @@ export function getFrontmatterTagList(frontmatter: Record<string, unknown> | und
 
 /**
  * Merges existing frontmatter tags with newly generated candidates, deduping
- * case-insensitively and enforcing `maxCount`. Existing tags are only ever
- * dropped when the merged list would otherwise exceed `maxCount` - `weight`
- * decides which side gives way first, it never discards tags on its own.
+ * case-insensitively. Every existing tag is always kept - `maxCount` only
+ * caps how many new candidates get appended (zero, once the field already
+ * has `maxCount` or more tags), it never truncates what's already there.
  */
 export function mergeTagLists(existingTags: string[], candidateTags: string[], options: TagMergeOptions): string[] {
 	const maxCount = Math.max(0, Math.floor(options.maxCount));
-	const weight = Math.min(1, Math.max(0, options.weight ?? 1));
-	if (maxCount === 0) return [];
 
 	const seen = new Set<string>();
 	const normalizedExisting: string[] = [];
@@ -71,28 +66,16 @@ export function mergeTagLists(existingTags: string[], candidateTags: string[], o
 		}
 	}
 
-	const existingSlots = Math.round(maxCount * weight);
-	const keptExisting = normalizedExisting.slice(0, Math.min(existingSlots, maxCount));
-	const addedCandidates = normalizedCandidates.slice(0, maxCount - keptExisting.length);
+	const remainingSlots = Math.max(0, maxCount - normalizedExisting.length);
+	const addedCandidates = normalizedCandidates.slice(0, remainingSlots);
 
-	const result = [...keptExisting, ...addedCandidates];
-
-	// Backfill any still-empty slots with leftover existing tags (covers
-	// weight < 1 when there weren't enough candidates to fill the gap).
-	if (result.length < maxCount) {
-		for (const tag of normalizedExisting.slice(keptExisting.length)) {
-			if (result.length >= maxCount) break;
-			result.push(tag);
-		}
-	}
-
-	return result;
+	return [...normalizedExisting, ...addedCandidates];
 }
 
 /**
  * Applies `candidateTags` to a file's frontmatter tag field via
  * `processFrontMatter`, appending to (never replacing) whatever is already
- * there, subject to `mergeTagLists`'s limit/weight rules.
+ * there, subject to `mergeTagLists`'s limit rule.
  */
 export async function appendFrontmatterTags(
 	app: App,
