@@ -23,7 +23,7 @@ const DEFAULT_VOCABULARY_WEIGHT = 0.5;
 export const semanticTags: GetCommandFn<SemanticTagsParams> = (plugin) => ({
 	id: SEMANTIC_TAGS_ID,
 	name: "Generate semantic tags",
-	description: "Uses a small bundled embedding model to find tags for the active file, up to a max count, and appends them to a frontmatter field without removing any tags already there. A weight setting controls whether new tags are drawn from ones already used elsewhere in the vault or invented from the file's own content. The first run may take a moment while the model loads.",
+	description: "Uses a small embedding model to find tags for the active file, up to a max count, and appends them to a frontmatter field without removing any tags already there. A weight setting controls whether new tags are drawn from ones already used elsewhere in the vault or invented from the file's own content. The first run downloads the model (needs network access once); after that it's cached and works offline.",
 	settingCallback: (settingGroup, currentConfig, saveFn) => {
 		const params = currentConfig.params;
 

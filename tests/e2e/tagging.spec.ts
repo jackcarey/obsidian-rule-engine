@@ -147,20 +147,20 @@ test("generate TF-IDF tags — already at/over the max: adds nothing and removes
 });
 
 // ── Semantic tags ────────────────────────────────────────────────────────────
-// The bundled embedding model loads (and its WASM runtime instantiates) on
-// first use inside the real Electron/Chromium window, so these are the tests
-// that actually prove the embedded-model approach works at runtime, not just
-// in unit tests with the model mocked out. Generous timeouts account for a
-// cold model load.
+// The embedding model downloads from Hugging Face (and its WASM runtime
+// instantiates) on first use inside the real Electron/Chromium window, so
+// these are the tests that actually prove the runtime-download approach
+// works, not just unit tests with the model mocked out. Generous timeouts
+// account for a cold model download on top of a cold model load.
 
 test("generate semantic tags — vocabularyWeight=1 only adds tags already used elsewhere in the vault", async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(150000);
   await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 10, vocabularyWeight: 1 });
   await openNote(page, FIXTURE_NOTE);
 
   await runCommand(page, SEMANTIC_COMMAND_ID);
 
-  const tags = await waitForTags(page, FIXTURE_NOTE, (t) => !!t && t.length > 1, 60000);
+  const tags = await waitForTags(page, FIXTURE_NOTE, (t) => !!t && t.length > 1, 120000);
   expect(tags).toContain("existing-tag");
   // "xylophone" appears nowhere else in the vault's tag vocabulary, so a
   // pure vocabularyWeight=1 run should never invent it.
@@ -168,13 +168,13 @@ test("generate semantic tags — vocabularyWeight=1 only adds tags already used 
 });
 
 test("generate semantic tags — vocabularyWeight=0 invents tags from the file's own content instead of reusing the vault's", async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(150000);
   await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 10, vocabularyWeight: 0 });
   await openNote(page, FIXTURE_NOTE);
 
   await runCommand(page, SEMANTIC_COMMAND_ID);
 
-  const tags = await waitForTags(page, FIXTURE_NOTE, (t) => !!t && t.length > 1, 60000);
+  const tags = await waitForTags(page, FIXTURE_NOTE, (t) => !!t && t.length > 1, 120000);
   expect(tags).toContain("existing-tag");
   // With vocabularyWeight=0 every new tag comes from the TF-IDF-invented pool,
   // and "xylophone" is by far the fixture note's most distinctive term.
@@ -182,19 +182,19 @@ test("generate semantic tags — vocabularyWeight=0 invents tags from the file's
 });
 
 test("generate semantic tags — respects the max tag count", async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(150000);
   await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 2, vocabularyWeight: 1 });
   await openNote(page, FIXTURE_NOTE);
 
   await runCommand(page, SEMANTIC_COMMAND_ID);
 
-  await waitForTags(page, FIXTURE_NOTE, (t) => !!t && t.length >= 1, 60000);
+  await waitForTags(page, FIXTURE_NOTE, (t) => !!t && t.length >= 1, 120000);
   const tags = await getFrontmatterTags(page, FIXTURE_NOTE);
   expect(tags?.length).toBeLessThanOrEqual(2);
 });
 
 test("generate semantic tags — already at/over the max: adds nothing and removes nothing", async ({ page }) => {
-  test.setTimeout(90000);
+  test.setTimeout(150000);
   const overCapacity = ["existing-tag", "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"];
   await setFrontmatterTags(page, FIXTURE_NOTE, overCapacity);
   await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 5, vocabularyWeight: 0.5 });
