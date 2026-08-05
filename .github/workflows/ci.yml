@@ -15,6 +15,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/cache@v4
+        with:
+          path: src/assets/model
+          key: model-assets-${{ hashFiles('fetch-model-assets.mjs') }}
       - run: npm ci
       - run: npm run lint
       - run: npm run build
@@ -41,6 +45,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/cache@v4
+        with:
+          path: src/assets/model
+          key: model-assets-${{ hashFiles('fetch-model-assets.mjs') }}
       - run: npm ci
       - run: npm run build
       - uses: actions/attest-build-provenance@v2
@@ -77,6 +85,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - uses: actions/cache@v4
+        with:
+          path: src/assets/model
+          key: model-assets-${{ hashFiles('fetch-model-assets.mjs') }}
       - run: npm ci
       - name: Determine version bump from conventional commits
         id: bump

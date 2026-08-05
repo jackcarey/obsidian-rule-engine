@@ -27,16 +27,36 @@ const HF_FILES = [
 const WASM_RUNTIME_FILE = "ort-wasm-simd-threaded.wasm";
 const WASM_SOURCE = path.join("node_modules", "onnxruntime-web", "dist", WASM_RUNTIME_FILE);
 
+const MAX_ATTEMPTS = 5;
+const RETRY_STATUS = new Set([429, 500, 502, 503, 504]);
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(url) {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        const res = await fetch(url);
+        if (res.ok) return res;
+        if (!RETRY_STATUS.has(res.status) || attempt === MAX_ATTEMPTS) {
+            throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
+        }
+        const retryAfter = Number(res.headers.get("retry-after"));
+        const delayMs = Number.isFinite(retryAfter) && retryAfter > 0
+            ? retryAfter * 1000
+            : 2 ** attempt * 1000;
+        console.log(`  ${res.status} ${res.statusText}, retrying in ${delayMs}ms (attempt ${attempt}/${MAX_ATTEMPTS})`);
+        await sleep(delayMs);
+    }
+}
+
 async function downloadFile(url, destPath) {
     if (existsSync(destPath) && statSync(destPath).size > 0) {
         console.log(`  skip (exists): ${destPath}`);
         return;
     }
     console.log(`  fetching ${url}`);
-    const res = await fetch(url);
-    if (!res.ok) {
-        throw new Error(`Failed to fetch ${url}: ${res.status} ${res.statusText}`);
-    }
+    const res = await fetchWithRetry(url);
     const buffer = Buffer.from(await res.arrayBuffer());
     mkdirSync(path.dirname(destPath), { recursive: true });
     writeFileSync(destPath, buffer);
