@@ -4,8 +4,9 @@
 	"description": "Run commands and create custom HTML views for your notes based on filter rules. Transform how your vault behaves and how notes are displayed.",
 	"main": "main.js",
 	"scripts": {
-		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"dev": "node fetch-model-assets.mjs && node esbuild.config.mjs",
+		"build": "node fetch-model-assets.mjs && tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"fetch-model-assets": "node fetch-model-assets.mjs",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint . && stylelint styles.css",
 		"lint:fix": "eslint . --fix && stylelint styles.css --fix",
@@ -42,6 +43,11 @@
 		"vitest": "^4.1.8"
 	},
 	"dependencies": {
+		"@huggingface/transformers": "^4.2.0",
 		"nanoid": "^5.1.6"
+	},
+	"overrides": {
+		"sharp": "^0.35.0",
+		"adm-zip": "^0.6.0"
 	}
 }

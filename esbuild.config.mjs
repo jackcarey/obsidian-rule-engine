@@ -28,6 +28,14 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: "main.js",
 	minify: prod,
+	loader: {
+		// Embedded semantic-tagging model + WASM runtime (see fetch-model-assets.mjs)
+		// are base64-encoded straight into main.js so the plugin needs no extra
+		// files or network access to run the "Semantic tags" command.
+		".onnx": "binary",
+		".wasm": "binary",
+		".txt": "text",
+	},
 });
 
 if (prod) {

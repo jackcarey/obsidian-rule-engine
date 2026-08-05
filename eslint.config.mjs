@@ -4,7 +4,7 @@ import obsidianmd from "eslint-plugin-obsidianmd";
 
 export default defineConfig([
 	{
-		ignores: ["node_modules/**", "main.js", "coverage/**", "tests/e2e/**", "*.config.mjs", "vitest.config.ts", "version-bump.mjs"],
+		ignores: ["node_modules/**", "main.js", "coverage/**", "tests/e2e/**", "*.config.mjs", "vitest.config.ts", "version-bump.mjs", "fetch-model-assets.mjs"],
 	},
 	...obsidianmd.configs.recommended,
 	{
@@ -44,6 +44,15 @@ export default defineConfig([
 			// the call site); this rule can't be suppressed inline (obsidianmd/*
 			// disables are banned), so it's scoped off for this file instead.
 			"obsidianmd/rule-custom-message": "off",
+		},
+	},
+	{
+		files: ["src/semanticModel/semanticModel.ts"],
+		languageOptions: {
+			// Electron's renderer (and therefore every Obsidian window) exposes
+			// `process` - this file relies on that to steer the bundled model
+			// loader down its portable code path (see the comment at loadExtractor).
+			globals: { process: "readonly" },
 		},
 	},
 	{

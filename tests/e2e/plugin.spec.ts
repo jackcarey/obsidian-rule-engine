@@ -94,6 +94,24 @@ test("command configuration — shows each command's ID and a per-file-overrides
   await closeSettings(settingsPage, page);
 });
 
+test("command configuration — a command with a settingCallback opens its own settings via the gear button", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+
+  // "Fill emoji task due dates" (apply-task-due-date) has a settingCallback.
+  // Obsidian's declarative settings list can only render one row's worth of
+  // controls per list item, so per-command settings live behind a "Configure"
+  // gear button that opens a dedicated modal — see CommandSettingsModal.
+  const taskDateRow = settingsPage.locator(".setting-item", { hasText: "Fill emoji task due dates" });
+  await taskDateRow.locator('[aria-label="Configure Fill emoji task due dates"]').click();
+
+  const modal = settingsPage.locator(".modal-container .modal-content");
+  await expect(modal.locator(".setting-item-name", { hasText: "Frontmatter field" })).toBeVisible();
+  await expect(modal.locator(".setting-item-name", { hasText: "Parse from title" })).toBeVisible();
+
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
+});
+
 test("rule list — delete a rule via the list's delete button", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
 

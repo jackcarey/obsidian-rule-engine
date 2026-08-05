@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Notes/inlinks-check.md",
+                "file": "Notes/tag-generation-fixture.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "inlinks-check"
+              "title": "tag-generation-fixture"
             }
           }
         ]
@@ -187,12 +187,14 @@
   },
   "active": "0bab95444b0ed4a2",
   "lastOpenFiles": [
+    "Notes/inlinks-check.md",
     "Notes/outlinks-check.md",
     "Notes/within-future-check.md",
     "Notes/within-past-check.md",
     "Notes/rich-frontmatter.md",
     "Notes/other-file.md",
     "Notes/matched-file.md",
+    "Notes/tag-generation-fixture.md",
     "Notes/unmatched-file.md"
   ]
 }

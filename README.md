@@ -18,6 +18,7 @@ _Expands on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-cu
 
 - **Vault enumeration**: the plugin lists vault files (`vault.getFiles()`/`getMarkdownFiles()`) so it can match them against your configured rules — this is core to how rule matching works.
 - **Dynamic code execution**: `<script>` tags inside templates are opt-in and run via `new Function()` (see [Script Support](#script-support)). Scripts with a `src` attribute are always ignored, so templates can't load remote code.
+- **Bundled ML model, no network access**: the `Generate semantic tags` command embeds a small ([MiniLM](https://huggingface.co/Xenova/all-MiniLM-L6-v2)) model directly in the plugin. It never downloads anything or contacts the network — see [Tag generation commands](#tag-generation-commands).
 
 ## Commands
 
@@ -35,10 +36,32 @@ By default, commands provided by this plugin are disabled. You can enable them i
 - `Force template` - Apply a template to the current file regardless of rule automations and conditions.
 - `Restore view` - Remove any applied templates from the current file.
 - `Process now` - Check and execute automations as if the file has just been opened.
+- `Generate TF-IDF tags` - Score the current file's words against other notes and append the most distinctive terms to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
+- `Generate semantic tags` - Match the current file's content against tags already used in your vault, using a small bundled embedding model, and append the closest matches to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
 
 ### Third party commands
 
 Any command available in the current Obsidian context will be available to include in rules. When rules execute, only commands available in that context will run. This means you can use commands from Obsidian itself or any other plugin. Avoid automating commands that require input when they run as these parameters cannot be selected.
+
+### Tag generation commands
+
+Both commands write to the same kind of frontmatter list field (`tags` by default) and share the same append/limit logic:
+
+- They **append**, never overwrite — your existing tags are always kept in full; the commands only ever add to them, never remove or replace them.
+- A **max tags** setting is a ceiling on the field's total tag count, not a target to hit. It only limits how many *new* tags get added — e.g. with max tags set to 10, a file with 6 existing tags gets up to 4 new ones added, while a file that already has 11 gets 0 added (and still keeps all 11 — the limit never trims what's already there).
+- Values are normalized before being written (no `#` prefix, spaces become dashes, `/` hierarchy separators are preserved).
+
+**`Generate TF-IDF tags`** scores the words in the current file against a corpus of other notes (TF-IDF: term frequency × inverse document frequency) and appends the highest-scoring terms.
+
+- **Frontmatter field** - which list field to write to (default `tags`).
+- **Max tags** - the ceiling described above.
+- **Compare against** - `Whole vault` (most accurate, scans every note) or `Linked notes` (faster on large vaults — only the current file's forward links and backlinks).
+
+**`Generate semantic tags`** uses a small (~23 MB) bundled embedding model ([Xenova/all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2), quantized) to find new tags for the current file, up to the max tags ceiling. The model runs entirely locally — nothing is downloaded or sent anywhere, and it works offline.
+
+- **Frontmatter field** and **Max tags** - same as above.
+- **Existing vault tags vs invented tags** - a 0-100% slider. Whenever there's room to add tags, this controls where they come from: at 100%, every new tag is one already used elsewhere in your vault (keeps your tagging vocabulary consistent, never invents new words — this is closer to how `Generate TF-IDF tags` sources its candidates, though scored differently); at 0%, new tags are instead invented from the current file's own distinctive content (the same TF-IDF scoring `Generate TF-IDF tags` uses), even if nothing like them exists elsewhere in the vault yet. Values in between blend the two.
+- The first run after starting Obsidian takes a moment while the model loads; subsequent runs are fast.
 
 ## Base files
 
@@ -414,6 +437,17 @@ Filter arguments can be:
 - **Simple values**: `date:"YYYY-MM-DD"`
 - **Multiple arguments**: `replace:"old":"new"` (comma-separated, or use quotes for strings with commas)
 - **Regex patterns**: `replace:"/pattern/flags":"replace"`
+
+### Updating the bundled semantic model
+
+The `Generate semantic tags` command's model isn't fetched at runtime — it's embedded directly into `main.js` at build time, so the plugin has no network dependency. If you're changing which model is used or refreshing its weights:
+
+1. Edit the constants at the top of `fetch-model-assets.mjs` (`MODEL_ID`, `HF_FILES`) to point at a different Hugging Face repo. It needs to publish a quantized ONNX `feature-extraction` export compatible with [`@huggingface/transformers`](https://www.npmjs.com/package/@huggingface/transformers) — check the model card's `onnx/` folder. Keep an eye on the total size: the model + tokenizer files plus the ~13 MB onnxruntime-web WASM runtime all end up base64-encoded inside `main.js`.
+2. Delete `src/assets/model/` (gitignored, so it won't show up as a diff) and run `npm run fetch-model-assets` to pull the new files down.
+3. Run `npm run build` — `esbuild.config.mjs`'s `.onnx`/`.wasm`/`.txt` loaders pick the new files up automatically via `src/semanticModel/modelAssets.ts`, no other code changes needed.
+4. Run the E2E suite (`npm run test:e2e`) — `tests/e2e/tagging.spec.ts` runs real inference inside a real Obsidian window, which is the only way to actually confirm a new model loads and runs correctly (unit tests mock the model out entirely).
+
+All of the model-loading logic (and the workaround for Electron's renderer confusing the library's environment detection — see the comment at the top of `loadExtractor` in `src/semanticModel/semanticModel.ts`) is isolated in `src/semanticModel/semanticModel.ts`. If you ever want to switch away from bundling (e.g. back to fetching from Hugging Face or your own release assets at first use instead of embedding), that's the only file that needs to change — everything else calls its `embedTexts()` export and doesn't know or care how the model was loaded.
 
 ### Contributing
 

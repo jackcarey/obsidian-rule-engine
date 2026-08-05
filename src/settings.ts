@@ -1,8 +1,9 @@
-import { App, PluginSettingTab, Setting, SettingGroup, SettingDefinitionItem, SettingDefinitionList, SettingGroupItem } from "obsidian";
+import { App, PluginSettingTab, Setting, SettingDefinitionItem, SettingDefinitionList, SettingGroupItem } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup } from "./types";
 import { DEFAULT_RULES } from "./consts";
 import { EditRuleModal } from "editRuleModal";
+import { CommandSettingsModal } from "commandSettingsModal";
 
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	plugin: ObsidianRuleEnginePlugin;
@@ -191,29 +192,38 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				return {
 					name,
 					desc: description ?? '',
-					render: (setting: Setting, group: SettingGroup) => {
+					render: (setting: Setting) => {
 						const currentConfig = this.plugin.getCommandConfig(id);
 						setting
 							.setName(name)
 							.setDesc(description ?? '')
-							.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rules')
-							.addToggle(toggle => toggle
-								.setValue(currentConfig.enabled)
-								.onChange(async (value) => {
-									currentConfig.enabled = value;
-									await this.plugin.updateCommandConfig(id, { enabled: value }).catch(e => this.plugin.debug(e));
-								}));
-						setting.nameEl.className = 'ore-command-config-name';
-						setting.descEl.createDiv({ cls: 'ore-command-config-id', text: `id: ${id}` });
+							.setTooltip('Toggle whether or not this command appears in the Obsidian palette and can be used in rules');
 
+						// Added before the toggle so the gear button renders to its left.
 						if (settingCallback) {
 							const saveFn = async (updatedConfig: { enabled?: boolean; params?: Record<string, unknown> }) => {
 								if (updatedConfig.enabled !== undefined) currentConfig.enabled = updatedConfig.enabled;
 								if (updatedConfig.params) Object.assign(currentConfig.params, updatedConfig.params);
 								await this.plugin.updateCommandConfig(id, updatedConfig);
 							};
-							settingCallback(group, currentConfig, saveFn);
+							setting.addExtraButton(btn => {
+								btn.setIcon('settings')
+									.setTooltip(`Configure ${name}`)
+									.onClick(() => {
+										new CommandSettingsModal(this.app, name, settingCallback, currentConfig, saveFn).open();
+									});
+							});
 						}
+
+						setting.addToggle(toggle => toggle
+							.setValue(currentConfig.enabled)
+							.onChange(async (value) => {
+								currentConfig.enabled = value;
+								await this.plugin.updateCommandConfig(id, { enabled: value }).catch(e => this.plugin.debug(e));
+							}));
+
+						setting.nameEl.className = 'ore-command-config-name';
+						setting.descEl.createDiv({ cls: 'ore-command-config-id', text: `id: ${id}` });
 					},
 				};
 			});
