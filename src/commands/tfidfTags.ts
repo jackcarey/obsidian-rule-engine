@@ -22,7 +22,7 @@ const DEFAULT_CORPUS_SCOPE: TfidfCorpusScope = "vault";
 export const tfidfTags: GetCommandFn<TfidfTagsParams> = (plugin) => ({
 	id: TFIDF_TAGS_ID,
 	name: "Generate TF-IDF tags",
-	description: "Scores the active file's words against a corpus of other notes and appends the most distinctive terms to a frontmatter field, keeping existing tags and respecting a max count.",
+	description: "Scores the active file's words against a corpus of other notes.",
 	settingCallback: (settingGroup, currentConfig, saveFn) => {
 		const params = currentConfig.params;
 

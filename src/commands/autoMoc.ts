@@ -17,7 +17,7 @@ const DEFAULT_HEADING = "Related notes";
 export const autoMoc: GetCommandFn<AutoMocParams> = (plugin) => ({
 	id: AUTO_MOC_ID,
 	name: "Generate automatic MOC",
-	description: "Builds a live \"map of content\" under a heading in the active file: a list of links to other notes sharing tags with it. \"Any\" matches notes sharing at least one tag; \"All\" matches notes that have every one of this file's tags. The whole section under that heading is regenerated every run, so stale links never linger - but that also means any other notes you've written in that same section get overwritten too. If the heading doesn't exist yet, it's created automatically at the end of the file, one level deeper than the file's last heading. Does nothing if the active file has no tags.",
+	description: "Builds a 'map of content' under a heading in the active file based on matching tags.",
 	settingCallback: (settingGroup, currentConfig, saveFn) => {
 		const params = currentConfig.params;
 
@@ -40,7 +40,7 @@ export const autoMoc: GetCommandFn<AutoMocParams> = (plugin) => ({
 		settingGroup.addSetting(setting => {
 			setting
 				.setName("Heading")
-				.setDesc("The heading (case-insensitive) to place the list under. Created automatically if it doesn't exist yet.")
+				.setDesc("The heading to place the list under. Created automatically if it doesn't exist yet.")
 				.addText(text => {
 					text.setValue(params.heading?.length ? params.heading : DEFAULT_HEADING);
 					text.onChange(async value => {
