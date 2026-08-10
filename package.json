@@ -42,8 +42,7 @@
 		"vitest": "^4.1.8"
 	},
 	"dependencies": {
-		"@huggingface/transformers": "^4.2.0",
-		"nanoid": "^5.1.6"
+		"@huggingface/transformers": "^4.2.0"
 	},
 	"overrides": {
 		"sharp": "^0.35.0",
