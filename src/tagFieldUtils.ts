@@ -2,11 +2,18 @@ import { App, TFile } from "obsidian";
 
 export interface TagMergeOptions {
 	/**
-	 * Ceiling on the field's total tag count. Existing tags are never removed
-	 * to enforce this - it only limits how many new candidates get added. If
-	 * the field already has this many tags (or more), nothing is added.
+	 * Ceiling on the field's total tag count. In append mode (the default),
+	 * existing tags are never removed to enforce this - it only limits how
+	 * many new candidates get added. If the field already has this many tags
+	 * (or more), nothing is added. In override mode this caps the replacement
+	 * list directly.
 	 */
 	maxCount: number;
+	/**
+	 * When true, replace the field's tags with `candidateTags` instead of
+	 * merging into whatever is already there.
+	 */
+	override?: boolean;
 }
 
 /**
@@ -42,18 +49,23 @@ export function getFrontmatterTagList(frontmatter: Record<string, unknown> | und
  * case-insensitively. Every existing tag is always kept - `maxCount` only
  * caps how many new candidates get appended (zero, once the field already
  * has `maxCount` or more tags), it never truncates what's already there.
+ *
+ * In override mode (`options.override`), existing tags are dropped entirely
+ * and the result is just the first `maxCount` deduped candidates.
  */
 export function mergeTagLists(existingTags: string[], candidateTags: string[], options: TagMergeOptions): string[] {
 	const maxCount = Math.max(0, Math.floor(options.maxCount));
 
 	const seen = new Set<string>();
 	const normalizedExisting: string[] = [];
-	for (const tag of existingTags) {
-		const normalized = normalizeTag(tag);
-		const key = normalized.toLowerCase();
-		if (normalized && !seen.has(key)) {
-			seen.add(key);
-			normalizedExisting.push(normalized);
+	if (!options.override) {
+		for (const tag of existingTags) {
+			const normalized = normalizeTag(tag);
+			const key = normalized.toLowerCase();
+			if (normalized && !seen.has(key)) {
+				seen.add(key);
+				normalizedExisting.push(normalized);
+			}
 		}
 	}
 	const normalizedCandidates: string[] = [];
@@ -74,8 +86,9 @@ export function mergeTagLists(existingTags: string[], candidateTags: string[], o
 
 /**
  * Applies `candidateTags` to a file's frontmatter tag field via
- * `processFrontMatter`, appending to (never replacing) whatever is already
- * there, subject to `mergeTagLists`'s limit rule.
+ * `processFrontMatter`, subject to `mergeTagLists`'s limit rule. Appends to
+ * whatever is already there unless `options.override` is set, in which case
+ * it replaces the field entirely.
  */
 export async function appendFrontmatterTags(
 	app: App,

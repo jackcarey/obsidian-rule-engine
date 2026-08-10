@@ -1,4 +1,4 @@
-import { Command, SettingGroup, type TFile } from "obsidian";
+import { Command, SettingGroupItem, type TFile } from "obsidian";
 
 declare module "obsidian" {
 	interface App {
@@ -72,6 +72,7 @@ export interface CustomRulesSettings {
 	processBaseResultsAutomatically: boolean;
 	processOnSave: boolean;
 	debug: boolean;
+	showNotices: boolean;
 	rules: RuleConfig[];
 	// Use the base version of the type to allow variety
 	commands: Record<string, CommandConfig>;
@@ -108,7 +109,7 @@ export interface SuggestItem {
 }
 
 export type CommandSaveFn = (updatedConfig: Partial<CommandConfig>) => Promise<void>;
-export type CommandSettingCallback<TConfig extends Record<string, unknown> = Record<string, unknown>> = (settingGroup: SettingGroup, currentConfig: CommandConfig<TConfig>, saveFn: CommandSaveFn) => void
+export type CommandSettingCallback<TConfig extends Record<string, unknown> = Record<string, unknown>> = (currentConfig: CommandConfig<TConfig>, saveFn: CommandSaveFn) => SettingGroupItem[];
 
 export type CommandWithSetup<TConfig extends Record<string, unknown> = Record<string, unknown>> = Command & {
 	// human readable description of what the command does

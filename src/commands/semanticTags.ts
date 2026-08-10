@@ -2,7 +2,7 @@ import { ComboboxSuggestModal } from "comboSuggestModal";
 import { addOverrideHint } from "commandSettingsModal";
 import { GetCommandFn } from "commands";
 import ObsidianRuleEnginePlugin from "main";
-import { Notice, TFile } from "obsidian";
+import { TFile } from "obsidian";
 import { computeSemanticCandidates } from "semanticModel/semanticTagger";
 import { computeTfidfCandidates } from "tfidf";
 import { appendFrontmatterTags, getFrontmatterTagList, normalizeTag, TagMergeOptions } from "tagFieldUtils";
@@ -14,91 +14,113 @@ export interface SemanticTagsParams extends Record<string, unknown> {
 	frontmatterField?: string;
 	maxTags?: number;
 	vocabularyWeight?: number;
+	override?: boolean;
+	confidenceThreshold?: number;
 }
 
 const DEFAULT_FIELD = "tags";
 const DEFAULT_MAX_TAGS = 10;
 const DEFAULT_VOCABULARY_WEIGHT = 0.5;
+const DEFAULT_CONFIDENCE_THRESHOLD = 0;
 
 export const semanticTags: GetCommandFn<SemanticTagsParams> = (plugin) => ({
 	id: SEMANTIC_TAGS_ID,
 	name: "Generate semantic tags",
 	description: "Uses a small embedding model to find tags for the active file, up to a max count.",
-	settingCallback: (settingGroup, currentConfig, saveFn) => {
+	settingCallback: (currentConfig, saveFn) => {
 		const params = currentConfig.params;
 
-		settingGroup.addSetting(setting => {
-			setting
-				.setName("Frontmatter field")
-				.setDesc("The frontmatter list field tags are appended to.")
-				.addButton(buttonEl => {
-					const propertyDefs = plugin.scanVaultProperties();
-					const suggestItems: SuggestItem[] = propertyDefs.map(def => ({
-						label: def.key,
-						value: def.key,
-						icon: plugin.getPropertyIcon(def.key, def.type),
-					}));
-					const fieldValue = params.frontmatterField?.length ? params.frontmatterField : DEFAULT_FIELD;
-					buttonEl.setButtonText(fieldValue);
-					const onSelect = (value: string) => {
-						const field = value?.length ? value : DEFAULT_FIELD;
-						saveFn({ params: { ...params, frontmatterField: field } }).then(() => {
-							buttonEl.setButtonText(field);
-						}).catch(e => plugin.debug(e));
-					};
-					const combo = new ComboboxSuggestModal(
-						plugin.app,
-						suggestItems,
-						fieldValue,
-						onSelect,
-						buttonEl.buttonEl,
-					);
-					buttonEl.onClick(() => combo.open());
-				});
-			addOverrideHint(setting, SEMANTIC_TAGS_ID, "frontmatterField");
-		});
-
-		settingGroup.addSetting(setting => {
-			setting
-				.setName("Max tags")
-				.setDesc("Ceiling on the field's total tag count. Existing tags are never removed to enforce this - it only caps how many new tags get added.")
-				.addText(text => {
-					text.inputEl.type = "number";
-					text.inputEl.min = "1";
-					text.setValue(String(params.maxTags ?? DEFAULT_MAX_TAGS));
-					text.onChange(async value => {
-						const parsed = parseInt(value, 10);
-						if (Number.isFinite(parsed) && parsed > 0) {
-							await saveFn({ params: { ...params, maxTags: parsed } });
-						}
+		return [
+			{
+				name: "Frontmatter field",
+				desc: "The frontmatter list field tags are appended to.",
+				render: (setting) => {
+					setting.addButton(buttonEl => {
+						const propertyDefs = plugin.scanVaultProperties();
+						const suggestItems: SuggestItem[] = propertyDefs.map(def => ({
+							label: def.key,
+							value: def.key,
+							icon: plugin.getPropertyIcon(def.key, def.type),
+						}));
+						const fieldValue = params.frontmatterField?.length ? params.frontmatterField : DEFAULT_FIELD;
+						buttonEl.setButtonText(fieldValue);
+						const onSelect = (value: string) => {
+							const field = value?.length ? value : DEFAULT_FIELD;
+							saveFn({ params: { ...params, frontmatterField: field } }).then(() => {
+								buttonEl.setButtonText(field);
+							}).catch(e => plugin.debug(e));
+						};
+						const combo = new ComboboxSuggestModal(
+							plugin.app,
+							suggestItems,
+							fieldValue,
+							onSelect,
+							buttonEl.buttonEl,
+						);
+						buttonEl.onClick(() => combo.open());
 					});
-				});
-			addOverrideHint(setting, SEMANTIC_TAGS_ID, "maxTags");
-		});
-
-		settingGroup.addSetting(setting => {
-			const descFor = (percent: number) =>
-				`When there's room to add tags, how much of that room goes to tags already used elsewhere in the vault vs new tags invented from this file's own content. Currently ${percent}% from existing vault tags.`;
-			// setDesc() empties descEl on every call, so the override hint has to
-			// be re-added each time it's called, not just once after setup.
-			const updateDesc = (percent: number) => {
-				setting.setDesc(descFor(percent));
-				addOverrideHint(setting, SEMANTIC_TAGS_ID, "vocabularyWeight");
-			};
-			const weightPercentEl = { current: Math.round((params.vocabularyWeight ?? DEFAULT_VOCABULARY_WEIGHT) * 100) };
-			setting.setName("Existing vault tags vs invented tags");
-			updateDesc(weightPercentEl.current);
-			setting.addSlider(slider => {
-				slider
-					.setLimits(0, 100, 5)
-					.setValue(weightPercentEl.current)
-					.onChange(async value => {
-						weightPercentEl.current = value;
-						updateDesc(value);
-						await saveFn({ params: { ...params, vocabularyWeight: value / 100 } });
+					addOverrideHint(setting, SEMANTIC_TAGS_ID, "frontmatterField");
+				},
+			},
+			{
+				name: "Max tags",
+				desc: "Ceiling on the field's total tag count. In append mode existing tags are never removed to enforce this - it only caps how many new tags get added.",
+				control: { type: "number", key: "maxTags", defaultValue: DEFAULT_MAX_TAGS, min: 1 },
+			},
+			{
+				name: "Override existing tags",
+				desc: "Replace the field's tags with the newly generated ones instead of adding to them.",
+				control: { type: "toggle", key: "override" },
+			},
+			{
+				name: "Existing vault tags vs invented tags",
+				desc: (() => {
+					const percent = Math.round((params.vocabularyWeight ?? DEFAULT_VOCABULARY_WEIGHT) * 100);
+					return `When there's room to add tags, how much of that room goes to tags already used elsewhere in the vault vs new tags invented from this file's own content. Currently ${percent}% from existing vault tags.`;
+				})(),
+				render: (setting) => {
+					const descFor = (percent: number) =>
+						`When there's room to add tags, how much of that room goes to tags already used elsewhere in the vault vs new tags invented from this file's own content. Currently ${percent}% from existing vault tags.`;
+					const weightPercentEl = { current: Math.round((params.vocabularyWeight ?? DEFAULT_VOCABULARY_WEIGHT) * 100) };
+					setting.addSlider(slider => {
+						slider
+							.setLimits(0, 100, 5)
+							.setValue(weightPercentEl.current)
+							.onChange(async value => {
+								weightPercentEl.current = value;
+								setting.setDesc(descFor(value));
+								addOverrideHint(setting, SEMANTIC_TAGS_ID, "vocabularyWeight");
+								await saveFn({ params: { ...params, vocabularyWeight: value / 100 } });
+							});
 					});
-			});
-		});
+					addOverrideHint(setting, SEMANTIC_TAGS_ID, "vocabularyWeight");
+				},
+			},
+			{
+				name: "Confidence threshold",
+				desc: (() => {
+					const percent = Math.round((params.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD) * 100);
+					return `Minimum similarity a vault tag must reach to be suggested from the embedding model. Higher values mean fewer, more confident matches. Currently ${percent}%.`;
+				})(),
+				render: (setting) => {
+					const descFor = (percent: number) =>
+						`Minimum similarity a vault tag must reach to be suggested from the embedding model. Higher values mean fewer, more confident matches. Currently ${percent}%.`;
+					const thresholdPercentEl = { current: Math.round((params.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD) * 100) };
+					setting.addSlider(slider => {
+						slider
+							.setLimits(0, 100, 5)
+							.setValue(thresholdPercentEl.current)
+							.onChange(async value => {
+								thresholdPercentEl.current = value;
+								setting.setDesc(descFor(value));
+								addOverrideHint(setting, SEMANTIC_TAGS_ID, "confidenceThreshold");
+								await saveFn({ params: { ...params, confidenceThreshold: value / 100 } });
+							});
+					});
+					addOverrideHint(setting, SEMANTIC_TAGS_ID, "confidenceThreshold");
+				},
+			},
+		];
 	},
 	checkCallback: (checking: boolean) => {
 		const file = plugin?.app.workspace.getActiveFile();
@@ -119,6 +141,7 @@ async function runSemanticTagging(plugin: ObsidianRuleEnginePlugin, file: TFile,
 	const fieldKey = params.frontmatterField?.length ? params.frontmatterField : DEFAULT_FIELD;
 	const maxTags = params.maxTags && params.maxTags > 0 ? params.maxTags : DEFAULT_MAX_TAGS;
 	const weight = Math.min(1, Math.max(0, params.vocabularyWeight ?? DEFAULT_VOCABULARY_WEIGHT));
+	const minScore = Math.min(1, Math.max(0, params.confidenceThreshold ?? DEFAULT_CONFIDENCE_THRESHOLD));
 
 	try {
 		const frontmatter = plugin.app.metadataCache.getFileCache(file)?.frontmatter;
@@ -132,7 +155,7 @@ async function runSemanticTagging(plugin: ObsidianRuleEnginePlugin, file: TFile,
 
 		const [vocabularyCandidates, inventedCandidates] = await Promise.all([
 			vocabularyTarget > 0
-				? computeSemanticCandidates(plugin.app, file, { maxCandidates: vocabularyTarget })
+				? computeSemanticCandidates(plugin.app, file, { maxCandidates: vocabularyTarget, minScore })
 				: Promise.resolve([]),
 			inventedTarget > 0
 				? computeTfidfCandidates(plugin.app, file, { corpusScope: "vault", maxCandidates: inventedTarget })
@@ -140,9 +163,9 @@ async function runSemanticTagging(plugin: ObsidianRuleEnginePlugin, file: TFile,
 		]);
 
 		const candidates = [...vocabularyCandidates, ...inventedCandidates];
-		const mergeOptions: TagMergeOptions = { maxCount: maxTags };
+		const mergeOptions: TagMergeOptions = { maxCount: maxTags, override: params.override };
 		const { addedTags } = await appendFrontmatterTags(plugin.app, file, fieldKey, candidates, mergeOptions);
-		new Notice(addedTags.length
+		plugin.notify(addedTags.length
 			? `Added ${addedTags.length} tag${addedTags.length === 1 ? "" : "s"} to "${fieldKey}"`
 			: `No new tags found for "${fieldKey}"`);
 	} catch (e) {

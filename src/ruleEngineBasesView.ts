@@ -42,7 +42,7 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         this.plugin.activeBasesView = undefined;
     }
 
-    public processView(ignoreDataHash = false): void {
+    public async processView(ignoreDataHash = false): Promise<void> {
         if (this.isProcessing) return;
 
         const layoutMode = this.config.get('layout') ?? 'table';
@@ -112,7 +112,10 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                         for (const entry of group.entries) {
                             const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
                             // always use file mode on each entry since 'results' wouldn't make sense
-                            this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf, this.plugin.getFileCommandOverrides(entry.file));
+                            // Awaited so each entry's file is fully open and active before the next
+                            // one starts — commands resolve "the current file" via the workspace's
+                            // active leaf, so overlapping entries would race onto the wrong file.
+                            await this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf, this.plugin.getFileCommandOverrides(entry.file));
                         }
                     }
                 } catch (e) {
@@ -126,11 +129,11 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     }
 
     public onDataUpdated(): void {
-        this.processView(false);
+        void this.processView(false);
     }
 
     public onOpen(): void {
-        this.processView(true);
+        void this.processView(true);
     }
 
     private renderGrid(parent: HTMLElement, entries: BasesEntry[], order: string[]) {

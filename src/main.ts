@@ -34,7 +34,7 @@ function toggleMarkdownVisibility(container: HTMLElement, hidden: boolean): void
  * Strips the "plugin-id:" prefix Obsidian adds to command ids, so overrides
  * keyed by either the full id or the short id can both be looked up.
  */
-function stripCommandIdPrefix(id: string): string {
+export function stripCommandIdPrefix(id: string): string {
 	return id.includes(':') ? id.slice(id.indexOf(':') + 1) : id;
 }
 export default class ObsidianRuleEnginePlugin extends Plugin {
@@ -50,6 +50,19 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (args[0] instanceof Error) {
 			const msg = '⛔ ' + args[0].message?.length ? args[0].message : args[0].name;
 			console.error(...args);
+			// Errors always surface, regardless of showNotices — suppressing them
+			// would hide failures, not noise.
+			new Notice(msg);
+		}
+	}
+
+	/**
+	 * Informational Notice(), gated by the "Show notices" setting. Use for
+	 * result/status popups (command completion, enable/disable) that aren't
+	 * errors — see debug() for those, which always shows.
+	 */
+	notify(msg: string) {
+		if (this.settings.showNotices) {
 			new Notice(msg);
 		}
 	}
@@ -263,7 +276,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		await this.saveSettings();
 
 		const msg = enabled ? "Rule Engine Enabled" : "Rule Engine Disabled";
-		new Notice(msg);
+		this.notify(msg);
 		this.debug(msg);
 
 		const file = this.app.workspace.getActiveFile();
@@ -451,7 +464,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	async saveSettings() {
 		this.debug(`saving settings`);
 		if (this.activeBasesView && this.settings.processOnSave) {
-			this.activeBasesView.processView(true);
+			void this.activeBasesView.processView(true);
 		}
 		await this.saveData(this.settings);
 	}
@@ -562,7 +575,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return allCommands;
 	}
 
-	public executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null, groupLeaf?: WorkspaceLeaf, fileOverrides?: Record<string, Partial<CommandConfig>>): void {
+	public async executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null, groupLeaf?: WorkspaceLeaf, fileOverrides?: Record<string, Partial<CommandConfig>>): Promise<void> {
 		if (!commandIds?.length) return;
 		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file, groupLeaf });
 		const doCmds = () => {
@@ -577,7 +590,17 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 						const override = fileOverrides?.[cmd.id] ?? fileOverrides?.[shortId];
 						if (override?.enabled === false) continue;
 						const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
-						commandFn?.(false);
+						if (commandFn) {
+							commandFn(false);
+						} else if (cmd.editorCallback) {
+							// checkCallback/callback-less commands (e.g. editorCallback-only ones
+							// like taskDate) need an editor/view context instead of a boolean -
+							// resolve it from whichever leaf is currently active.
+							const activeEditor = this.app.workspace.activeEditor;
+							if (activeEditor?.editor) {
+								cmd.editorCallback(activeEditor.editor, activeEditor);
+							}
+						}
 					}
 				} else {
 					this.debug(`commands not executed for mode:`, mode);
@@ -587,7 +610,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			}
 		};
 		if (file) {
-
 			const leaf = this.app.workspace.getLeaf(
 				groupLeaf ? undefined : "split",
 				groupLeaf ? undefined : "vertical"
@@ -596,14 +618,19 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			if (groupLeaf) {
 				leaf.setGroupMember(groupLeaf);
 			}
-			leaf.openFile(file).then(() => {
+			try {
+				await leaf.openFile(file);
+				// Commands resolve "the current file" via workspace.getActiveFile()
+				// (e.g. checkCallback-based ones), which only reflects entry.file if
+				// this leaf is actually made active first - otherwise they silently
+				// act on whatever leaf the user last focused instead.
+				this.app.workspace.setActiveLeaf(leaf, { focus: false });
 				doCmds();
-			}).catch(e => {
+			} catch (e) {
 				this.debug(e);
-			}).finally(() => {
+			} finally {
 				this.debug(`leaf command execution finished`);
-			});
-			return;
+			}
 		} else {
 			doCmds();
 		}
