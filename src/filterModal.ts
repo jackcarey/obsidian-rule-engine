@@ -543,9 +543,12 @@ class FilterBuilder {
 
         // Conjunction word, the group's own AND/OR/NOR dropdown, and its
         // delete button all live on one row - same shape as a filter row
-        // (name + controls + delete), so it reads the same way.
+        // (name + controls + delete), so it reads the same way. Deliberately
+        // NOT .ore-filter-row - that class means "an actual leaf filter" to
+        // tests/selectors (e.g. .ore-filter-row .ore-property-input), and
+        // this row has no property/operator/value controls.
         settingGroup.addSetting((setting) => {
-            setting.settingEl.addClass("ore-filter-row");
+            setting.settingEl.addClass("ore-filter-subgroup-header-row");
             setting.setName(conjunctionWord);
             setting.addDropdown((dropdown) => {
                 dropdown.selectEl.addClass("conjunction");

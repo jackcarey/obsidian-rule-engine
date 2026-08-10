@@ -42,7 +42,8 @@
     background-color: var(--background-modifier-hover);
 }
 
-.ore-filter-row .setting-item-name {
+.ore-filter-row .setting-item-name,
+.ore-filter-subgroup-header-row .setting-item-name {
     min-width: 4.5rem;
     font-size: var(--font-ui-small);
     text-align: end;
@@ -54,7 +55,8 @@
    narrow controls (the subgroup's conjunction dropdown + delete button) that
    leaves a large, confusing gap between the name and the controls - pack them
    left instead, immediately after the name. */
-.ore-filter-row .setting-item-control {
+.ore-filter-row .setting-item-control,
+.ore-filter-subgroup-header-row .setting-item-control {
     justify-content: flex-start;
 }
 
