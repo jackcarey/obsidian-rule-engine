@@ -149,3 +149,15 @@ export async function openEditRuleModal(page: Page, ruleIndex = 0): Promise<void
   }, ruleIndex);
   await page.waitForSelector(".ore-edit-rule-modal", { timeout: 5000 });
 }
+
+/**
+ * Click the "Edit filters" button in an already-open edit rule modal and wait
+ * for FilterModal (the standalone modal hosting the actual filter builder) to
+ * open on top of it. The edit rule modal itself only shows a read-only
+ * summary — the interactive .filter-row/.filter-group-header controls this
+ * test suite drives all live inside FilterModal now.
+ */
+export async function openFilterModal(page: Page): Promise<void> {
+  await page.locator(".ore-edit-rule-modal button", { hasText: "Edit filters" }).click();
+  await page.waitForSelector(".ore-filter-modal", { timeout: 5000 });
+}

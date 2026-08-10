@@ -1,4 +1,4 @@
-import { closeModal, closeSettings, expect, openEditRuleModal, openNote, openPluginSettings, test } from "./fixtures";
+import { closeModal, closeSettings, expect, openEditRuleModal, openFilterModal, openNote, openPluginSettings, test } from "./fixtures";
 
 // ── 1. Plugin bootstrap ───────────────────────────────────────────────────────
 
@@ -151,14 +151,15 @@ test("edit rule modal opens with correct sections", async ({ page }) => {
   // Rule name input
   await expect(modal.locator("input[type=text]").first()).toBeVisible();
 
-  // Filters heading
-  await expect(modal.locator(".setting-item-name", { hasText: "Filters" })).toBeVisible();
+  // Section groups (Rule/Filters/Commands/HTML template) render as SettingGroup
+  // headings, not regular setting rows.
+  await expect(modal.locator(".setting-item-heading", { hasText: "Filters" })).toBeVisible();
+  await expect(modal.locator(".setting-item-heading", { hasText: "Commands" })).toBeVisible();
+  await expect(modal.locator(".setting-item-heading", { hasText: "HTML template" })).toBeVisible();
 
-  // Commands heading
-  await expect(modal.locator(".setting-item-name", { hasText: "Commands" })).toBeVisible();
-
-  // HTML template heading
-  await expect(modal.locator(".setting-item-name", { hasText: "HTML template" })).toBeVisible();
+  // Filters section shows a read-only summary and an "Edit filters" button
+  // instead of the inline filter builder.
+  await expect(modal.locator("button", { hasText: "Edit filters" })).toBeVisible();
 
   // Enable-for-context toggles
   await expect(modal.locator(".setting-item-name", { hasText: "Enable for file" })).toBeVisible();
@@ -271,31 +272,36 @@ test("edit rule modal rule name is editable", async ({ page }) => {
 test("filter builder shows existing filter condition", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
 
   // Rule 0 has a "file.name contains matched" filter
-  const filterRow = settingsPage.locator(".filter-row");
+  const filterRow = settingsPage.locator(".ore-filter-modal .filter-row");
   expect(await filterRow.count()).toBeGreaterThan(0);
 
-  await closeModal(settingsPage);
+  await closeModal(settingsPage); // FilterModal
+  await closeModal(settingsPage); // EditRuleModal
   await closeSettings(settingsPage, page);
 });
 
 test("filter builder — add a new filter", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
 
-  const countBefore = await settingsPage.locator(".filter-row").count();
+  const filterModal = settingsPage.locator(".ore-filter-modal");
+  const countBefore = await filterModal.locator(".filter-row").count();
 
   // Click "Add filter" button
-  const addFilterBtn = settingsPage.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
+  const addFilterBtn = filterModal.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
   await addFilterBtn.click();
   await settingsPage.waitForTimeout(300);
 
   // A new filter row should appear
-  const countAfter = await settingsPage.locator(".filter-row").count();
+  const countAfter = await filterModal.locator(".filter-row").count();
   expect(countAfter).toBeGreaterThan(countBefore);
 
-  await closeModal(settingsPage);
+  await closeModal(settingsPage); // FilterModal
+  await closeModal(settingsPage); // EditRuleModal
   await closeSettings(settingsPage, page);
 });
 
@@ -303,33 +309,36 @@ test("filter builder — delete a filter", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   // Use rule index 1 (tag rule) which has 1 filter, so deletion leaves 0 conditions (placeholder)
   await openEditRuleModal(settingsPage, 1);
+  await openFilterModal(settingsPage);
 
-  const modal = settingsPage.locator(".ore-edit-rule-modal");
+  const filterModal = settingsPage.locator(".ore-filter-modal");
 
   // Click add filter to ensure at least 1 explicit filter row
-  const addBtn = modal.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
+  const addBtn = filterModal.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
   await addBtn.click();
   await settingsPage.waitForTimeout(300);
 
-  const rowsBefore = await modal.locator(".filter-row").count();
+  const rowsBefore = await filterModal.locator(".filter-row").count();
 
   // Click the first delete (trash) button in a filter row
-  const deleteBtn = modal.locator(".filter-row .clickable-icon").first();
+  const deleteBtn = filterModal.locator(".filter-row .clickable-icon").first();
   await deleteBtn.click();
   await settingsPage.waitForTimeout(300);
 
-  const rowsAfter = await modal.locator(".filter-row").count();
+  const rowsAfter = await filterModal.locator(".filter-row").count();
   expect(rowsAfter).toBeLessThan(rowsBefore);
 
-  await closeModal(settingsPage);
+  await closeModal(settingsPage); // FilterModal
+  await closeModal(settingsPage); // EditRuleModal
   await closeSettings(settingsPage, page);
 });
 
 test("filter builder — property input accepts free text not in the suggestion list", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
 
-  const propertyInput = settingsPage.locator(".filter-row .ore-property-input").first();
+  const propertyInput = settingsPage.locator(".ore-filter-modal .filter-row .ore-property-input").first();
   await propertyInput.fill("some.unindexed.property");
   // Blur without picking a suggestion
   await settingsPage.keyboard.press("Tab");
@@ -337,23 +346,28 @@ test("filter builder — property input accepts free text not in the suggestion 
 
   await expect(propertyInput).toHaveValue("some.unindexed.property");
 
-  await closeModal(settingsPage);
+  await closeModal(settingsPage); // FilterModal
+  await closeModal(settingsPage); // EditRuleModal
   await closeSettings(settingsPage, page);
 });
 
 test("filter builder — operator dropdown changes and persists the filter's operator", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
 
   // Rule 0's filter is "file.name contains matched" — operator is a direct
   // child <select> of .ore-filter-expression (the relative-date/multi-select
   // dropdowns, if any, live nested inside .ore-filter-rhs-container instead).
-  const operatorSelect = settingsPage.locator(".ore-filter-expression > select.dropdown").first();
+  const operatorSelect = settingsPage.locator(".ore-filter-modal .ore-filter-expression > select.dropdown").first();
   await expect(operatorSelect).toHaveValue("contains");
 
   await operatorSelect.selectOption("does not contain");
   await expect(operatorSelect).toHaveValue("does not contain");
 
+  // FilterModal edits the rule's filterGroup by reference — "Done" just closes
+  // it, the outer edit rule modal's "Save" is what persists to plugin settings.
+  await settingsPage.locator(".ore-filter-modal button", { hasText: "Done" }).click();
   await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
   await settingsPage.waitForTimeout(300);
 
@@ -383,13 +397,15 @@ test("filter builder — operator dropdown changes and persists the filter's ope
 test("filter builder — conjunction dropdown changes AND/OR/NOR and persists", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
 
-  const conjunctionSelect = settingsPage.locator(".filter-group-header select.conjunction").first();
+  const conjunctionSelect = settingsPage.locator(".ore-filter-modal .filter-group-header select.conjunction").first();
   await expect(conjunctionSelect).toHaveValue("and");
 
   await conjunctionSelect.selectOption("or");
   await expect(conjunctionSelect).toHaveValue("or");
 
+  await settingsPage.locator(".ore-filter-modal button", { hasText: "Done" }).click();
   await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
   await settingsPage.waitForTimeout(300);
 
@@ -421,13 +437,15 @@ test("filter builder — relative-date unit dropdown changes and persists", asyn
   // not 3: the earlier "delete Folder Rule" test (section 2) already removed
   // the rule that originally sat between "Tag Rule" and this one.
   await openEditRuleModal(settingsPage, 2);
+  await openFilterModal(settingsPage);
 
-  const unitSelect = settingsPage.locator(".ore-relative-date-container select.dropdown").first();
+  const unitSelect = settingsPage.locator(".ore-filter-modal .ore-relative-date-container select.dropdown").first();
   await expect(unitSelect).toHaveValue("days");
 
   await unitSelect.selectOption("weeks");
   await expect(unitSelect).toHaveValue("weeks");
 
+  await settingsPage.locator(".ore-filter-modal button", { hasText: "Done" }).click();
   await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
   await settingsPage.waitForTimeout(300);
 
