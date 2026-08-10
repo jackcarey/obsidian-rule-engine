@@ -4,6 +4,7 @@ import { RuleConfig, FilterGroup } from "./types";
 import { DEFAULT_RULES } from "./consts";
 import { EditRuleModal } from "editRuleModal";
 import { CommandSettingsModal } from "commandSettingsModal";
+import { ConfirmModal } from "confirmModal";
 
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	plugin: ObsidianRuleEnginePlugin;
@@ -79,9 +80,16 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				this.update();
 			},
 			onDelete: (index) => {
-				this.plugin.settings.rules.splice(index, 1);
-				void this.plugin.saveSettings();
-				this.update();
+				const rule = this.plugin.settings.rules[index];
+				new ConfirmModal(
+					this.app,
+					`Delete rule "${rule?.name ?? "this rule"}"? This can't be undone.`,
+					() => {
+						this.plugin.settings.rules.splice(index, 1);
+						void this.plugin.saveSettings();
+						this.update();
+					}
+				).open();
 			},
 			addItem: {
 				name: "Add new rule",
