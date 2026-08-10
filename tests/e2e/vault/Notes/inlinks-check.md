@@ -1,5 +1,5 @@
 ---
-description: "Has exactly 2 resolved incoming links — used to test the file.inlinks filter"
+description: "Has exactly 2 resolved incoming links - used to test the file.inlinks filter"
 ---
 
 # Inlinks Check

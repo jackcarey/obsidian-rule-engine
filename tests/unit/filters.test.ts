@@ -1,11 +1,14 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { applyFilterChain } from "../../src/filters";
 
 function apply(value: unknown, chain: string) {
-	return applyFilterChain(value as Parameters<typeof applyFilterChain>[0], chain);
+	return applyFilterChain(
+		value as Parameters<typeof applyFilterChain>[0],
+		chain,
+	);
 }
 
-describe("applyFilterChain — basics", () => {
+describe("applyFilterChain - basics", () => {
 	it("returns the original value when chain is empty string", () => {
 		expect(apply("hello", "")).toBe("hello");
 	});
@@ -18,49 +21,67 @@ describe("applyFilterChain — basics", () => {
 });
 
 describe("upper", () => {
-	it("uppercases a string", () => expect(apply("hello", "upper")).toBe("HELLO"));
-	it("handles already-uppercase input", () => expect(apply("HELLO", "upper")).toBe("HELLO"));
+	it("uppercases a string", () =>
+		expect(apply("hello", "upper")).toBe("HELLO"));
+	it("handles already-uppercase input", () =>
+		expect(apply("HELLO", "upper")).toBe("HELLO"));
 	it("handles mixed case", () => expect(apply("HeLLo", "upper")).toBe("HELLO"));
 });
 
 describe("lower", () => {
-	it("lowercases a string", () => expect(apply("HELLO", "lower")).toBe("hello"));
-	it("handles already-lowercase input", () => expect(apply("hello", "lower")).toBe("hello"));
+	it("lowercases a string", () =>
+		expect(apply("HELLO", "lower")).toBe("hello"));
+	it("handles already-lowercase input", () =>
+		expect(apply("hello", "lower")).toBe("hello"));
 });
 
 describe("capitalize", () => {
-	it("uppercases first char, lowercases rest", () => expect(apply("hello world", "capitalize")).toBe("Hello world"));
-	it("handles all-caps input", () => expect(apply("HELLO", "capitalize")).toBe("Hello"));
+	it("uppercases first char, lowercases rest", () =>
+		expect(apply("hello world", "capitalize")).toBe("Hello world"));
+	it("handles all-caps input", () =>
+		expect(apply("HELLO", "capitalize")).toBe("Hello"));
 });
 
 describe("title", () => {
-	it("title-cases each word", () => expect(apply("hello world", "title")).toBe("Hello World"));
-	it("handles mixed-case words", () => expect(apply("hELLo WoRLD", "title")).toBe("Hello World"));
+	it("title-cases each word", () =>
+		expect(apply("hello world", "title")).toBe("Hello World"));
+	it("handles mixed-case words", () =>
+		expect(apply("hELLo WoRLD", "title")).toBe("Hello World"));
 });
 
 describe("camel", () => {
-	it("converts space-separated to camelCase", () => expect(apply("hello world", "camel")).toBe("helloWorld"));
-	it("handles hyphen-separated input", () => expect(apply("foo-bar-baz", "camel")).toBe("fooBarBaz"));
+	it("converts space-separated to camelCase", () =>
+		expect(apply("hello world", "camel")).toBe("helloWorld"));
+	it("handles hyphen-separated input", () =>
+		expect(apply("foo-bar-baz", "camel")).toBe("fooBarBaz"));
 });
 
 describe("kebab", () => {
-	it("converts PascalCase to kebab-case", () => expect(apply("HelloWorld", "kebab")).toBe("hello-world"));
-	it("converts space-separated to kebab-case", () => expect(apply("hello world", "kebab")).toBe("hello-world"));
+	it("converts PascalCase to kebab-case", () =>
+		expect(apply("HelloWorld", "kebab")).toBe("hello-world"));
+	it("converts space-separated to kebab-case", () =>
+		expect(apply("hello world", "kebab")).toBe("hello-world"));
 });
 
 describe("snake", () => {
-	it("converts PascalCase to snake_case", () => expect(apply("HelloWorld", "snake")).toBe("hello_world"));
-	it("converts space-separated to snake_case", () => expect(apply("hello world", "snake")).toBe("hello_world"));
+	it("converts PascalCase to snake_case", () =>
+		expect(apply("HelloWorld", "snake")).toBe("hello_world"));
+	it("converts space-separated to snake_case", () =>
+		expect(apply("hello world", "snake")).toBe("hello_world"));
 });
 
 describe("trim", () => {
-	it("removes leading and trailing whitespace", () => expect(apply("  hello  ", "trim")).toBe("hello"));
-	it("returns unchanged string if no whitespace", () => expect(apply("hello", "trim")).toBe("hello"));
+	it("removes leading and trailing whitespace", () =>
+		expect(apply("  hello  ", "trim")).toBe("hello"));
+	it("returns unchanged string if no whitespace", () =>
+		expect(apply("hello", "trim")).toBe("hello"));
 });
 
 describe("replace", () => {
 	it("replaces a literal substring (all occurrences)", () => {
-		expect(apply("hello world world", 'replace:"world","there"')).toBe("hello there there");
+		expect(apply("hello world world", 'replace:"world","there"')).toBe(
+			"hello there there",
+		);
 	});
 	it("escapes regex meta-characters in the search string", () => {
 		expect(apply("1+1=2", 'replace:"+","plus"')).toBe("1plus1=2");
@@ -69,7 +90,9 @@ describe("replace", () => {
 		expect(apply("hello123", 'replace:"/[0-9]+/g",""')).toBe("hello");
 	});
 	it("supports regex flags (case-insensitive)", () => {
-		expect(apply("Hello HELLO hello", 'replace:"/hello/gi","hi"')).toBe("hi hi hi");
+		expect(apply("Hello HELLO hello", 'replace:"/hello/gi","hi"')).toBe(
+			"hi hi hi",
+		);
 	});
 	it("replaces with empty string when replacement arg is omitted", () => {
 		expect(apply("hello world", 'replace:"world"')).toBe("hello ");
@@ -77,8 +100,10 @@ describe("replace", () => {
 });
 
 describe("wikilink", () => {
-	it("wraps value in [[ ]]", () => expect(apply("My Note", "wikilink")).toBe("[[My Note]]"));
-	it("adds alias with pipe", () => expect(apply("My Note", 'wikilink:"alias"')).toBe("[[My Note|alias]]"));
+	it("wraps value in [[ ]]", () =>
+		expect(apply("My Note", "wikilink")).toBe("[[My Note]]"));
+	it("adds alias with pipe", () =>
+		expect(apply("My Note", 'wikilink:"alias"')).toBe("[[My Note|alias]]"));
 	it("maps over an array", () => {
 		expect(apply(["A", "B"], "wikilink")).toBe("[[A]], [[B]]");
 	});
@@ -89,14 +114,18 @@ describe("wikilink", () => {
 
 describe("link", () => {
 	it("creates markdown link with default label 'link'", () => {
-		expect(apply("https://example.com", "link")).toBe("[link](https://example.com)");
+		expect(apply("https://example.com", "link")).toBe(
+			"[link](https://example.com)",
+		);
 	});
 	it("uses custom label when provided", () => {
-		expect(apply("https://example.com", 'link:"Click here"')).toBe("[Click here](https://example.com)");
+		expect(apply("https://example.com", 'link:"Click here"')).toBe(
+			"[Click here](https://example.com)",
+		);
 	});
 	it("maps over an array", () => {
 		expect(apply(["https://a.com", "https://b.com"], "link")).toBe(
-			"[link](https://a.com), [link](https://b.com)"
+			"[link](https://a.com), [link](https://b.com)",
 		);
 	});
 });
@@ -106,7 +135,9 @@ describe("image", () => {
 		expect(apply("photo.png", "image")).toBe("![](photo.png)");
 	});
 	it("uses custom alt text", () => {
-		expect(apply("photo.png", 'image:"My Photo"')).toBe("![My Photo](photo.png)");
+		expect(apply("photo.png", 'image:"My Photo"')).toBe(
+			"![My Photo](photo.png)",
+		);
 	});
 	it("maps over an array (newline-separated)", () => {
 		expect(apply(["a.png", "b.png"], "image")).toBe("![](a.png)\n![](b.png)");
@@ -115,7 +146,9 @@ describe("image", () => {
 
 describe("blockquote", () => {
 	it("prefixes each line with '> '", () => {
-		expect(apply("line1\nline2\nline3", "blockquote")).toBe("> line1\n> line2\n> line3");
+		expect(apply("line1\nline2\nline3", "blockquote")).toBe(
+			"> line1\n> line2\n> line3",
+		);
 	});
 	it("handles single-line input", () => {
 		expect(apply("quote", "blockquote")).toBe("> quote");
@@ -147,24 +180,32 @@ describe("join", () => {
 });
 
 describe("first", () => {
-	it("returns first element of an array", () => expect(apply(["x", "y", "z"], "first")).toBe("x"));
-	it("returns non-array value unchanged", () => expect(apply("hello", "first")).toBe("hello"));
+	it("returns first element of an array", () =>
+		expect(apply(["x", "y", "z"], "first")).toBe("x"));
+	it("returns non-array value unchanged", () =>
+		expect(apply("hello", "first")).toBe("hello"));
 });
 
 describe("last", () => {
-	it("returns last element of an array", () => expect(apply(["x", "y", "z"], "last")).toBe("z"));
-	it("returns non-array value unchanged", () => expect(apply("hello", "last")).toBe("hello"));
+	it("returns last element of an array", () =>
+		expect(apply(["x", "y", "z"], "last")).toBe("z"));
+	it("returns non-array value unchanged", () =>
+		expect(apply("hello", "last")).toBe("hello"));
 });
 
 describe("slice", () => {
 	it("slices a string", () => expect(apply("hello", "slice:1,3")).toBe("el"));
-	it("slices an array", () => expect(apply(["a", "b", "c", "d"], "slice:1,3")).toEqual(["b", "c"]));
-	it("slices from index to end when end omitted", () => expect(apply("hello", "slice:2")).toBe("llo"));
-	it("returns non-sliceable value unchanged", () => expect(apply(42, "slice:1")).toBe(42));
+	it("slices an array", () =>
+		expect(apply(["a", "b", "c", "d"], "slice:1,3")).toEqual(["b", "c"]));
+	it("slices from index to end when end omitted", () =>
+		expect(apply("hello", "slice:2")).toBe("llo"));
+	it("returns non-sliceable value unchanged", () =>
+		expect(apply(42, "slice:1")).toBe(42));
 });
 
 describe("count", () => {
-	it("returns array length", () => expect(apply(["a", "b", "c"], "count")).toBe(3));
+	it("returns array length", () =>
+		expect(apply(["a", "b", "c"], "count")).toBe(3));
 	it("returns string length", () => expect(apply("hello", "count")).toBe(5));
 	it("returns 0 for empty array", () => expect(apply([], "count")).toBe(0));
 });
@@ -175,7 +216,8 @@ describe("calc", () => {
 	it("multiplies", () => expect(apply(4, 'calc:"*3"')).toBe(12));
 	it("divides", () => expect(apply(10, 'calc:"/2"')).toBe(5));
 	it("raises to power with ^", () => expect(apply(2, 'calc:"^10"')).toBe(1024));
-	it("raises to power with **", () => expect(apply(2, 'calc:"**10"')).toBe(1024));
+	it("raises to power with **", () =>
+		expect(apply(2, 'calc:"**10"')).toBe(1024));
 	it("returns original value for non-numeric input", () => {
 		expect(apply("hello", 'calc:"+1"')).toBe("hello");
 	});
@@ -223,7 +265,9 @@ describe("date_modify", () => {
 
 describe("strip_tags", () => {
 	it("removes HTML tags from a string", () => {
-		expect(apply("<b>hello</b> <i>world</i>", "strip_tags")).toBe("hello world");
+		expect(apply("<b>hello</b> <i>world</i>", "strip_tags")).toBe(
+			"hello world",
+		);
 	});
 	it("returns plain text unchanged", () => {
 		expect(apply("hello world", "strip_tags")).toBe("hello world");
@@ -231,10 +275,10 @@ describe("strip_tags", () => {
 });
 
 describe("split with unquoted separator", () => {
-    it("treats an unquoted non-numeric arg as a literal separator string", () => {
-        // "." is unquoted and non-numeric — hits the bare-string return path in parseFilterArg
-        expect(apply("a.b.c", "split:.")).toEqual(["a", "b", "c"]);
-    });
+	it("treats an unquoted non-numeric arg as a literal separator string", () => {
+		// "." is unquoted and non-numeric - hits the bare-string return path in parseFilterArg
+		expect(apply("a.b.c", "split:.")).toEqual(["a", "b", "c"]);
+	});
 });
 
 describe("filter errors", () => {
@@ -255,7 +299,9 @@ describe("filter chaining", () => {
 		expect(apply("a,b,c", 'split | join:" "')).toBe("a b c");
 	});
 	it("handles three-step chain", () => {
-		expect(apply("  hello world  ", 'trim | capitalize | replace:"world","there"')).toBe("Hello there");
+		expect(
+			apply("  hello world  ", 'trim | capitalize | replace:"world","there"'),
+		).toBe("Hello there");
 	});
 	it("handles quoted pipes inside filter arguments (does not split on them)", () => {
 		expect(apply("foo|bar", 'replace:"|","-"')).toBe("foo-bar");

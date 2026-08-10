@@ -123,7 +123,7 @@ test.afterEach(async ({ page }) => {
 
 // ── TF-IDF tags ────────────────────────────────────────────────────────────
 
-test("generate TF-IDF tags — appends a distinctive term without dropping the existing tag", async ({ page }) => {
+test("generate TF-IDF tags - appends a distinctive term without dropping the existing tag", async ({ page }) => {
   await configureCommand(page, TFIDF_COMMAND_ID, { frontmatterField: "tags", maxTags: 10, corpusScope: "vault" });
   await openNote(page, FIXTURE_NOTE);
 
@@ -136,7 +136,7 @@ test("generate TF-IDF tags — appends a distinctive term without dropping the e
   expect(tags?.some((t) => t.toLowerCase().includes("xylophone"))).toBe(true);
 });
 
-test("generate TF-IDF tags — respects the max tag count", async ({ page }) => {
+test("generate TF-IDF tags - respects the max tag count", async ({ page }) => {
   await configureCommand(page, TFIDF_COMMAND_ID, { frontmatterField: "tags", maxTags: 2, corpusScope: "vault" });
   await openNote(page, FIXTURE_NOTE);
 
@@ -146,7 +146,7 @@ test("generate TF-IDF tags — respects the max tag count", async ({ page }) => 
   expect(tags?.length).toBeLessThanOrEqual(2);
 });
 
-test("generate TF-IDF tags — running twice does not keep growing the field past the limit", async ({ page }) => {
+test("generate TF-IDF tags - running twice does not keep growing the field past the limit", async ({ page }) => {
   await configureCommand(page, TFIDF_COMMAND_ID, { frontmatterField: "tags", maxTags: 3, corpusScope: "vault" });
   await openNote(page, FIXTURE_NOTE);
 
@@ -159,7 +159,7 @@ test("generate TF-IDF tags — running twice does not keep growing the field pas
   expect(tags?.length).toBeLessThanOrEqual(3);
 });
 
-test("generate TF-IDF tags — already at/over the max: adds nothing and removes nothing", async ({ page }) => {
+test("generate TF-IDF tags - already at/over the max: adds nothing and removes nothing", async ({ page }) => {
   const overCapacity = ["existing-tag", "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"];
   await setFrontmatterTags(page, FIXTURE_NOTE, overCapacity);
   await configureCommand(page, TFIDF_COMMAND_ID, { frontmatterField: "tags", maxTags: 5, corpusScope: "vault" });
@@ -179,7 +179,7 @@ test("generate TF-IDF tags — already at/over the max: adds nothing and removes
 // works, not just unit tests with the model mocked out. Generous timeouts
 // account for a cold model download on top of a cold model load.
 
-test("generate semantic tags — vocabularyWeight=1 only adds tags already used elsewhere in the vault", async ({ page }) => {
+test("generate semantic tags - vocabularyWeight=1 only adds tags already used elsewhere in the vault", async ({ page }) => {
   test.setTimeout(150000);
   await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 10, vocabularyWeight: 1 });
   await openNote(page, FIXTURE_NOTE);
@@ -193,7 +193,7 @@ test("generate semantic tags — vocabularyWeight=1 only adds tags already used 
   expect(tags?.some((t) => t.toLowerCase().includes("xylophone"))).toBe(false);
 });
 
-test("generate semantic tags — vocabularyWeight=0 invents tags from the file's own content instead of reusing the vault's", async ({ page }) => {
+test("generate semantic tags - vocabularyWeight=0 invents tags from the file's own content instead of reusing the vault's", async ({ page }) => {
   test.setTimeout(150000);
   await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 10, vocabularyWeight: 0 });
   await openNote(page, FIXTURE_NOTE);
@@ -207,7 +207,7 @@ test("generate semantic tags — vocabularyWeight=0 invents tags from the file's
   expect(tags?.some((t) => t.toLowerCase().includes("xylophone"))).toBe(true);
 });
 
-test("generate semantic tags — respects the max tag count", async ({ page }) => {
+test("generate semantic tags - respects the max tag count", async ({ page }) => {
   test.setTimeout(150000);
   await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 2, vocabularyWeight: 1 });
   await openNote(page, FIXTURE_NOTE);
@@ -219,7 +219,7 @@ test("generate semantic tags — respects the max tag count", async ({ page }) =
   expect(tags?.length).toBeLessThanOrEqual(2);
 });
 
-test("generate semantic tags — already at/over the max: adds nothing and removes nothing", async ({ page }) => {
+test("generate semantic tags - already at/over the max: adds nothing and removes nothing", async ({ page }) => {
   test.setTimeout(150000);
   const overCapacity = ["existing-tag", "e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8", "e9"];
   await setFrontmatterTags(page, FIXTURE_NOTE, overCapacity);
@@ -233,7 +233,7 @@ test("generate semantic tags — already at/over the max: adds nothing and remov
   expect(tags).toEqual(overCapacity);
 });
 
-test("generate semantic tags — downloaded model files land in Cache Storage", async ({ page }) => {
+test("generate semantic tags - downloaded model files land in Cache Storage", async ({ page }) => {
   test.setTimeout(150000);
   await configureCommand(page, SEMANTIC_COMMAND_ID, { frontmatterField: "tags", maxTags: 10, vocabularyWeight: 1 });
   await openNote(page, FIXTURE_NOTE);
@@ -250,7 +250,7 @@ test("generate semantic tags — downloaded model files land in Cache Storage", 
   expect(cachedFileCount).toBeGreaterThanOrEqual(5);
 });
 
-test("generate semantic tags — reuses the cached model after a plugin reload instead of re-downloading", async ({ page }) => {
+test("generate semantic tags - reuses the cached model after a plugin reload instead of re-downloading", async ({ page }) => {
   test.setTimeout(150000);
   // A prior test has already populated Cache Storage; reloading the plugin
   // resets the in-memory extractorPromise, so the next run below can only

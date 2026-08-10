@@ -4,6 +4,7 @@ import { RuleConfig, FilterGroup } from "./types";
 import { DEFAULT_RULES } from "./consts";
 import { EditRuleModal } from "editRuleModal";
 import { CommandSettingsModal } from "commandSettingsModal";
+import { ConfirmModal } from "confirmModal";
 
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	plugin: ObsidianRuleEnginePlugin;
@@ -79,9 +80,16 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				this.update();
 			},
 			onDelete: (index) => {
-				this.plugin.settings.rules.splice(index, 1);
-				void this.plugin.saveSettings();
-				this.update();
+				const rule = this.plugin.settings.rules[index];
+				new ConfirmModal(
+					this.app,
+					`Delete rule "${rule?.name ?? "this rule"}"? This can't be undone.`,
+					() => {
+						this.plugin.settings.rules.splice(index, 1);
+						void this.plugin.saveSettings();
+						this.update();
+					}
+				).open();
 			},
 			addItem: {
 				name: "Add new rule",
@@ -111,9 +119,11 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			items: this.plugin.settings.rules.map((rule, index) => ({
 				name: rule.name,
 				render: (setting: Setting) => {
+					const templateActive = !!rule.template?.trim().length
+						&& (rule.enableTemplateForFile || rule.enableTemplateForBase || rule.enableTemplateForCanvas);
 					const summary = [
 						`${rule.commandIds.length} command${rule.commandIds.length === 1 ? "" : "s"}`,
-						rule.template?.length ? "has template" : "no template",
+						templateActive ? "has template" : "no template",
 						rule.enabled ? undefined : "disabled",
 					].filter((str): str is string => Boolean(str?.length)).join(" · ");
 					setting
@@ -177,6 +187,11 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				},
 			},
 			{
+				name: "Show notices",
+				desc: "Show popup notices for command results (e.g. tags added, MOC updated) and the enable/disable toggle. Errors are always shown regardless of this setting.",
+				control: { type: "toggle", key: "showNotices" },
+			},
+			{
 				name: "Debug",
 				desc: "Log debug messages to the developer tools",
 				control: { type: "toggle", key: "debug" },
@@ -210,7 +225,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 								btn.setIcon('settings')
 									.setTooltip(`Configure ${name}`)
 									.onClick(() => {
-										new CommandSettingsModal(this.app, name, settingCallback, currentConfig, saveFn).open();
+										new CommandSettingsModal(this.app, id, name, settingCallback, currentConfig, saveFn).open();
 									});
 							});
 						}

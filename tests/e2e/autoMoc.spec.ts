@@ -154,7 +154,7 @@ test("heading matching is case-insensitive and updates the same section", async 
 	expect(content).toContain("[[moc-match-any]]");
 });
 
-test("creates the heading when it doesn't exist, one level deeper than the file's last heading", async ({ page }) => {
+test("creates the heading when it doesn't exist, at the default level (2)", async ({ page }) => {
 	const noHeadingContent = ["---", "tags:", "  - moc-a", "---", "", "# Title", "", "## Existing", "", "body text", ""].join("\n");
 	await setFileContent(page, SOURCE_NOTE, noHeadingContent);
 	await configureCommand(page, { mode: "any", heading: "New Links" });
@@ -163,11 +163,28 @@ test("creates the heading when it doesn't exist, one level deeper than the file'
 	await runCommand(page);
 	const content = await waitForContentChange(page, SOURCE_NOTE, noHeadingContent, 15000);
 
-	expect(content).toContain("### New Links");
+	expect(content).toContain("## New Links");
 	expect(content).toContain("[[moc-match-any]]");
 	// Existing content untouched.
 	expect(content).toContain("## Existing");
 	expect(content).toContain("body text");
+});
+
+test("creates the heading at a configured custom level", async ({ page }) => {
+	const noHeadingContent = ["---", "tags:", "  - moc-a", "---", "", "# Title", "", "## Existing", "", "body text", ""].join("\n");
+	await setFileContent(page, SOURCE_NOTE, noHeadingContent);
+	await configureCommand(page, { mode: "any", heading: "New Links", headingLevel: 4 });
+	await openNote(page, SOURCE_NOTE);
+
+	await runCommand(page);
+	const content = await waitForContentChange(page, SOURCE_NOTE, noHeadingContent, 15000);
+
+	expect(content).toContain("#### New Links");
+	// "#### New Links" contains "## New Links" as a raw substring (the last two
+	// hashes + text), so this must check for a *line* that's exactly level 2,
+	// not use toContain.
+	expect(content).not.toMatch(/^## New Links$/m);
+	expect(content).toContain("[[moc-match-any]]");
 });
 
 test("running twice is idempotent - content doesn't drift or duplicate", async ({ page }) => {

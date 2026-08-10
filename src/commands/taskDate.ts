@@ -14,7 +14,7 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
     id: TASK_DATE_ID,
     name: 'Fill emoji task due dates',
     description: 'The due date will always fall back to the last modified time of the file if the field or title are not parsed.',
-    settingCallback: (settingGroup, currentConfig, saveFn) => {
+    settingCallback: (currentConfig, saveFn) => {
         const params = currentConfig.params;
         const propertyDefs = plugin.scanVaultProperties();
         const propertyDefSuggestions = propertyDefs.map(def => {
@@ -40,44 +40,38 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
                     ? frontmatterFieldSuggestion
                     : []]
             ;
-        settingGroup.addSetting(setting => {
-            setting
-                .setName('Frontmatter field')
-                .setDesc('Parse the date from a frontmatter field');
-            addOverrideHint(setting, TASK_DATE_ID, 'frontmatterField');
-            setting
-                .addButton(buttonEl => {
-                    buttonEl.setButtonText(params.frontmatterField?.length ? params.frontmatterField : 'None');
-                    const onSelect = (value: string) => {
-                        saveFn({ params: { ...params, frontmatterField: value } }).then(() => {
-                            const displayText = value?.length ? value : 'None';
-                            buttonEl.setButtonText(displayText);
-                        }).catch(e => plugin.debug(e));
-                    };
-                    const comboValue = params.frontmatterField?.length ? params.frontmatterField : '';
-                    const combo = new ComboboxSuggestModal(
-                        plugin?.app,
-                        suggestItems,
-                        comboValue,
-                        onSelect,
-                        buttonEl.buttonEl,
-                    );
-                    buttonEl.onClick(() => combo.open());
-                });
-        });
-        settingGroup.addSetting(setting => {
-            setting
-                .setName('Parse from title')
-                .setDesc('If a date cannot be found in frontmatter, should one be parsed from the title (in yyyy-mm-dd format)?')
-                .addToggle(toggle => {
-                    toggle.setValue(!!params.parseTitle);
-                    toggle.onChange(async val => {
-                        await saveFn({ params: { ...params, parseTitle: val } });
+        return [
+            {
+                name: 'Frontmatter field',
+                desc: 'Parse the date from a frontmatter field',
+                render: (setting) => {
+                    setting.addButton(buttonEl => {
+                        buttonEl.setButtonText(params.frontmatterField?.length ? params.frontmatterField : 'None');
+                        const onSelect = (value: string) => {
+                            saveFn({ params: { ...params, frontmatterField: value } }).then(() => {
+                                const displayText = value?.length ? value : 'None';
+                                buttonEl.setButtonText(displayText);
+                            }).catch(e => plugin.debug(e));
+                        };
+                        const comboValue = params.frontmatterField?.length ? params.frontmatterField : '';
+                        const combo = new ComboboxSuggestModal(
+                            plugin?.app,
+                            suggestItems,
+                            comboValue,
+                            onSelect,
+                            buttonEl.buttonEl,
+                        );
+                        buttonEl.onClick(() => combo.open());
                     });
-
-                });
-            addOverrideHint(setting, TASK_DATE_ID, 'parseTitle');
-        });
+                    addOverrideHint(setting, TASK_DATE_ID, 'frontmatterField');
+                },
+            },
+            {
+                name: 'Parse from title',
+                desc: 'If a date cannot be found in frontmatter, should one be parsed from the title (in yyyy-mm-dd format)?',
+                control: { type: 'toggle', key: 'parseTitle' },
+            },
+        ];
     },
     editorCallback: (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
         const file = view.file;

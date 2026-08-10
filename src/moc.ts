@@ -67,18 +67,16 @@ export function findMocMatches(app: App, file: TFile, sourceTags: string[], mode
  *
  * - Heading found: everything from right after it up to the next heading of
  *   equal-or-shallower level (or EOF) is replaced with `lines`.
- * - Heading missing: a new one is appended at the end of the file, one level
- *   deeper than the file's last heading (capped at 6), or level 2 if the
- *   file has no headings at all.
+ * - Heading missing: a new one is appended at the end of the file at
+ *   `missingHeadingLevel` (clamped to 1-6).
  */
-export function applyMocSection(content: string, headings: HeadingCache[], headingName: string, lines: string[]): string {
+export function applyMocSection(content: string, headings: HeadingCache[], headingName: string, lines: string[], missingHeadingLevel: number = 2): string {
 	const contentLines = content.split("\n");
 	const normalizedTarget = headingName.trim().toLowerCase();
 	const matchIndex = headings.findIndex(h => h.heading.trim().toLowerCase() === normalizedTarget);
 
 	if (matchIndex === -1) {
-		const lastHeading = headings[headings.length - 1];
-		const newLevel = lastHeading ? Math.min(6, lastHeading.level + 1) : 2;
+		const newLevel = Math.max(1, Math.min(6, Math.round(missingHeadingLevel)));
 		const headingLine = `${"#".repeat(newLevel)} ${headingName.trim()}`;
 
 		const trimmedTrailingBlank = contentLines[contentLines.length - 1]?.trim() === ""

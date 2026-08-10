@@ -16,8 +16,8 @@ export const OBSIDIAN_BIN =
   (process.platform === "win32"
     ? "C:\\Program Files\\Obsidian\\Obsidian.exe"
     : process.platform === "darwin"
-    ? "/Applications/Obsidian.app/Contents/MacOS/Obsidian"
-    : "/opt/obsidian/obsidian"); // set OBSIDIAN_BIN in CI
+      ? "/Applications/Obsidian.app/Contents/MacOS/Obsidian"
+      : "/opt/obsidian/obsidian"); // set OBSIDIAN_BIN in CI
 
 export const CDP_PORT = parseInt(process.env.CDP_PORT ?? "9223", 10);
 
@@ -197,7 +197,7 @@ export default async function globalSetup() {
   );
 
   // Notes with a relative `check_date` for the "within past"/"within future" filter rules
-  // (gitignored, so must be generated — a checked-in fixed date would go stale relative to "now").
+  // (gitignored, so must be generated - a checked-in fixed date would go stale relative to "now").
   // 3/5-day buffers, matching src/__tests__/matcher.test.ts, so local-midnight vs UTC-ms
   // timezone differences (max ~26h) cannot flip the result.
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -253,7 +253,7 @@ export default async function globalSetup() {
   config.vaults = vaults;
   writeFileSync(configPath, JSON.stringify(config, null, 2));
 
-  // 4. Kill ALL existing Obsidian processes — Electron's single-instance lock would
+  // 4. Kill ALL existing Obsidian processes - Electron's single-instance lock would
   //    forward our --remote-debugging-port to the already-running instance (which has
   //    no debug port) and exit, so the CDP server would never start.
   console.debug("[e2e] Killing any existing Obsidian instances...");

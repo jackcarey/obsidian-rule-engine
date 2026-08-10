@@ -4,7 +4,7 @@ import { defineConfig } from "@playwright/test";
  * E2E tests for the Rule Engine Obsidian plugin.
  *
  * These tests drive the REAL Obsidian Electron app via Chrome DevTools Protocol (CDP).
- * No browser binaries need to be installed — Playwright connects to the already-running
+ * No browser binaries need to be installed - Playwright connects to the already-running
  * Obsidian process over its --remote-debugging-port.
  *
  * CI requirements:
@@ -27,7 +27,7 @@ export default defineConfig({
   globalSetup: "./tests/e2e/global-setup.ts",
   globalTeardown: "./tests/e2e/global-teardown.ts",
   use: {
-    // No browser launch config — we use connectOverCDP in fixtures
+    // No browser launch config - we use connectOverCDP in fixtures
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },

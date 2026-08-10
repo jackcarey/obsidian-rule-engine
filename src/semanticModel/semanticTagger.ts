@@ -7,6 +7,8 @@ export interface SemanticTagOptions {
 	maxCandidates: number;
 	/** Characters of note content fed to the embedding model. */
 	contentCharLimit?: number;
+	/** Minimum cosine similarity (0-1) a vocabulary tag must reach to be returned. */
+	minScore?: number;
 }
 
 const DEFAULT_CONTENT_CHAR_LIMIT = 2000;
@@ -51,9 +53,10 @@ export async function computeSemanticCandidates(app: App, file: TFile, options: 
 	]);
 	if (!noteVector) return [];
 
+	const minScore = options.minScore ?? -Infinity;
 	const scored = vocabulary
 		.map(tag => ({ tag, score: cosineSimilarity(noteVector, tagVectors.get(tag) ?? []) }))
-		.filter(s => tagVectors.has(s.tag));
+		.filter(s => tagVectors.has(s.tag) && s.score >= minScore);
 	scored.sort((a, b) => b.score - a.score || a.tag.localeCompare(b.tag));
 
 	return scored.slice(0, options.maxCandidates).map(s => s.tag);

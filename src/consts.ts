@@ -41,6 +41,7 @@ export const DEFAULT_SETTINGS: CustomRulesSettings = {
     processBaseResultsAutomatically: false,
     processOnSave: false,
     debug: false,
+    showNotices: true,
     rules: [
         {
             id: 'default-1',
