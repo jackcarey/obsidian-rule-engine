@@ -29,17 +29,6 @@
     margin-top: var(--size-2-3);
 }
 
-/* The subgroup's conjunction word ("and"/"or"/"Where") sits in the
-   SettingGroup's own heading slot (next to its delete button) - de-emphasize
-   it from a full section heading down to a small connector word, matching
-   the row-level conjunction labels in .ore-filter-row .setting-item-name. */
-.ore-filter-subgroup .setting-item-heading {
-    padding: 0;
-    margin: 0;
-    min-height: 0;
-    border: none;
-}
-
 .ore-parent-query-container select.conjunction {
     border: none;
     padding-top: 0;
@@ -58,6 +47,15 @@
     font-size: var(--font-ui-small);
     text-align: end;
     color: var(--text-muted);
+}
+
+/* Obsidian's default .setting-item-control is justify-content: flex-end,
+   which packs a row's controls against its far right edge. For rows with few/
+   narrow controls (the subgroup's conjunction dropdown + delete button) that
+   leaves a large, confusing gap between the name and the controls - pack them
+   left instead, immediately after the name. */
+.ore-filter-row .setting-item-control {
+    justify-content: flex-start;
 }
 
 .ore-property-input {
@@ -494,10 +492,4 @@
 
 .ore-relative-date-amount {
     width: 40px;
-}
-
-.ore-filter-subgroup .setting-item-heading .setting-item-name {
-    font-size: var(--font-ui-small);
-    font-weight: var(--font-medium);
-    color: var(--text-muted);
 }

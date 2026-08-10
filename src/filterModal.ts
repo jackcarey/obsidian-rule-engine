@@ -539,19 +539,38 @@ class FilterBuilder {
         const wrapper = parentGroup.listEl.createDiv({
             cls: "ore-filter-subgroup",
         });
+        const settingGroup = new SettingGroup(wrapper);
 
-        // Conjunction word lives in the group's own heading slot, right next
-        // to its delete button, instead of a disconnected label above an
-        // otherwise-empty header row.
-        const settingGroup = new SettingGroup(wrapper).setHeading(conjunctionWord);
-        settingGroup.addExtraButton((btn) =>
-            btn
-                .setIcon("trash-2")
-                .setTooltip("Remove filter group")
-                .onClick(onDelete),
-        );
-
-        this.renderConjunction(settingGroup, subgroup);
+        // Conjunction word, the group's own AND/OR/NOR dropdown, and its
+        // delete button all live on one row - same shape as a filter row
+        // (name + controls + delete), so it reads the same way.
+        settingGroup.addSetting((setting) => {
+            setting.settingEl.addClass("ore-filter-row");
+            setting.setName(conjunctionWord);
+            setting.addDropdown((dropdown) => {
+                dropdown.selectEl.addClass("conjunction");
+                dropdown.addOptions({
+                    and: CONJUNCTION_LABELS.AND,
+                    or: CONJUNCTION_LABELS.OR,
+                    not: CONJUNCTION_LABELS.NOR,
+                });
+                dropdown.setValue(CONJUNCTION_VALUES[subgroup.operator] || "and");
+                dropdown.onChange((newVal) => {
+                    const val = CONJUNCTION_REVERSE[newVal];
+                    if (val) {
+                        subgroup.operator = val;
+                        this.onSave();
+                        this.onRefresh();
+                    }
+                });
+            });
+            setting.addExtraButton((btn) =>
+                btn
+                    .setIcon("trash-2")
+                    .setTooltip("Remove filter group")
+                    .onClick(onDelete),
+            );
+        });
 
         if (subgroup.conditions.length === 0) {
             const placeholderFilter: Filter = {
