@@ -457,6 +457,7 @@ class FilterBuilder {
 
     private renderConjunction(settingGroup: SettingGroup, group: AnyFilterGroup) {
         settingGroup.addSetting((setting) => {
+            setting.settingEl.addClass("ore-filter-root-header-row");
             setting.addDropdown((dropdown) => {
                 dropdown.selectEl.addClass("conjunction");
                 dropdown.addOptions({

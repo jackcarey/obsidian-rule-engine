@@ -16,7 +16,7 @@
 
 .ore-filter-subgroup {
     background-color: var(--background-primary-alt);
-    border: var(--table-border-width) solid var(--table-border-color);
+    border: 1px solid var(--background-modifier-border);
     padding: var(--size-2-2) var(--size-2-3);
     border-radius: var(--radius-m);
     margin-top: var(--size-2-3);
@@ -36,7 +36,8 @@
 }
 
 .ore-filter-row .setting-item-name,
-.ore-filter-subgroup-header-row .setting-item-name {
+.ore-filter-subgroup-header-row .setting-item-name,
+.ore-filter-root-header-row .setting-item-name {
     min-width: 4.5rem;
     font-size: var(--font-ui-small);
     text-align: end;
@@ -48,9 +49,25 @@
    narrow controls (the subgroup's conjunction dropdown + delete button) that
    leaves a large, confusing gap between the name and the controls - pack them
    left instead, immediately after the name. */
-.ore-filter-row .setting-item-control,
-.ore-filter-subgroup-header-row .setting-item-control {
+.ore-filter-row .setting-item-control {
     justify-content: flex-start;
+}
+
+/* Header rows (root and subgroup conjunction): .setting-item-info and
+   .setting-item-control both default to flex-grow: 1, so they split the
+   row's width and strand the name/dropdown/delete cluster in the middle
+   with dead space on both sides. Keep the name at its intrinsic width, flush
+   left, and let the control fill the rest of the row with its own children
+   pushed to opposite ends - dropdown right after the name, delete button at
+   the far right edge. */
+.ore-filter-subgroup-header-row .setting-item-info,
+.ore-filter-root-header-row .setting-item-info {
+    flex: 0 0 auto;
+}
+
+.ore-filter-subgroup-header-row .setting-item-control,
+.ore-filter-root-header-row .setting-item-control {
+    justify-content: space-between;
 }
 
 .ore-property-input {
