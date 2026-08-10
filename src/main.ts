@@ -709,13 +709,27 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			file,
 			groupLeaf,
 		});
-		const doCmds = () => {
+		const doCmds = (view?: MarkdownView): boolean => {
 			const prev = this._callOverrides;
 			this._callOverrides = fileOverrides ?? {};
+			let ranEditorCommand = false;
 			try {
-				const commandObjects = Object.entries(this.obsidianCommands)
-					.filter(([k]) => commandIds.includes(k))
-					.map(([_, cmd]) => cmd);
+				// Sourced from this.commands (the plugin's own generators), not
+				// this.obsidianCommands (app.commands.commands/editorCommands) -
+				// Obsidian normalizes a plain editorCallback registration into its
+				// own editorCheckCallback wrapper and never preserves the raw
+				// editorCallback property, and that wrapper resolves "the current
+				// editor" from ambient DOM/window focus internally regardless of
+				// what's passed to it - reliable for a real user's hotkey/command
+				// palette invocation, but not for this programmatic call site (e.g.
+				// a background base-results leaf that's deliberately opened
+				// unfocused, or a headless CI window with no OS focus at all).
+				// Calling the plugin's own editorCallback directly sidesteps that
+				// entirely - no dependence on Obsidian's internal dispatch state.
+				const shortCommandIds = commandIds.map(stripCommandIdPrefix);
+				const commandObjects = this.commands.filter((cmd) =>
+					shortCommandIds.includes(cmd.id),
+				);
 				if (mode === "file" || mode === "both") {
 					for (const cmd of commandObjects) {
 						// Check per-file enabled override
@@ -723,17 +737,15 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 						const override =
 							fileOverrides?.[cmd.id] ?? fileOverrides?.[shortId];
 						if (override?.enabled === false) continue;
-						const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
-						if (commandFn) {
-							commandFn(false);
-						} else if (cmd.editorCallback) {
-							// checkCallback/callback-less commands (e.g. editorCallback-only ones
-							// like taskDate) need an editor/view context instead of a boolean -
-							// resolve it from whichever leaf is currently active.
-							const activeEditor = this.app.workspace.activeEditor;
+						if (cmd.editorCallback) {
+							const activeEditor = view ?? this.app.workspace.activeEditor;
 							if (activeEditor?.editor) {
 								cmd.editorCallback(activeEditor.editor, activeEditor);
+								ranEditorCommand = true;
 							}
+						} else {
+							const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
+							commandFn?.(false);
 						}
 					}
 				} else {
@@ -742,6 +754,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			} finally {
 				this._callOverrides = prev;
 			}
+			return ranEditorCommand;
 		};
 		if (file) {
 			const leaf = this.app.workspace.getLeaf(
@@ -753,13 +766,39 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				leaf.setGroupMember(groupLeaf);
 			}
 			try {
+				// A leaf resolved while it's not the focused/visible pane (as this
+				// one deliberately is, via focus:false below) can be a deferred leaf
+				// - its .view is a lightweight DeferredView stand-in rather than a
+				// real MarkdownView with a live editor, until explicitly loaded.
+				await leaf.loadIfDeferred();
 				await leaf.openFile(file);
 				// Commands resolve "the current file" via workspace.getActiveFile()
 				// (e.g. checkCallback-based ones), which only reflects entry.file if
 				// this leaf is actually made active first - otherwise they silently
 				// act on whatever leaf the user last focused instead.
 				this.app.workspace.setActiveLeaf(leaf, { focus: false });
-				doCmds();
+				const view = leaf.view instanceof MarkdownView ? leaf.view : undefined;
+				const ranEditorCommand = doCmds(view);
+				// Editor-based commands (e.g. taskDate's editor.replaceRange) only
+				// mutate the in-memory editor - Obsidian's own view.save() flushes
+				// that to disk via the view's getViewData(), which relies on the
+				// editor's change events to keep the view's own data snapshot in
+				// sync. On an unfocused/background leaf (deliberately never focused
+				// here, and especially on a headless/CI window) those change events
+				// don't reliably fire, so the snapshot save() serializes can still
+				// be stale even though the editor itself already has the new text.
+				// Write the editor's actual content straight to the file instead of
+				// going through that snapshot - but only when an editor-based
+				// command actually ran: other commands (e.g. autoMoc, the tag
+				// generators) write via vault.modify()/processFrontMatter() directly
+				// and don't touch this leaf's editor at all, so its buffer is stale
+				// relative to their change - flushing it here would clobber theirs.
+				if (view && ranEditorCommand) {
+					const content = view.editor.getValue();
+					if (content !== (await this.app.vault.read(file))) {
+						await this.app.vault.modify(file, content);
+					}
+				}
 			} catch (e) {
 				this.debug(e);
 			} finally {
