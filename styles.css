@@ -6,17 +6,10 @@
 }
 
 .ore-parent-query-container {
-    -webkit-app-region: no-drag;
     display: flex;
     flex-direction: column;
-    border: var(--menu-border-width) solid var(--menu-border-color);
-    background-color: var(--menu-background);
-    backdrop-filter: var(--menu-backdrop-filter);
-    border-radius: var(--menu-radius);
     max-height: 100%;
-    z-index: var(--layer-menu);
     user-select: none;
-    padding: var(--size-4-3);
 
     --input-height: 28px;
 }
