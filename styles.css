@@ -321,6 +321,13 @@
     overflow-y: auto;
 }
 
+/* SettingGroup reserves an empty .setting-group-search placeholder by
+   default, even without calling addSearch() - not used here, hide it. */
+.ore-edit-rule-modal .setting-group-search,
+.ore-filter-modal .setting-group-search {
+    display: none;
+}
+
 .obsidian-custom-rule-render {
     padding: 0;
     height: 100%;
