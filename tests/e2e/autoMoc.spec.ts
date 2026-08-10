@@ -180,7 +180,10 @@ test("creates the heading at a configured custom level", async ({ page }) => {
 	const content = await waitForContentChange(page, SOURCE_NOTE, noHeadingContent, 15000);
 
 	expect(content).toContain("#### New Links");
-	expect(content).not.toContain("## New Links");
+	// "#### New Links" contains "## New Links" as a raw substring (the last two
+	// hashes + text), so this must check for a *line* that's exactly level 2,
+	// not use toContain.
+	expect(content).not.toMatch(/^## New Links$/m);
 	expect(content).toContain("[[moc-match-any]]");
 });
 
