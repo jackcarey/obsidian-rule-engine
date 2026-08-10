@@ -24,15 +24,20 @@
 .ore-filter-subgroup {
     background-color: var(--background-primary-alt);
     border: var(--table-border-width) solid var(--table-border-color);
-    padding: var(--size-2-3);
+    padding: var(--size-2-2) var(--size-2-3);
     border-radius: var(--radius-m);
     margin-top: var(--size-2-3);
 }
 
-.ore-filter-subgroup-label {
-    font-size: var(--font-ui-small);
-    color: var(--text-muted);
-    padding-bottom: var(--size-2-1);
+/* The subgroup's conjunction word ("and"/"or"/"Where") sits in the
+   SettingGroup's own heading slot (next to its delete button) - de-emphasize
+   it from a full section heading down to a small connector word, matching
+   the row-level conjunction labels in .ore-filter-row .setting-item-name. */
+.ore-filter-subgroup .setting-item-heading {
+    padding: 0;
+    margin: 0;
+    min-height: 0;
+    border: none;
 }
 
 .ore-parent-query-container select.conjunction {
@@ -489,4 +494,10 @@
 
 .ore-relative-date-amount {
     width: 40px;
+}
+
+.ore-filter-subgroup .setting-item-heading .setting-item-name {
+    font-size: var(--font-ui-small);
+    font-weight: var(--font-medium);
+    color: var(--text-muted);
 }

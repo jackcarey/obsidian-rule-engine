@@ -539,12 +539,11 @@ class FilterBuilder {
         const wrapper = parentGroup.listEl.createDiv({
             cls: "ore-filter-subgroup",
         });
-        wrapper.createDiv({
-            cls: "ore-filter-subgroup-label",
-            text: conjunctionWord,
-        });
 
-        const settingGroup = new SettingGroup(wrapper);
+        // Conjunction word lives in the group's own heading slot, right next
+        // to its delete button, instead of a disconnected label above an
+        // otherwise-empty header row.
+        const settingGroup = new SettingGroup(wrapper).setHeading(conjunctionWord);
         settingGroup.addExtraButton((btn) =>
             btn
                 .setIcon("trash-2")
