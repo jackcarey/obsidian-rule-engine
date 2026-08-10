@@ -442,6 +442,29 @@
     margin-top: 20px;
 }
 
+.ore-filter-summary-group {
+    margin-bottom: var(--size-4-2);
+}
+
+.ore-filter-summary-heading {
+    font-weight: var(--font-medium);
+    color: var(--text-muted);
+}
+
+.ore-filter-summary-empty {
+    color: var(--text-faint);
+}
+
+.ore-filter-summary-list {
+    margin: var(--size-2-1) 0 0 0;
+    padding-left: var(--size-4-4);
+    color: var(--text-normal);
+}
+
+.ore-filter-summary-list li {
+    margin-bottom: var(--size-2-1);
+}
+
 .obsidian-custom-rule-render .markdown-preview-section {
     padding: 0;
 }
@@ -578,27 +601,4 @@
 
 .ore-relative-date-amount {
     width: 40px;
-}
-
-.ore-filter-summary-group {
-    margin-bottom: var(--size-4-2);
-}
-
-.ore-filter-summary-heading {
-    font-weight: var(--font-medium);
-    color: var(--text-muted);
-}
-
-.ore-filter-summary-empty {
-    color: var(--text-faint);
-}
-
-.ore-filter-summary-list {
-    margin: var(--size-2-1) 0 0 0;
-    padding-left: var(--size-4-4);
-    color: var(--text-normal);
-}
-
-.ore-filter-summary-list li {
-    margin-bottom: var(--size-2-1);
 }

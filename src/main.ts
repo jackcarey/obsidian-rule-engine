@@ -356,7 +356,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file, options);
 
 		if (!options?.skipCommandExecution) {
-			this.executeCommands(baseFileHandling, commandIds, null, undefined, this.getFileCommandOverrides(file));
+			await this.executeCommands(baseFileHandling, commandIds, null, undefined, this.getFileCommandOverrides(file));
 		}
 
 		if (!matchedTemplate) {

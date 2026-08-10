@@ -59,7 +59,7 @@ function renderSettingGroupItem(
 			case "dropdown":
 				setting.addDropdown(d => {
 					d.addOptions(control.options);
-					d.setValue(String(currentValue ?? ""));
+					d.setValue(String((currentValue as string | number | boolean | undefined) ?? ""));
 					d.onChange(save);
 				});
 				break;
@@ -69,7 +69,7 @@ function renderSettingGroupItem(
 					if (control.min !== undefined) t.inputEl.min = String(control.min);
 					if (control.max !== undefined) t.inputEl.max = String(control.max);
 					if (control.placeholder) t.setPlaceholder(control.placeholder);
-					t.setValue(currentValue !== undefined ? String(currentValue) : "");
+					t.setValue(currentValue !== undefined ? String(currentValue as string | number | boolean) : "");
 					t.onChange(value => {
 						const parsed = parseFloat(value);
 						if (Number.isFinite(parsed)) void save(parsed);
@@ -80,14 +80,13 @@ function renderSettingGroupItem(
 				setting.addSlider(s => {
 					s.setLimits(control.min, control.max, control.step);
 					s.setValue(Number(currentValue ?? control.min));
-					s.setDynamicTooltip();
 					s.onChange(save);
 				});
 				break;
 			case "textarea":
 				setting.addTextArea(t => {
 					if (control.placeholder) t.setPlaceholder(control.placeholder);
-					t.setValue(currentValue !== undefined ? String(currentValue) : "");
+					t.setValue(currentValue !== undefined ? String(currentValue as string | number | boolean) : "");
 					if (control.rows) t.inputEl.rows = control.rows;
 					t.onChange(save);
 				});
@@ -97,7 +96,7 @@ function renderSettingGroupItem(
 			default:
 				setting.addText(t => {
 					if ("placeholder" in control && control.placeholder) t.setPlaceholder(control.placeholder);
-					t.setValue(currentValue !== undefined ? String(currentValue) : "");
+					t.setValue(currentValue !== undefined ? String(currentValue as string | number | boolean) : "");
 					t.onChange(save);
 				});
 				break;
