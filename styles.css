@@ -391,7 +391,7 @@
 }
 
 /* position/margin/transform are set as inline styles in comboSuggestModal.ts
-   instead — Obsidian sets those inline too (for its own modal open/close
+   instead - Obsidian sets those inline too (for its own modal open/close
    animation), and only a later inline-style write reliably beats that. */
 .ore-suggestion-container.modal {
     max-width: 500px;
@@ -437,7 +437,7 @@
     width: max(50%, fit-content);
 }
 
-/* display: block is set inline in ruleEngineBasesView.ts — bypasses parent flex squashing. */
+/* display: block is set inline in ruleEngineBasesView.ts - bypasses parent flex squashing. */
 .rule-bases-view-container {
     width: 100%;
     height: 100%;

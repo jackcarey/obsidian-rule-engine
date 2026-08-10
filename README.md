@@ -16,10 +16,10 @@ _Expands on [anuwup/obsidian-custom-views](https://github.com/anuwup/obsidian-cu
 
 **Permissions & behavior**
 
-- **Vault enumeration**: the plugin lists vault files (`vault.getFiles()`/`getMarkdownFiles()`) so it can match them against your configured rules — this is core to how rule matching works.
+- **Vault enumeration**: the plugin lists vault files (`vault.getFiles()`/`getMarkdownFiles()`) so it can match them against your configured rules - this is core to how rule matching works.
 - **Dynamic code execution**: `<script>` tags inside templates are opt-in and run via `new Function()` (see [Script Support](#script-support)). Scripts with a `src` attribute are always ignored, so templates can't load remote code.
-- **On-demand ML model download**: the `Generate semantic tags` command downloads a small ([MiniLM](https://huggingface.co/Xenova/all-MiniLM-L6-v2)) model from Hugging Face the first time it's used, then caches it locally so later runs (and future Obsidian sessions) work offline — see [Tag generation commands](#tag-generation-commands).
-- **File deletion**: the `Delete current file without confirmation` command trashes the active file immediately, with no confirmation prompt — it's disabled by default like all provided commands, but enable it deliberately.
+- **On-demand ML model download**: the `Generate semantic tags` command downloads a small ([MiniLM](https://huggingface.co/Xenova/all-MiniLM-L6-v2)) model from Hugging Face the first time it's used, then caches it locally so later runs (and future Obsidian sessions) work offline - see [Tag generation commands](#tag-generation-commands).
+- **File deletion**: the `Delete current file without confirmation` command trashes the active file immediately, with no confirmation prompt - it's disabled by default like all provided commands, but enable it deliberately.
 
 ## Commands
 
@@ -55,39 +55,39 @@ Any command available in the current Obsidian context will be available to inclu
 - **Parse from title** - if enabled and the frontmatter field is empty or unset, falls back to a `YYYY-MM-DD` date found in the file's title.
 - If neither source yields a date, it falls back to the file's last-modified time.
 
-Unlike the other provided commands, this one only works on the note currently open in the editor, so it can't be triggered automatically through rule automations — run it manually from the command palette or a hotkey.
+Unlike the other provided commands, this one only works on the note currently open in the editor, so it can't be triggered automatically through rule automations - run it manually from the command palette or a hotkey.
 
 ### Tag generation commands
 
 Both commands write to the same kind of frontmatter list field (`tags` by default) and share the same append/limit logic:
 
-- They **append**, never overwrite — your existing tags are always kept in full; the commands only ever add to them, never remove or replace them.
-- A **max tags** setting is a ceiling on the field's total tag count, not a target to hit. It only limits how many *new* tags get added — e.g. with max tags set to 10, a file with 6 existing tags gets up to 4 new ones added, while a file that already has 11 gets 0 added (and still keeps all 11 — the limit never trims what's already there).
+- They **append**, never overwrite - your existing tags are always kept in full; the commands only ever add to them, never remove or replace them.
+- A **max tags** setting is a ceiling on the field's total tag count, not a target to hit. It only limits how many *new* tags get added - e.g. with max tags set to 10, a file with 6 existing tags gets up to 4 new ones added, while a file that already has 11 gets 0 added (and still keeps all 11 - the limit never trims what's already there).
 - Values are normalized before being written (no `#` prefix, spaces become dashes, `/` hierarchy separators are preserved).
 
 **`Generate TF-IDF tags`** scores the words in the current file against a corpus of other notes (TF-IDF: term frequency × inverse document frequency) and appends the highest-scoring terms.
 
 - **Frontmatter field** - which list field to write to (default `tags`).
 - **Max tags** - the ceiling described above.
-- **Compare against** - `Whole vault` (most accurate, scans every note) or `Linked notes` (faster on large vaults — only the current file's forward links and backlinks).
+- **Compare against** - `Whole vault` (most accurate, scans every note) or `Linked notes` (faster on large vaults - only the current file's forward links and backlinks).
 
-**`Generate semantic tags`** uses a small (~23 MB) embedding model ([Xenova/all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2), quantized) to find new tags for the current file, up to the max tags ceiling. Inference runs entirely locally — nothing about your notes is ever sent anywhere.
+**`Generate semantic tags`** uses a small (~23 MB) embedding model ([Xenova/all-MiniLM-L6-v2](https://huggingface.co/Xenova/all-MiniLM-L6-v2), quantized) to find new tags for the current file, up to the max tags ceiling. Inference runs entirely locally - nothing about your notes is ever sent anywhere.
 
 - **Frontmatter field** and **Max tags** - same as above.
-- **Existing vault tags vs invented tags** - a 0-100% slider. Whenever there's room to add tags, this controls where they come from: at 100%, every new tag is one already used elsewhere in your vault (keeps your tagging vocabulary consistent, never invents new words — this is closer to how `Generate TF-IDF tags` sources its candidates, though scored differently); at 0%, new tags are instead invented from the current file's own distinctive content (the same TF-IDF scoring `Generate TF-IDF tags` uses), even if nothing like them exists elsewhere in the vault yet. Values in between blend the two.
-- The very first run downloads the model (~35 MB, including its WASM runtime) from Hugging Face and caches it locally — it needs network access just that once. Every run after that, including in future Obsidian sessions, loads from the local cache and works fully offline.
+- **Existing vault tags vs invented tags** - a 0-100% slider. Whenever there's room to add tags, this controls where they come from: at 100%, every new tag is one already used elsewhere in your vault (keeps your tagging vocabulary consistent, never invents new words - this is closer to how `Generate TF-IDF tags` sources its candidates, though scored differently); at 0%, new tags are instead invented from the current file's own distinctive content (the same TF-IDF scoring `Generate TF-IDF tags` uses), even if nothing like them exists elsewhere in the vault yet. Values in between blend the two.
+- The very first run downloads the model (~35 MB, including its WASM runtime) from Hugging Face and caches it locally - it needs network access just that once. Every run after that, including in future Obsidian sessions, loads from the local cache and works fully offline.
 
 ### Automatic MOC
 
-**`Generate automatic MOC`** builds a live "map of content" — a bullet list of links to other notes sharing tags with the current file — under a heading in the current file's body.
+**`Generate automatic MOC`** builds a live "map of content" - a bullet list of links to other notes sharing tags with the current file - under a heading in the current file's body.
 
 - **Mode** - `any` (notes sharing at least one tag with the current file) or `all` (notes that have *every* one of the current file's tags).
 - **Heading** - which heading to place the list under, matched case-insensitively. If it doesn't exist yet, it's created automatically at the end of the file, one level deeper than the file's last heading (or `##` if the file has no headings at all).
 
-Unlike the tag generation commands above, this list is **fully regenerated every run**, not appended to — since it's entirely derived from the vault's current tags rather than anything you typed, keeping it always up to date matters more than preserving history. Two things follow from that:
+Unlike the tag generation commands above, this list is **fully regenerated every run**, not appended to - since it's entirely derived from the vault's current tags rather than anything you typed, keeping it always up to date matters more than preserving history. Two things follow from that:
 
 - Links to notes that no longer match are dropped automatically the next time it runs.
-- **Everything else under that heading gets overwritten too.** Don't write your own notes in the same section as the generated list — put them elsewhere in the file, or under a different heading.
+- **Everything else under that heading gets overwritten too.** Don't write your own notes in the same section as the generated list - put them elsewhere in the file, or under a different heading.
 
 If the current file has no tags, the command does nothing (silently - no heading gets created, nothing gets touched).
 
@@ -408,8 +408,8 @@ Each rule has:
 
 You can override command settings for individual files using frontmatter keys in the format `ore:[command-id]:[setting]`.
 
-- `ore:[command-id]:enabled: false` — disable a specific command for this file
-- `ore:[command-id]:params: {key: value}` — pass custom parameters to a command for this file
+- `ore:[command-id]:enabled: false` - disable a specific command for this file
+- `ore:[command-id]:params: {key: value}` - pass custom parameters to a command for this file
 
 **Example:**
 
@@ -468,12 +468,12 @@ Filter arguments can be:
 
 ### Updating the semantic model
 
-The `Generate semantic tags` command's model is fetched from Hugging Face on first use via [`@huggingface/transformers`](https://www.npmjs.com/package/@huggingface/transformers)'s normal remote-model loading, and cached locally (Cache Storage API) from then on — it isn't embedded into `main.js`. If you're changing which model is used:
+The `Generate semantic tags` command's model is fetched from Hugging Face on first use via [`@huggingface/transformers`](https://www.npmjs.com/package/@huggingface/transformers)'s normal remote-model loading, and cached locally (Cache Storage API) from then on - it isn't embedded into `main.js`. If you're changing which model is used:
 
-1. Change `MODEL_ID` at the top of `src/semanticModel/semanticModel.ts` to point at a different Hugging Face repo. It needs to publish a quantized ONNX `feature-extraction` export compatible with `@huggingface/transformers` — check the model card's `onnx/` folder.
-2. Run the E2E suite (`npm run test:e2e`) — `tests/e2e/tagging.spec.ts` runs real inference inside a real Obsidian window, which is the only way to actually confirm a new model loads and runs correctly (unit tests mock the model out entirely).
+1. Change `MODEL_ID` at the top of `src/semanticModel/semanticModel.ts` to point at a different Hugging Face repo. It needs to publish a quantized ONNX `feature-extraction` export compatible with `@huggingface/transformers` - check the model card's `onnx/` folder.
+2. Run the E2E suite (`npm run test:e2e`) - `tests/e2e/tagging.spec.ts` runs real inference inside a real Obsidian window, which is the only way to actually confirm a new model loads and runs correctly (unit tests mock the model out entirely).
 
-All of the model-loading logic (and the workaround for Electron's renderer confusing the library's environment detection — see the comment at the top of `loadExtractor` in `src/semanticModel/semanticModel.ts`) is isolated in `src/semanticModel/semanticModel.ts`. Everything else calls its `embedTexts()` export and doesn't know or care how the model was loaded.
+All of the model-loading logic (and the workaround for Electron's renderer confusing the library's environment detection - see the comment at the top of `loadExtractor` in `src/semanticModel/semanticModel.ts`) is isolated in `src/semanticModel/semanticModel.ts`. Everything else calls its `embedTexts()` export and doesn't know or care how the model was loaded.
 
 ### Contributing
 

@@ -1,7 +1,15 @@
-import ObsidianRuleEnginePlugin from "main";
-import { BasesEntry, BasesView, HoverParent, HoverPopover, Keymap, parsePropertyId, QueryController } from "obsidian";
+import type ObsidianRuleEnginePlugin from "main";
+import {
+    type BasesEntry,
+    BasesView,
+    type HoverParent,
+    type HoverPopover,
+    Keymap,
+    parsePropertyId,
+    type QueryController,
+} from "obsidian";
 
-export const RULE_ENGINE_BASE_VIEW_ID = 'rule-engine-base';
+export const RULE_ENGINE_BASE_VIEW_ID = "rule-engine-base";
 
 export class RuleEngineBasesView extends BasesView implements HoverParent {
     type = RULE_ENGINE_BASE_VIEW_ID;
@@ -10,19 +18,27 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     public hoverPopover: HoverPopover | null = null;
     private isProcessing = false;
 
-    constructor(controller: QueryController, scrollEl: HTMLElement, plugin: ObsidianRuleEnginePlugin) {
+    constructor(
+        controller: QueryController,
+        scrollEl: HTMLElement,
+        plugin: ObsidianRuleEnginePlugin,
+    ) {
         super(controller);
         this.plugin = plugin;
-        this.containerEl = scrollEl.createDiv({ cls: 'rule-bases-view-container' });
-        // Set inline rather than via CSS — the parent flex container squashes
+        this.containerEl = scrollEl.createDiv({ cls: "rule-bases-view-container" });
+        // Set inline rather than via CSS - the parent flex container squashes
         // this view otherwise, and only an inline style reliably wins here.
-        this.containerEl.setCssStyles({ display: 'block' });
+        this.containerEl.setCssStyles({ display: "block" });
     }
 
     private lastDataHash: string = "";
 
     private get currentDataHash(): string {
-        const dataHash = this.data.data.map(val => `${val.file.path}${val.file.stat.mtime}`).sort().join("_").toLowerCase();
+        const dataHash = this.data.data
+            .map((val) => `${val.file.path}${val.file.stat.mtime}`)
+            .sort()
+            .join("_")
+            .toLowerCase();
         const propertyHash = this.data.properties.sort().join("_");
         const str = [dataHash, propertyHash].join("_");
         // FNV-1a hash
@@ -45,31 +61,37 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     public async processView(ignoreDataHash = false): Promise<void> {
         if (this.isProcessing) return;
 
-        const layoutMode = this.config.get('layout') ?? 'table';
+        const layoutMode = this.config.get("layout") ?? "table";
         this.plugin?.debug(`processView`, { ignoreDataHash, layoutMode });
         this.containerEl.empty();
 
         const order = this.config.getOrder();
 
-        if (layoutMode === 'table') {
-            const table = this.containerEl.createEl('table');
-            table.setAttribute('style', `
+        if (layoutMode === "table") {
+            const table = this.containerEl.createEl("table");
+            table.setAttribute(
+                "style",
+                `
             width: 100%;
             border-collapse: collapse;
             font-size: var(--font-small);
-        `);
-            const thead = table.createEl('thead');
-            const headerRow = thead.createEl('tr');
-            order.forEach(id => {
-                const th = headerRow.createEl('th', { text: parsePropertyId(id).name });
-                th.setAttribute('style', `
+        `,
+            );
+            const thead = table.createEl("thead");
+            const headerRow = thead.createEl("tr");
+            order.forEach((id) => {
+                const th = headerRow.createEl("th", { text: parsePropertyId(id).name });
+                th.setAttribute(
+                    "style",
+                    `
                 text-align: left;
                 padding: 4px 8px;
                 border-bottom: 2px solid var(--background-modifier-border);
                 color: var(--text-muted);
-            `);
+            `,
+                );
             });
-            const tbody = table.createEl('tbody');
+            const tbody = table.createEl("tbody");
             for (let idx = 0; idx < this.data.groupedData.length; ++idx) {
                 if (idx) {
                     tbody.append(headerRow.cloneNode(true));
@@ -81,21 +103,22 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             }
         }
 
-        if (layoutMode === 'grid') {
+        if (layoutMode === "grid") {
             for (const group of this.data.groupedData) {
                 const groupWrapper = this.containerEl.createDiv();
                 this.renderGrid(groupWrapper, group.entries, order);
             }
         }
 
-        const viewEnabledCommands = Boolean(this.config.get('enableCommands'));
+        const viewEnabledCommands = Boolean(this.config.get("enableCommands"));
         const autoProcess = this.plugin.settings.processBaseResultsAutomatically;
-        const canProcessCommands = viewEnabledCommands && (ignoreDataHash || autoProcess);
+        const canProcessCommands =
+            viewEnabledCommands && (ignoreDataHash || autoProcess);
         this.plugin.debug(`canProcessCommands`, {
             canProcessCommands,
             viewEnabledCommands,
             ignoreDataHash,
-            autoProcess
+            autoProcess,
         });
         if (canProcessCommands) {
             const thisHash = this.currentDataHash;
@@ -104,18 +127,29 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             if (willRunCommands) {
                 this.isProcessing = true;
                 this.lastDataHash = thisHash;
-                this.plugin.debug(`${willRunCommands ? 'data changed' : ignoreDataHash ? 'ignoring data hash' : ''}- processing commands...`)
+                this.plugin.debug(
+                    `${willRunCommands ? "data changed" : ignoreDataHash ? "ignoring data hash" : ""}- processing commands...`,
+                );
                 const groupLeaf = this.app.workspace.getLeaf("split", "vertical");
                 try {
                     groupLeaf.setGroup("ore-leaf-group");
                     for (const group of this.data.groupedData) {
                         for (const entry of group.entries) {
-                            const { commandIds } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results" });
+                            const { commandIds } = this.plugin.extractMatchingRuleParameters(
+                                entry.file,
+                                { baseFileHandling: "results" },
+                            );
                             // always use file mode on each entry since 'results' wouldn't make sense
                             // Awaited so each entry's file is fully open and active before the next
-                            // one starts — commands resolve "the current file" via the workspace's
+                            // one starts - commands resolve "the current file" via the workspace's
                             // active leaf, so overlapping entries would race onto the wrong file.
-                            await this.plugin.executeCommands("file", commandIds, entry.file, groupLeaf, this.plugin.getFileCommandOverrides(entry.file));
+                            await this.plugin.executeCommands(
+                                "file",
+                                commandIds,
+                                entry.file,
+                                groupLeaf,
+                                this.plugin.getFileCommandOverrides(entry.file),
+                            );
                         }
                     }
                 } catch (e) {
@@ -136,35 +170,49 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
         void this.processView(true);
     }
 
-    private renderGrid(parent: HTMLElement, entries: BasesEntry[], order: string[]) {
+    private renderGrid(
+        parent: HTMLElement,
+        entries: BasesEntry[],
+        order: string[],
+    ) {
         const widthPc = String(this.config.get("widthPercentage")) + "%";
         const heightVal = this.config.get("heightPercentage");
         // If heightVal is 30, this makes the card at least 300px tall (adjust multiplier as needed)
         const minHeightPx = heightVal ? `${Number(heightVal) * 5}px` : "auto";
-        const gapPx = Number(this.config.get('cardGap')) + 'px';
+        const gapPx = Number(this.config.get("cardGap")) + "px";
         const grid = parent.createDiv();
         // --- 2. Inlined Grid Engine ---
-        grid.setAttribute('style', `
+        grid.setAttribute(
+            "style",
+            `
             display: grid;
             grid-template-columns: repeat(auto-fill,minmax(${widthPc},1fr));
             grid-template-rows: auto;
             gap: ${gapPx};
-        `);
+        `,
+        );
 
         for (const entry of entries) {
             const card = grid.createDiv();
-            card.setAttribute('style', `
+            card.setAttribute(
+                "style",
+                `
                 min-height: ${minHeightPx};
                 background-color: var(--background-secondary);
                 border: 1px solid var(--background-modifier-border);
                 border-radius: var(--radius-m);
-            `);
+            `,
+            );
 
-            const { matchedTemplate } = this.plugin.extractMatchingRuleParameters(entry.file, { baseFileHandling: "results", renderContext: 'base' });
+            const { matchedTemplate } = this.plugin.extractMatchingRuleParameters(
+                entry.file,
+                { baseFileHandling: "results", renderContext: "base" },
+            );
 
-            if (matchedTemplate?.length && Boolean(this.config.get('enableTemplates'))) {
-                this.plugin.injectCustomView(card, entry.file, matchedTemplate).catch(e => console.error(e));
-                continue;
+            if (matchedTemplate?.length && this.config.get("enableTemplates")) {
+                this.plugin
+                    .injectCustomView(card, entry.file, matchedTemplate)
+                    .catch((e) => console.error(e));
             } else {
                 // Render properties as rows inside the card
                 for (const propId of order) {
@@ -172,37 +220,41 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
                     const { type, name } = parsePropertyId(propId);
                     // @ts-expect-error
                     const value = entry.getValue(propId);
-                    if (!value && name !== 'name') continue;
+                    if (!value && name !== "name") continue;
 
                     const cardRow = card.createDiv();
                     cardRow.classList.add(`ore-bases-grid-card`);
 
-                    if (name === 'name' && type === 'file') {
+                    if (name === "name" && type === "file") {
                         cardRow.classList.add(`ore-bases-grid-card-file-name`);
                         this.renderFileLink(cardRow, entry);
                     } else {
-                        cardRow.createSpan({ text: value?.toString() ?? '' });
+                        cardRow.createSpan({ text: value?.toString() ?? "" });
                     }
                 }
             }
         }
     }
 
-    private renderGroupTableRows(tbody: HTMLElement, entries: BasesEntry[], order: string[]) {
+    private renderGroupTableRows(
+        tbody: HTMLElement,
+        entries: BasesEntry[],
+        order: string[],
+    ) {
         for (const entry of entries) {
-            const tr = tbody.createEl('tr');
-            order.forEach(id => {
-                const td = tr.createEl('td', { cls: 'ore-base-group-cell' });
+            const tr = tbody.createEl("tr");
+            order.forEach((id) => {
+                const td = tr.createEl("td", { cls: "ore-base-group-cell" });
                 //@ts-expect-error - ignore specific string format
                 const { type, name } = parsePropertyId(id);
                 //@ts-expect-error - ignore specific string format
                 const value = entry.getValue(id);
 
-                if (name === 'name' && type === 'file') {
+                if (name === "name" && type === "file") {
                     this.renderFileLink(td, entry);
                 } else {
                     if (value === null) {
-                        td.setText('-');
+                        td.setText("-");
                     } else {
                         td.setText(value?.toString() ?? "");
                     }
@@ -212,18 +264,28 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
     }
 
     private renderFileLink(container: HTMLElement, entry: BasesEntry) {
-        const linkEl = container.createEl('a', { text: entry.file.name, cls: 'ore-bases-file-link' });
+        const linkEl = container.createEl("a", {
+            text: entry.file.name,
+            cls: "ore-bases-file-link",
+        });
 
         linkEl.onClickEvent((evt) => {
             evt.preventDefault();
             const modEvent = Keymap.isModEvent(evt);
-            void this.plugin.app.workspace.openLinkText(entry.file.path, '', modEvent);
+            void this.plugin.app.workspace.openLinkText(
+                entry.file.path,
+                "",
+                modEvent,
+            );
         });
 
-        linkEl.addEventListener('mouseover', (evt) => {
-            this.plugin.app.workspace.trigger('hover-link', {
-                event: evt, source: 'bases', hoverParent: this,
-                targetEl: linkEl, linktext: entry.file.path,
+        linkEl.addEventListener("mouseover", (evt) => {
+            this.plugin.app.workspace.trigger("hover-link", {
+                event: evt,
+                source: "bases",
+                hoverParent: this,
+                targetEl: linkEl,
+                linktext: entry.file.path,
             });
         });
     }

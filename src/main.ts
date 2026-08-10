@@ -1,12 +1,39 @@
-import { Plugin, TFile, MarkdownView, Keymap, Notice, WorkspaceLeaf, Command } from "obsidian";
-import { ObsidianRuleEngineSettingTab } from "./settings";
-import { checkRules } from "./matcher";
-import { renderTemplate } from "./templateRenderer";
-import { CUSTOM_RULE_CLASS, DEFAULT_SETTINGS, HIDE_MARKDOWN_CLASS, TYPE_ICONS } from "./consts";
-import { BaseFileHandling, CanvasNode, CanvasView, CommandConfig, CommandWithSetup, CustomRulesSettings, ProcessMarkdownViewOptions, PropertyDef, PropertyType } from "./types";
-import { list as commandList } from './commands';
-import { RULE_ENGINE_BASE_VIEW_ID, RuleEngineBasesView } from "ruleEngineBasesView";
+import {
+	RULE_ENGINE_BASE_VIEW_ID,
+	RuleEngineBasesView,
+} from "ruleEngineBasesView";
 import { getRuleEngineViewOptions } from "ruleEngineBasesViewOptions";
+import {
+	type Command,
+	Keymap,
+	MarkdownView,
+	Notice,
+	Plugin,
+	TFile,
+	type WorkspaceLeaf,
+} from "obsidian";
+import { list as commandList } from "./commands";
+import {
+	CUSTOM_RULE_CLASS,
+	DEFAULT_SETTINGS,
+	HIDE_MARKDOWN_CLASS,
+	TYPE_ICONS,
+} from "./consts";
+import { checkRules } from "./matcher";
+import { ObsidianRuleEngineSettingTab } from "./settings";
+import { renderTemplate } from "./templateRenderer";
+import type {
+	BaseFileHandling,
+	CanvasNode,
+	CanvasView,
+	CommandConfig,
+	CommandWithSetup,
+	CustomRulesSettings,
+	ProcessMarkdownViewOptions,
+	PropertyDef,
+	PropertyType,
+} from "./types";
+
 /**
  * Type guard to check if a view is a canvas view
  */
@@ -17,14 +44,23 @@ function isCanvasView(view: unknown): view is CanvasView {
 /**
  * Hides/shows the underlying markdown source/preview view so our custom
  * template can be shown instead. Set directly as an inline style rather than
- * via a CSS class — `container` is sometimes the source/preview view itself
+ * via a CSS class - `container` is sometimes the source/preview view itself
  * (canvas nodes) and sometimes an ancestor of it (normal file views), so a
  * single descendant selector can't reliably target both.
  */
-function toggleMarkdownVisibility(container: HTMLElement, hidden: boolean): void {
-	const targets = container.matches(".markdown-source-view, .markdown-preview-view")
+function toggleMarkdownVisibility(
+	container: HTMLElement,
+	hidden: boolean,
+): void {
+	const targets = container.matches(
+		".markdown-source-view, .markdown-preview-view",
+	)
 		? [container]
-		: Array.from(container.querySelectorAll<HTMLElement>(".markdown-source-view, .markdown-preview-view"));
+		: Array.from(
+			container.querySelectorAll<HTMLElement>(
+				".markdown-source-view, .markdown-preview-view",
+			),
+		);
 	for (const el of targets) {
 		el.toggle(!hidden);
 	}
@@ -35,11 +71,13 @@ function toggleMarkdownVisibility(container: HTMLElement, hidden: boolean): void
  * keyed by either the full id or the short id can both be looked up.
  */
 export function stripCommandIdPrefix(id: string): string {
-	return id.includes(':') ? id.slice(id.indexOf(':') + 1) : id;
+	return id.includes(":") ? id.slice(id.indexOf(":") + 1) : id;
 }
 export default class ObsidianRuleEnginePlugin extends Plugin {
-	settings: CustomRulesSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) as CustomRulesSettings;
-	// Per-call command overrides set inside doCmds() and restored after — safe because
+	settings: CustomRulesSettings = JSON.parse(
+		JSON.stringify(DEFAULT_SETTINGS),
+	) as CustomRulesSettings;
+	// Per-call command overrides set inside doCmds() and restored after - safe because
 	// JS is single-threaded: each doCmds() runs to completion before the next starts.
 	private _callOverrides: Record<string, Partial<CommandConfig>> = {};
 
@@ -48,9 +86,10 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			console.debug(...args);
 		}
 		if (args[0] instanceof Error) {
-			const msg = '⛔ ' + args[0].message?.length ? args[0].message : args[0].name;
+			const msg =
+				"⛔ " + args[0].message?.length ? args[0].message : args[0].name;
 			console.error(...args);
-			// Errors always surface, regardless of showNotices — suppressing them
+			// Errors always surface, regardless of showNotices - suppressing them
 			// would hide failures, not noise.
 			new Notice(msg);
 		}
@@ -59,7 +98,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	/**
 	 * Informational Notice(), gated by the "Show notices" setting. Use for
 	 * result/status popups (command completion, enable/disable) that aren't
-	 * errors — see debug() for those, which always shows.
+	 * errors - see debug() for those, which always shows.
 	 */
 	notify(msg: string) {
 		if (this.settings.showNotices) {
@@ -68,17 +107,25 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	}
 
 	get commands(): CommandWithSetup[] {
-		return commandList.map(fn => fn(this));
-	};
+		return commandList.map((fn) => fn(this));
+	}
 
 	/**
-	 * 
+	 *
 	 * @param id The command ID
 	 * @returns The command config from the plugin data.json
 	 */
-	getCommandConfig = <T extends Record<string, unknown>>(id: string): CommandConfig<T> => {
-		const existing = this.settings.commands?.[id] as CommandConfig<T> | undefined;
-		const base: CommandConfig<T> = { enabled: false, params: {} as T, ...existing };
+	getCommandConfig = <T extends Record<string, unknown>>(
+		id: string,
+	): CommandConfig<T> => {
+		const existing = this.settings.commands?.[id] as
+			| CommandConfig<T>
+			| undefined;
+		const base: CommandConfig<T> = {
+			enabled: false,
+			params: {} as T,
+			...existing,
+		};
 		const shortId = stripCommandIdPrefix(id);
 		const override = this._callOverrides[id] ?? this._callOverrides[shortId];
 		if (!override) return base;
@@ -101,22 +148,26 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			if (!cmdId || !setting) continue;
 			if (!overrides[cmdId]) overrides[cmdId] = {};
 			const value = frontmatter[key] as unknown;
-			if (setting === 'enabled') {
-				overrides[cmdId].enabled = value === true || value === 'true' || value === 1;
+			if (setting === "enabled") {
+				overrides[cmdId].enabled =
+					value === true || value === "true" || value === 1;
 			} else {
 				if (!overrides[cmdId].params) overrides[cmdId].params = {};
-				(overrides[cmdId].params)[setting] = value;
+				overrides[cmdId].params[setting] = value;
 			}
 		}
 		return overrides;
-	};
+	}
 
 	/**
-	 * 
+	 *
 	 * @param id The command ID
 	 * @param partialUpdate An object containing some settings to update in the plugin data.json
 	 */
-	updateCommandConfig = async <T extends Record<string, unknown>>(id: string, partialUpdate: Partial<CommandConfig<T>>): Promise<void> => {
+	updateCommandConfig = async <T extends Record<string, unknown>>(
+		id: string,
+		partialUpdate: Partial<CommandConfig<T>>,
+	): Promise<void> => {
 		this.settings.commands = this.settings.commands || {};
 
 		const existing = this.getCommandConfig<T>(id);
@@ -125,12 +176,12 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			...partialUpdate,
 			params: {
 				...existing.params,
-				...(partialUpdate.params || {})
-			}
+				...(partialUpdate.params || {}),
+			},
 		};
 		this.settings.commands[id] = fullConfig;
 
-		await this.saveSettings().catch(reason => {
+		await this.saveSettings().catch((reason) => {
 			this.debug(reason);
 			throw new Error(`failed to update command config`);
 		});
@@ -145,13 +196,17 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		if (!this.isBasesViewRegistered) {
 			this.debug(`registerBasesView`);
-			this.isBasesViewRegistered = this.registerBasesView(RULE_ENGINE_BASE_VIEW_ID, {
-				name: 'Rule Engine', // Display name in view selector
-				icon: 'terminal', // Lucide icon name
-				factory: (controller, containerEl) => new RuleEngineBasesView(controller, containerEl, this),
-				options: getRuleEngineViewOptions // Optional: user-configurable options function
-			});
-		};
+			this.isBasesViewRegistered = this.registerBasesView(
+				RULE_ENGINE_BASE_VIEW_ID,
+				{
+					name: "Rule Engine", // Display name in view selector
+					icon: "terminal", // Lucide icon name
+					factory: (controller, containerEl) =>
+						new RuleEngineBasesView(controller, containerEl, this),
+					options: getRuleEngineViewOptions, // Optional: user-configurable options function
+				},
+			);
+		}
 
 		this.addCommand({
 			id: "enable",
@@ -181,11 +236,11 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		for (const cmd of this.commands) {
 			try {
-				if ('description' in cmd) {
+				if ("description" in cmd) {
 					delete cmd.description;
 				}
-				if ('settingCallback' in cmd) {
-					delete cmd.settingCallback
+				if ("settingCallback" in cmd) {
+					delete cmd.settingCallback;
 				}
 				const cmdObject: Command = {
 					...cmd,
@@ -235,9 +290,11 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 
 		this.registerEvent(
-			this.app.workspace.on("file-open", (file) => this.processMarkdownView(file, {
-				skipCommandExecution: true
-			}))
+			this.app.workspace.on("file-open", (file) =>
+				this.processMarkdownView(file, {
+					skipCommandExecution: true,
+				}),
+			),
 		);
 
 		this.registerEvent(
@@ -245,12 +302,12 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				const file = this.app.workspace.getActiveFile();
 
 				void this.processMarkdownView(file, {
-					skipCommandExecution: false
+					skipCommandExecution: false,
 				});
 				if (this.settings.workInCanvas) {
 					void this.processAllCanvasNodes();
 				}
-			})
+			}),
 		);
 
 		// Process canvas nodes when canvas changes
@@ -259,16 +316,18 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				if (this.settings.workInCanvas) {
 					void this.processAllCanvasNodes();
 				}
-			})
+			}),
 		);
 
 		// Also process canvas nodes periodically to catch updates
-		this.registerInterval(window.setInterval(() => {
-			if (this.settings.enabled && this.settings.workInCanvas) {
-				this.debug(`canvas node interval`);
-				void this.processAllCanvasNodes();
-			}
-		}, 10000));
+		this.registerInterval(
+			window.setInterval(() => {
+				if (this.settings.enabled && this.settings.workInCanvas) {
+					this.debug(`canvas node interval`);
+					void this.processAllCanvasNodes();
+				}
+			}, 10000),
+		);
 	}
 
 	async setPluginState(enabled: boolean) {
@@ -297,24 +356,46 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		this.restoreAllCanvasNodes();
 	}
 
-	extractMatchingRuleParameters = (file: TFile, options?: ProcessMarkdownViewOptions) => {
+	extractMatchingRuleParameters = (
+		file: TFile,
+		options?: ProcessMarkdownViewOptions,
+	) => {
 		const cache = this.app.metadataCache.getFileCache(file);
-		const useBaseFileHandling: BaseFileHandling = options?.baseFileHandling ?? "file";
+		const useBaseFileHandling: BaseFileHandling =
+			options?.baseFileHandling ?? "file";
 		let matchedTemplate = "";
 		let commandIds: string[] = [];
 
-		const ruleLog = this.settings.debug ? (...args: unknown[]) => this.debug(...args) : undefined;
+		const ruleLog = this.settings.debug
+			? (...args: unknown[]) => this.debug(...args)
+			: undefined;
 		for (const [ruleIndex, ruleConfig] of this.settings.rules.entries()) {
 			//default to file baseFileHandling
-			const matchingBaseHandling = ruleConfig.baseFileHandling === "both" || ruleConfig.baseFileHandling === useBaseFileHandling;
-			const isMatch = ruleConfig.enabled && matchingBaseHandling && checkRules(this.app, ruleConfig.filterGroup, file, cache?.frontmatter, ruleLog);
-			this.debug(`Rule [${ruleIndex}] "${ruleConfig.name ?? ""}" on "${file.path}": ${isMatch ? "MATCH" : "no match"}${!ruleConfig.enabled ? " (disabled)" : !matchingBaseHandling ? " (wrong base handling)" : ""}`);
+			const matchingBaseHandling =
+				ruleConfig.baseFileHandling === "both" ||
+				ruleConfig.baseFileHandling === useBaseFileHandling;
+			const isMatch =
+				ruleConfig.enabled &&
+				matchingBaseHandling &&
+				checkRules(
+					this.app,
+					ruleConfig.filterGroup,
+					file,
+					cache?.frontmatter,
+					ruleLog,
+				);
+			this.debug(
+				`Rule [${ruleIndex}] "${ruleConfig.name ?? ""}" on "${file.path}": ${isMatch ? "MATCH" : "no match"}${!ruleConfig.enabled ? " (disabled)" : !matchingBaseHandling ? " (wrong base handling)" : ""}`,
+			);
 			if (isMatch) {
 				if (!matchedTemplate.length) {
 					const ctx = options?.renderContext;
-					const contextEnabled = ctx === 'canvas' ? ruleConfig.enableTemplateForCanvas
-						: ctx === 'base' ? ruleConfig.enableTemplateForBase
-						: ruleConfig.enableTemplateForFile;
+					const contextEnabled =
+						ctx === "canvas"
+							? ruleConfig.enableTemplateForCanvas
+							: ctx === "base"
+								? ruleConfig.enableTemplateForBase
+								: ruleConfig.enableTemplateForFile;
 					if (contextEnabled && ruleConfig.template) {
 						matchedTemplate = ruleConfig.template;
 					}
@@ -325,12 +406,15 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			}
 		}
 
-		const forcedTemplate = options?.forceTemplateIndex === undefined ? undefined : this.settings.rules[options?.forceTemplateIndex]?.template?.trim();
+		const forcedTemplate =
+			options?.forceTemplateIndex === undefined
+				? undefined
+				: this.settings.rules[options?.forceTemplateIndex]?.template?.trim();
 
 		const result = {
 			matchedTemplate: forcedTemplate ?? matchedTemplate,
 			commandIds,
-			baseFileHandling: useBaseFileHandling
+			baseFileHandling: useBaseFileHandling,
 		};
 
 		this.debug(`extractMatchingRuleParameters`, result);
@@ -338,7 +422,10 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return result;
 	};
 
-	async processMarkdownView(file: TFile | null, options?: ProcessMarkdownViewOptions) {
+	async processMarkdownView(
+		file: TFile | null,
+		options?: ProcessMarkdownViewOptions,
+	) {
 		if (!file) return;
 
 		const leaf = this.app.workspace.getLeaf(false);
@@ -353,10 +440,17 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			return;
 		}
 
-		const { matchedTemplate, commandIds, baseFileHandling } = this.extractMatchingRuleParameters(file, options);
+		const { matchedTemplate, commandIds, baseFileHandling } =
+			this.extractMatchingRuleParameters(file, options);
 
 		if (!options?.skipCommandExecution) {
-			await this.executeCommands(baseFileHandling, commandIds, null, undefined, this.getFileCommandOverrides(file));
+			await this.executeCommands(
+				baseFileHandling,
+				commandIds,
+				null,
+				undefined,
+				this.getFileCommandOverrides(file),
+			);
 		}
 
 		if (!matchedTemplate) {
@@ -366,9 +460,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 
 		const state = view.getState();
-		const isTrueSourceMode = state.mode === 'source' && state.source === true;
-		const isReadingMode = state.mode === 'preview';
-		const isLivePreviewMode = state.mode === 'source' && state.source === false;
+		const isTrueSourceMode = state.mode === "source" && state.source === true;
+		const isReadingMode = state.mode === "preview";
+		const isLivePreviewMode = state.mode === "source" && state.source === false;
 
 		if (isTrueSourceMode) {
 			this.restoreDefaultView(view);
@@ -386,8 +480,14 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		await this.injectCustomView(view.contentEl, file, matchedTemplate);
 	}
 
-	async injectCustomView(container: HTMLElement, file: TFile, template: string) {
-		let customEl = container.querySelector(`.${CUSTOM_RULE_CLASS}`) as HTMLElement;
+	async injectCustomView(
+		container: HTMLElement,
+		file: TFile,
+		template: string,
+	) {
+		let customEl = container.querySelector(
+			`.${CUSTOM_RULE_CLASS}`,
+		) as HTMLElement;
 
 		if (!customEl) {
 			customEl = container.createDiv({ cls: CUSTOM_RULE_CLASS });
@@ -399,7 +499,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 				if (link && link.instanceOf(HTMLAnchorElement)) {
 					evt.preventDefault();
-					const href = link.getAttribute("data-href") || link.getAttribute("href");
+					const href =
+						link.getAttribute("data-href") || link.getAttribute("href");
 
 					if (href) {
 						const newLeaf = Keymap.isModEvent(evt);
@@ -425,15 +526,22 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		const loadedData = await this.loadData() as Partial<CustomRulesSettings> | null;
-		this.settings = Object.assign(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), loadedData || {}) as CustomRulesSettings;
+		const loadedData =
+			(await this.loadData()) as Partial<CustomRulesSettings> | null;
+		this.settings = Object.assign(
+			JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
+			loadedData || {},
+		) as CustomRulesSettings;
 
 		// Migrate pre-2.0 rules: separate templateBase/templateCanvas override strings
 		// are replaced by enableTemplateForBase/enableTemplateForCanvas toggles on the single `template`.
 		// A rule that had non-empty override text keeps applying its template in that
 		// context; the override text itself is discarded (only `template` survives).
 		for (const rule of this.settings.rules) {
-			const legacy = rule as unknown as { templateBase?: string; templateCanvas?: string };
+			const legacy = rule as unknown as {
+				templateBase?: string;
+				templateCanvas?: string;
+			};
 			if (rule.enableTemplateForBase === undefined) {
 				rule.enableTemplateForBase = Boolean(legacy.templateBase?.trim());
 			}
@@ -441,7 +549,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				rule.enableTemplateForCanvas = Boolean(legacy.templateCanvas?.trim());
 			}
 			// Pre-2.0 rules always applied their template to normal file views
-			// unconditionally — default to true so existing rules keep working.
+			// unconditionally - default to true so existing rules keep working.
 			if (rule.enableTemplateForFile === undefined) {
 				rule.enableTemplateForFile = true;
 			}
@@ -489,7 +597,11 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 					// Process each node in the canvas
 					this.debug(`processAllCanvasNodes`, `processing nodes`);
 					canvas.nodes.forEach((node) => {
-						if (node.file && node.file instanceof TFile && node.file.extension === "md") {
+						if (
+							node.file &&
+							node.file instanceof TFile &&
+							node.file.extension === "md"
+						) {
 							void this.processCanvasNode(node);
 						}
 					});
@@ -508,7 +620,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const {
 			matchedTemplate,
 			// commandIds, baseFileHandling
-		} = this.extractMatchingRuleParameters(file, { renderContext: 'canvas' });
+		} = this.extractMatchingRuleParameters(file, { renderContext: "canvas" });
 
 		// this.executeCommands(baseFileHandling, commandIds);
 
@@ -522,7 +634,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (!nodeEl) return;
 
 		// Find the markdown preview container within the node
-		const previewContainer = nodeEl.querySelector(".markdown-preview-view") as HTMLElement;
+		const previewContainer = nodeEl.querySelector(
+			".markdown-preview-view",
+		) as HTMLElement;
 		if (!previewContainer) return;
 
 		await this.injectCustomView(previewContainer, file, matchedTemplate);
@@ -535,7 +649,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const nodeEl = node.nodeEl as HTMLElement;
 		if (!nodeEl) return;
 
-		const previewContainer = nodeEl.querySelector(".markdown-preview-view") as HTMLElement;
+		const previewContainer = nodeEl.querySelector(
+			".markdown-preview-view",
+		) as HTMLElement;
 		if (!previewContainer) return;
 
 		this.debug(`restoreCanvasNode`);
@@ -566,28 +682,46 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	public get obsidianCommands(): Record<string, Command> {
 		const regularCommands = this.app.commands.commands;
 		const editorCommands = this.app.commands.editorCommands;
-		const allCommands: Record<string, Command> = { ...regularCommands, ...editorCommands };
+		const allCommands: Record<string, Command> = {
+			...regularCommands,
+			...editorCommands,
+		};
 		if (Object.keys(allCommands).length === 0) {
-			this.debug('no commands found for rule-engine');
+			this.debug("no commands found for rule-engine");
 		} else {
-			this.debug(`found ${Object.keys(allCommands).length} commands`, allCommands);
+			this.debug(
+				`found ${Object.keys(allCommands).length} commands`,
+				allCommands,
+			);
 		}
 		return allCommands;
 	}
 
-	public async executeCommands(mode: BaseFileHandling, commandIds: string[], file?: TFile | null, groupLeaf?: WorkspaceLeaf, fileOverrides?: Record<string, Partial<CommandConfig>>): Promise<void> {
+	public async executeCommands(
+		mode: BaseFileHandling,
+		commandIds: string[],
+		file?: TFile | null,
+		groupLeaf?: WorkspaceLeaf,
+		fileOverrides?: Record<string, Partial<CommandConfig>>,
+	): Promise<void> {
 		if (!commandIds?.length) return;
-		this.debug(`executeCommands`, mode, commandIds.length, 'commands', { file, groupLeaf });
+		this.debug(`executeCommands`, mode, commandIds.length, "commands", {
+			file,
+			groupLeaf,
+		});
 		const doCmds = () => {
 			const prev = this._callOverrides;
 			this._callOverrides = fileOverrides ?? {};
 			try {
-				const commandObjects = Object.entries(this.obsidianCommands).filter(([k]) => commandIds.includes(k)).map(([_, cmd]) => cmd);
+				const commandObjects = Object.entries(this.obsidianCommands)
+					.filter(([k]) => commandIds.includes(k))
+					.map(([_, cmd]) => cmd);
 				if (mode === "file" || mode === "both") {
 					for (const cmd of commandObjects) {
 						// Check per-file enabled override
 						const shortId = stripCommandIdPrefix(cmd.id);
-						const override = fileOverrides?.[cmd.id] ?? fileOverrides?.[shortId];
+						const override =
+							fileOverrides?.[cmd.id] ?? fileOverrides?.[shortId];
 						if (override?.enabled === false) continue;
 						const commandFn = cmd?.checkCallback ?? cmd?.callback ?? undefined;
 						if (commandFn) {
@@ -612,9 +746,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (file) {
 			const leaf = this.app.workspace.getLeaf(
 				groupLeaf ? undefined : "split",
-				groupLeaf ? undefined : "vertical"
+				groupLeaf ? undefined : "vertical",
 			);
-			leaf.setGroup('ore-leaf-group');
+			leaf.setGroup("ore-leaf-group");
 			if (groupLeaf) {
 				leaf.setGroupMember(groupLeaf);
 			}
@@ -652,7 +786,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	 * Scans the vault to find properties and INFER their types.
 	 */
 	scanVaultProperties(): PropertyDef[] {
-
 		// Define built-in properties in the desired order
 		const builtInProps: Array<[string, PropertyType]> = [
 			["file", "file"],
@@ -665,7 +798,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			["file.outlinks", "number"],
 			["file.inlinks", "number"],
 			["file tags", "list"],
-			["aliases", "list"]
+			["aliases", "list"],
 		];
 
 		// init with built-in props
@@ -677,9 +810,15 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			const cache = this.app.metadataCache.getFileCache(file);
 			if (cache?.frontmatter) {
 				for (const key of Object.keys(cache.frontmatter)) {
-					if (key === "position" || key === "tags" || key === "aliases") continue;
+					if (key === "position" || key === "tags" || key === "aliases")
+						continue;
 					if (propMap.has(key) && propMap.get(key) !== "unknown") continue;
-					const val = cache.frontmatter[key] as string | number | boolean | string[] | undefined;
+					const val = cache.frontmatter[key] as
+						| string
+						| number
+						| boolean
+						| string[]
+						| undefined;
 					const type = this.inferType(val);
 					propMap.set(key, type);
 				}
@@ -689,8 +828,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	}
 
 	/**
-	  * Gets the icon for a property
-	  */
+	 * Gets the icon for a property
+	 */
 	getPropertyIcon(key: string, type: PropertyType): string {
 		if (key === "file tags") return "tags";
 		if (key === "aliases") return "forward";
@@ -700,15 +839,17 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		return TYPE_ICONS[type] || "pilcrow";
 	}
 
-	getPropertyType(key: string, allVaultProperties?: PropertyDef[]): PropertyType {
+	getPropertyType(
+		key: string,
+		allVaultProperties?: PropertyDef[],
+	): PropertyType {
 		// passing the property definitions here means the vault doesn't need to be searched again
 		const props = allVaultProperties?.length
 			? allVaultProperties
 			: this.scanVaultProperties();
-		const def = props.find(p => p.key === key);
+		const def = props.find((p) => p.key === key);
 		return def ? def.type : "text";
 	}
-
 
 	/**
 	 * Gets the display label for a property key
@@ -722,7 +863,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			"file.outlinks": "outgoing link count",
 			"file.inlinks": "backlink count",
 			"file.ctime": "created time",
-			"file.mtime": "modified time"
+			"file.mtime": "modified time",
 		};
 		return labelMap[key] || key;
 	}

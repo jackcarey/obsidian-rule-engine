@@ -1,12 +1,16 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import type { App, Component, TFile } from "obsidian";
+import { beforeAll, describe, expect, it } from "vitest";
 import { renderTemplate } from "../../src/templateRenderer";
-import type { App, TFile, Component } from "obsidian";
 
 // activeDocument is an Obsidian global used inside renderTemplate
 beforeAll(() => {
-    (globalThis as unknown as { activeDocument: Document }).activeDocument = document;
+    (globalThis as unknown as { activeDocument: Document }).activeDocument =
+        document;
     // Polyfill Obsidian's HTMLElement extensions used by renderTemplate
-    type DomElementInfo = { cls?: string | string[]; attr?: Record<string, string | number | boolean | null> };
+    type DomElementInfo = {
+        cls?: string | string[];
+        attr?: Record<string, string | number | boolean | null>;
+    };
     const proto = HTMLElement.prototype as unknown as {
         addClass?: (...cls: string[]) => void;
         createEl?: (tag: string, o?: DomElementInfo | string) => HTMLElement;
@@ -18,7 +22,11 @@ beforeAll(() => {
         };
     }
     if (!proto.createEl) {
-        proto.createEl = function (this: HTMLElement, tag: string, o?: DomElementInfo | string) {
+        proto.createEl = function (
+            this: HTMLElement,
+            tag: string,
+            o?: DomElementInfo | string,
+        ) {
             const el = document.createElement(tag);
             const opts = typeof o === "string" ? { cls: o } : o;
             if (opts?.cls) {
@@ -34,32 +42,39 @@ beforeAll(() => {
         };
     }
     if (!proto.createDiv) {
-        proto.createDiv = function (this: HTMLElement, o?: DomElementInfo | string) {
+        proto.createDiv = function (
+            this: HTMLElement,
+            o?: DomElementInfo | string,
+        ) {
             return this.createEl("div", o);
         };
     }
 });
 
-function makeApp(opts: {
-    frontmatter?: Record<string, unknown>;
-    fileContent?: string;
-} = {}) {
+function makeApp(
+    opts: { frontmatter?: Record<string, unknown>; fileContent?: string } = {},
+) {
     return {
         metadataCache: {
-            getFileCache: () => opts.frontmatter !== undefined ? { frontmatter: opts.frontmatter } : null,
+            getFileCache: () =>
+                opts.frontmatter !== undefined
+                    ? { frontmatter: opts.frontmatter }
+                    : null,
         },
         vault: { read: async () => opts.fileContent ?? "" },
     } as unknown as App;
 }
 
-function makeFile(opts: {
-    name?: string;
-    basename?: string;
-    path?: string;
-    extension?: string;
-    parent?: { path: string } | null;
-    stat?: { size: number; ctime: number; mtime: number };
-} = {}) {
+function makeFile(
+    opts: {
+        name?: string;
+        basename?: string;
+        path?: string;
+        extension?: string;
+        parent?: { path: string } | null;
+        stat?: { size: number; ctime: number; mtime: number };
+    } = {},
+) {
     return {
         name: opts.name ?? "note.md",
         basename: opts.basename ?? "note",
@@ -70,55 +85,82 @@ function makeFile(opts: {
     } as unknown as TFile;
 }
 
-async function render(template: string, file?: TFile, frontmatter?: Record<string, unknown>) {
+async function render(
+    template: string,
+    file?: TFile,
+    frontmatter?: Record<string, unknown>,
+) {
     const container = document.createElement("div");
     await renderTemplate(
         makeApp({ frontmatter }),
         template,
         file ?? makeFile(),
         container,
-        {} as unknown as Component
+        {} as unknown as Component,
     );
     return container;
 }
 
 // ---------------------------------------------------------------------------
-// Attribute-injected values (inlined as raw strings — no MarkdownRenderer)
+// Attribute-injected values (inlined as raw strings - no MarkdownRenderer)
 // ---------------------------------------------------------------------------
 
 describe("file property variables (attribute injection)", () => {
     it("{{file.basename}} resolves to file basename", async () => {
-        const el = await render('<img alt="{{file.basename}}">', makeFile({ basename: "my-note" }));
+        const el = await render(
+            '<img alt="{{file.basename}}">',
+            makeFile({ basename: "my-note" }),
+        );
         expect(el.querySelector("img")?.getAttribute("alt")).toBe("my-note");
     });
 
     it("{{file.name}} resolves to file name", async () => {
-        const el = await render('<img alt="{{file.name}}">', makeFile({ name: "my-note.md" }));
+        const el = await render(
+            '<img alt="{{file.name}}">',
+            makeFile({ name: "my-note.md" }),
+        );
         expect(el.querySelector("img")?.getAttribute("alt")).toBe("my-note.md");
     });
 
     it("{{file.path}} resolves to full file path", async () => {
-        const el = await render('<img src="{{file.path}}">', makeFile({ path: "folder/sub/note.md" }));
-        expect(el.querySelector("img")?.getAttribute("src")).toBe("folder/sub/note.md");
+        const el = await render(
+            '<img src="{{file.path}}">',
+            makeFile({ path: "folder/sub/note.md" }),
+        );
+        expect(el.querySelector("img")?.getAttribute("src")).toBe(
+            "folder/sub/note.md",
+        );
     });
 
     it("{{file.folder}} resolves to parent folder path", async () => {
-        const el = await render('<img alt="{{file.folder}}">', makeFile({ parent: { path: "projects/work" } }));
+        const el = await render(
+            '<img alt="{{file.folder}}">',
+            makeFile({ parent: { path: "projects/work" } }),
+        );
         expect(el.querySelector("img")?.getAttribute("alt")).toBe("projects/work");
     });
 
     it("{{file.extension}} resolves to file extension", async () => {
-        const el = await render('<img alt="{{file.extension}}">', makeFile({ extension: "md" }));
+        const el = await render(
+            '<img alt="{{file.extension}}">',
+            makeFile({ extension: "md" }),
+        );
         expect(el.querySelector("img")?.getAttribute("alt")).toBe("md");
     });
 
     it("{{file.size}} resolves to file size", async () => {
-        const el = await render('<img alt="{{file.size}}">', makeFile({ stat: { size: 4096, ctime: 0, mtime: 0 } }));
+        const el = await render(
+            '<img alt="{{file.size}}">',
+            makeFile({ stat: { size: 4096, ctime: 0, mtime: 0 } }),
+        );
         expect(el.querySelector("img")?.getAttribute("alt")).toBe("4096");
     });
 
     it("{{file.folder}} is empty string when file is in vault root", async () => {
-        const el = await render('<img alt="{{file.folder}}">', makeFile({ parent: { path: "" } }));
+        const el = await render(
+            '<img alt="{{file.folder}}">',
+            makeFile({ parent: { path: "" } }),
+        );
         expect(el.querySelector("img")?.getAttribute("alt")).toBe("");
     });
 });
@@ -129,12 +171,16 @@ describe("file property variables (attribute injection)", () => {
 
 describe("frontmatter variables (attribute injection)", () => {
     it("resolves a frontmatter string property", async () => {
-        const el = await render('<div class="{{status}}">', makeFile(), { status: "done" });
+        const el = await render('<div class="{{status}}">', makeFile(), {
+            status: "done",
+        });
         expect(el.querySelector("div")?.getAttribute("class")).toBe("done");
     });
 
     it("renders empty string for a missing frontmatter property", async () => {
-        const el = await render('<div class="{{missing}}">', makeFile(), { status: "done" });
+        const el = await render('<div class="{{missing}}">', makeFile(), {
+            status: "done",
+        });
         expect(el.querySelector("div")?.getAttribute("class")).toBe("");
     });
 
@@ -153,22 +199,26 @@ describe("file.* properties take priority over frontmatter (bug fix)", () => {
         const el = await render(
             '<img src="{{file.path}}">',
             makeFile({ path: "real/path/note.md" }),
-            { path: "frontmatter-path" }
+            { path: "frontmatter-path" },
         );
-        expect(el.querySelector("img")?.getAttribute("src")).toBe("real/path/note.md");
+        expect(el.querySelector("img")?.getAttribute("src")).toBe(
+            "real/path/note.md",
+        );
     });
 
     it("{{file.basename}} is not overridden by a frontmatter 'basename' key", async () => {
         const el = await render(
             '<img alt="{{file.basename}}">',
             makeFile({ basename: "real-basename" }),
-            { basename: "fm-basename" }
+            { basename: "fm-basename" },
         );
         expect(el.querySelector("img")?.getAttribute("alt")).toBe("real-basename");
     });
 
     it("bare {{path}} resolves from frontmatter when available", async () => {
-        const el = await render('<img src="{{path}}">', makeFile(), { path: "fm-path-value" });
+        const el = await render('<img src="{{path}}">', makeFile(), {
+            path: "fm-path-value",
+        });
         expect(el.querySelector("img")?.getAttribute("src")).toBe("fm-path-value");
     });
 });
@@ -179,48 +229,69 @@ describe("file.* properties take priority over frontmatter (bug fix)", () => {
 
 describe("filter chains in templates", () => {
     it("applies a single filter", async () => {
-        const el = await render('<img alt="{{file.basename|upper}}">', makeFile({ basename: "hello" }));
+        const el = await render(
+            '<img alt="{{file.basename|upper}}">',
+            makeFile({ basename: "hello" }),
+        );
         expect(el.querySelector("img")?.getAttribute("alt")).toBe("HELLO");
     });
 
     it("applies a chained filter", async () => {
         // upper→kebab: "In Progress" → "IN PROGRESS" → "in-progress" (kebab lowercases)
-        const el = await render('<span class="{{status|upper|kebab}}">', makeFile(), { status: "In Progress" });
+        const el = await render(
+            '<span class="{{status|upper|kebab}}">',
+            makeFile(),
+            { status: "In Progress" },
+        );
         expect(el.querySelector("span")?.getAttribute("class")).toBe("in-progress");
     });
 
     it("applies date filter to a timestamp", async () => {
         const ts = new Date("2024-06-15T12:00:00Z").getTime();
-        const el = await render('<img alt="{{file.ctime|date}}">', makeFile({ stat: { size: 0, ctime: ts, mtime: 0 } }));
+        const el = await render(
+            '<img alt="{{file.ctime|date}}">',
+            makeFile({ stat: { size: 0, ctime: ts, mtime: 0 } }),
+        );
         // result is a YYYY-MM-DD string; exact value depends on local timezone
-        expect(el.querySelector("img")?.getAttribute("alt")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(el.querySelector("img")?.getAttribute("alt")).toMatch(
+            /^\d{4}-\d{2}-\d{2}$/,
+        );
     });
 });
 
 // ---------------------------------------------------------------------------
-// Non-attribute values — rendered via MarkdownRenderer (mock sets textContent)
+// Non-attribute values - rendered via MarkdownRenderer (mock sets textContent)
 // ---------------------------------------------------------------------------
 
 describe("non-attribute variable rendering", () => {
     it("renders a non-attribute variable as markdown", async () => {
-        const el = await render("<p>{{file.basename}}</p>", makeFile({ basename: "My Note" }));
+        const el = await render(
+            "<p>{{file.basename}}</p>",
+            makeFile({ basename: "My Note" }),
+        );
         // MarkdownRenderer mock puts the value as textContent of a span inside <p>
         expect(el.querySelector("p")?.textContent?.trim()).toBe("My Note");
     });
 
     it("renders a frontmatter value inline", async () => {
-        const el = await render("<p>{{status}}</p>", makeFile(), { status: "active" });
+        const el = await render("<p>{{status}}</p>", makeFile(), {
+            status: "active",
+        });
         expect(el.querySelector("p")?.textContent?.trim()).toBe("active");
     });
 });
 
 // ---------------------------------------------------------------------------
-// {{file.content}} — inserts a placeholder div for body content
+// {{file.content}} - inserts a placeholder div for body content
 // ---------------------------------------------------------------------------
 
 describe("{{file.content}} placeholder", () => {
     it("inserts a rendered-content div for {{file.content}}", async () => {
-        const el = await render("<main>{{file.content}}</main>", makeFile(), undefined);
+        const el = await render(
+            "<main>{{file.content}}</main>",
+            makeFile(),
+            undefined,
+        );
         // The placeholder div has class markdown-rendered-content
         expect(el.querySelector(".markdown-rendered-content")).toBeTruthy();
     });
@@ -232,7 +303,9 @@ describe("{{file.content}} placeholder", () => {
 
 describe("template scripts", () => {
     it("executes an inline script with `this` bound to the render container", async () => {
-        const el = await render("<div><script>this.setAttribute('data-executed', 'yes');</script></div>");
+        const el = await render(
+            "<div><script>this.setAttribute('data-executed', 'yes');</script></div>",
+        );
         expect(el.getAttribute("data-executed")).toBe("yes");
     });
 
@@ -242,13 +315,17 @@ describe("template scripts", () => {
     });
 
     it("does not execute a script with a src attribute", async () => {
-        const el = await render('<div><script src="https://example.com/evil.js">this.setAttribute(\'data-executed\', \'yes\')</script></div>');
+        const el = await render(
+            "<div><script src=\"https://example.com/evil.js\">this.setAttribute('data-executed', 'yes')</script></div>",
+        );
         expect(el.getAttribute("data-executed")).toBeNull();
         expect(el.querySelector("script")).toBeNull();
     });
 
     it("swallows errors thrown by a template script instead of crashing the render", async () => {
-        const el = await render("<div><div id=\"marker\"></div><script>throw new Error('boom');</script></div>");
+        const el = await render(
+            "<div><div id=\"marker\"></div><script>throw new Error('boom');</script></div>",
+        );
         expect(el.querySelector("#marker")).toBeTruthy();
         expect(el.querySelector("script")).toBeNull();
     });

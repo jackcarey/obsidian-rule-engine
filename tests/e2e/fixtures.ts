@@ -1,4 +1,9 @@
-import { chromium, test as base, type Browser, type Page } from "@playwright/test";
+import {
+  type Browser,
+  test as base,
+  chromium,
+  type Page,
+} from "@playwright/test";
 import { CDP_PORT } from "./global-setup";
 
 declare global {
@@ -6,13 +11,26 @@ declare global {
     app: {
       workspace: {
         containerEl: HTMLElement;
-        getActiveFile(): { path: string; name: string; basename: string } | null;
+        getActiveFile(): {
+          path: string;
+          name: string;
+          basename: string;
+        } | null;
         openLinkText(linkText: string, sourcePath: string): Promise<void>;
         getLeaf(newLeaf?: boolean): { view: { getViewType(): string } };
       };
-      vault: { getMarkdownFiles(): Array<{ path: string; name: string; basename: string }> };
+      vault: {
+        getMarkdownFiles(): Array<{
+          path: string;
+          name: string;
+          basename: string;
+        }>;
+      };
       plugins: {
-        plugins: Record<string, { settings: Record<string, unknown> } | undefined>;
+        plugins: Record<
+          string,
+          { settings: Record<string, unknown> } | undefined
+        >;
         manifests: Record<string, { version: string }>;
         loadErrors: Record<string, string>;
       };
@@ -27,8 +45,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   // Shared per-worker browser connection to Obsidian
   obsidianBrowser: [
     // eslint-disable-next-line no-empty-pattern -- Playwright requires the literal destructuring pattern here
-    async ({}, use) => {
-      const browser = await chromium.connectOverCDP(`http://localhost:${CDP_PORT}`);
+    async ({ }, use) => {
+      const browser = await chromium.connectOverCDP(
+        `http://localhost:${CDP_PORT}`,
+      );
       await use(browser);
       // close() disconnects CDP without killing Obsidian
       await browser.close();
@@ -36,7 +56,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: "worker" },
   ],
 
-  // Per-test page — resolves to the live Obsidian window
+  // Per-test page - resolves to the live Obsidian window
   page: async ({ obsidianBrowser }, use) => {
     const context = obsidianBrowser.contexts()[0];
     let page = context.pages().find((p) => p.url().includes("obsidian.md"));
@@ -47,7 +67,9 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       });
     }
     // Wait for Obsidian workspace to be fully ready
-    await page.waitForFunction(() => !!window.app?.workspace?.containerEl, { timeout: 30000 });
+    await page.waitForFunction(() => !!window.app?.workspace?.containerEl, {
+      timeout: 30000,
+    });
     await use(page);
   },
 });
@@ -59,7 +81,9 @@ export { expect } from "@playwright/test";
 /** Open a note by its filename (e.g. "matched-file.md") via Obsidian's API. */
 export async function openNote(page: Page, filename: string): Promise<void> {
   await page.evaluate(async (name) => {
-    const file = window.app.vault.getMarkdownFiles().find((f) => f.name === name);
+    const file = window.app.vault
+      .getMarkdownFiles()
+      .find((f) => f.name === name);
     if (!file) throw new Error(`File not found in vault: ${name}`);
     await window.app.workspace.openLinkText(file.path, "");
   }, filename);
@@ -73,12 +97,15 @@ export async function openNote(page: Page, filename: string): Promise<void> {
  *
  * As of Obsidian 1.13, Settings opens in its own popout OS window (a second
  * CDP target/Page) rather than as a `.modal-container` overlay in the main
- * window. That popout is a singleton — `setting.open()` re-shows the same
+ * window. That popout is a singleton - `setting.open()` re-shows the same
  * window on subsequent calls instead of creating a new one, so callers must
  * always use the returned Page for further interaction, not the original
  * `page` passed in.
  */
-export async function openPluginSettings(page: Page, tabLabel: string): Promise<Page> {
+export async function openPluginSettings(
+  page: Page,
+  tabLabel: string,
+): Promise<Page> {
   const context = page.context();
 
   await page.evaluate(() => {
@@ -102,7 +129,9 @@ export async function openPluginSettings(page: Page, tabLabel: string): Promise<
 
   // Click the tab in the vertical nav
   await settingsPage.evaluate((label) => {
-    const items = Array.from(document.querySelectorAll<HTMLElement>(".vertical-tab-nav-item"));
+    const items = Array.from(
+      document.querySelectorAll<HTMLElement>(".vertical-tab-nav-item"),
+    );
     const tab = items.find((el) => el.textContent?.trim() === label);
     if (!tab) throw new Error(`Settings tab not found: ${label}`);
     tab.click();
@@ -124,7 +153,10 @@ export async function closeModal(page: Page): Promise<void> {
  * the main page (fallback case), just presses Escape instead of closing the
  * whole Obsidian window.
  */
-export async function closeSettings(settingsPage: Page, mainPage: Page): Promise<void> {
+export async function closeSettings(
+  settingsPage: Page,
+  mainPage: Page,
+): Promise<void> {
   if (settingsPage !== mainPage) {
     await settingsPage.close().catch(() => undefined);
   } else {
@@ -138,10 +170,13 @@ export async function closeSettings(settingsPage: Page, mainPage: Page): Promise
  * `.setting-item` row (it has no edit button), so this selects directly by
  * edit-button presence rather than indexing into all `.setting-item` rows.
  */
-export async function openEditRuleModal(page: Page, ruleIndex = 0): Promise<void> {
+export async function openEditRuleModal(
+  page: Page,
+  ruleIndex = 0,
+): Promise<void> {
   await page.evaluate((idx) => {
     const editButtons = document.querySelectorAll<HTMLElement>(
-      '.ore-rule-list .setting-item button[aria-label="Edit rule"]'
+      '.ore-rule-list .setting-item button[aria-label="Edit rule"]',
     );
     const editBtn = editButtons[idx];
     if (!editBtn) throw new Error(`Rule at index ${idx} not found`);
@@ -154,10 +189,12 @@ export async function openEditRuleModal(page: Page, ruleIndex = 0): Promise<void
  * Click the "Edit filters" button in an already-open edit rule modal and wait
  * for FilterModal (the standalone modal hosting the actual filter builder) to
  * open on top of it. The edit rule modal itself only shows a read-only
- * summary — the interactive .filter-row/.filter-group-header controls this
+ * summary - the interactive .filter-row/.filter-group-header controls this
  * test suite drives all live inside FilterModal now.
  */
 export async function openFilterModal(page: Page): Promise<void> {
-  await page.locator(".ore-edit-rule-modal button", { hasText: "Edit filters" }).click();
+  await page
+    .locator(".ore-edit-rule-modal button", { hasText: "Edit filters" })
+    .click();
   await page.waitForSelector(".ore-filter-modal", { timeout: 5000 });
 }

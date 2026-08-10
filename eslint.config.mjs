@@ -18,7 +18,7 @@ export default defineConfig([
 		},
 		rules: {
 			// Obsidian's own API is heavily `any`-typed, so these fire constantly
-			// on legitimate calls into it — keep as warnings, not build-breaking errors.
+			// on legitimate calls into it - keep as warnings, not build-breaking errors.
 			"@typescript-eslint/no-unsafe-assignment": "warn",
 			"@typescript-eslint/no-unsafe-member-access": "warn",
 			"@typescript-eslint/no-unsafe-call": "warn",
@@ -66,7 +66,7 @@ export default defineConfig([
 		files: ["package.json"],
 		rules: {
 			// moment is a devDependency only, used by the obsidian test mock so
-			// specs run outside Obsidian — not bundled into the plugin.
+			// specs run outside Obsidian - not bundled into the plugin.
 			"depend/ban-dependencies": ["error", { presets: ["native", "microutilities", "preferred"], allowed: ["moment"] }],
 		},
 	},
