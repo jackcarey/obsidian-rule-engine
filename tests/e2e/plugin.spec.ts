@@ -112,6 +112,30 @@ test("command configuration — a command with a settingCallback opens its own s
   await closeSettings(settingsPage, page);
 });
 
+test("rule list — delete button asks for confirmation, and Cancel keeps the rule", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+
+  const ruleRows = settingsPage.locator('.ore-rule-list .setting-item:has([aria-label="Edit rule"])');
+  const countBefore = await ruleRows.count();
+
+  const folderRuleRow = ruleRows.filter({ hasText: "Folder Rule" });
+  await expect(folderRuleRow).toHaveCount(1);
+  await folderRuleRow.locator('[aria-label="Delete"]').click();
+
+  const confirmModal = settingsPage.locator(".ore-confirm-modal");
+  await expect(confirmModal).toBeVisible();
+  await expect(confirmModal).toContainText("Folder Rule");
+
+  await confirmModal.locator("button", { hasText: "Cancel" }).click();
+  await settingsPage.waitForTimeout(300);
+
+  // Nothing should have been removed
+  expect(await ruleRows.count()).toBe(countBefore);
+  await expect(ruleRows.filter({ hasText: "Folder Rule" })).toHaveCount(1);
+
+  await closeSettings(settingsPage, page);
+});
+
 test("rule list — delete a rule via the list's delete button", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
 
@@ -123,6 +147,11 @@ test("rule list — delete a rule via the list's delete button", async ({ page }
   const folderRuleRow = ruleRows.filter({ hasText: "Folder Rule" });
   await expect(folderRuleRow).toHaveCount(1);
   await folderRuleRow.locator('[aria-label="Delete"]').click();
+
+  // Deleting now asks for confirmation before actually removing the rule.
+  const confirmModal = settingsPage.locator(".ore-confirm-modal");
+  await expect(confirmModal).toBeVisible();
+  await confirmModal.locator("button", { hasText: "Delete" }).click();
   await settingsPage.waitForTimeout(400);
 
   expect(await ruleRows.count()).toBe(countBefore - 1);
