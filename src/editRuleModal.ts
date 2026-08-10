@@ -3,7 +3,7 @@ import { CommandSettingsModal } from "commandSettingsModal";
 import { FilterModal } from "filterModal";
 import ObsidianRuleEnginePlugin, { stripCommandIdPrefix } from "main";
 import { App, ButtonComponent, Modal, Setting, SettingGroup } from "obsidian";
-import { BaseFileHandling, CommandConfig, FilterConjunction, FilterGroup, RuleConfig, SuggestItem } from "types";
+import { AnyFilterGroup, BaseFileHandling, CommandConfig, FilterConjunction, RuleConfig, SuggestItem } from "types";
 
 /**
  * Read-only, recursively-nested rendering of a filter tree for reviewing a
@@ -13,7 +13,7 @@ import { BaseFileHandling, CommandConfig, FilterConjunction, FilterGroup, RuleCo
  * FilterModal. Accepts a DocumentFragment too (via `createFragment`) since
  * this is used as a Setting's description, not just a standalone container.
  */
-function renderFilterSummary(container: HTMLElement | DocumentFragment, plugin: ObsidianRuleEnginePlugin, group: FilterGroup): void {
+function renderFilterSummary(container: HTMLElement | DocumentFragment, plugin: ObsidianRuleEnginePlugin, group: AnyFilterGroup): void {
     const conjLabel: Record<FilterConjunction, string> = { AND: "All of", OR: "Any of", NOR: "None of" };
     const wrapper = container.createDiv({ cls: "ore-filter-summary-group" });
     wrapper.createDiv({ cls: "ore-filter-summary-heading", text: conjLabel[group.operator] });
@@ -128,7 +128,7 @@ export class EditRuleModal extends Modal {
                     btn.setIcon("pencil")
                         .setButtonText("Edit filters")
                         .onClick(() => {
-                            new FilterModal(this.app, this.plugin, this.rule.filterGroup, () => {
+                            new FilterModal(this.app, this.plugin, this.rule.filterGroup, this.rule.name, () => {
                                 filterSetting.setDesc(buildFilterSummary());
                             }).open();
                         });

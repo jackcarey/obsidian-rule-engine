@@ -1,7 +1,7 @@
 import { OPERATORS, RELATIVE_DATE_UNITS, RELATIVE_DATE_UNITS_PLURAL } from "consts";
 import ObsidianRuleEnginePlugin from "main";
-import { AbstractInputSuggest, App, ButtonComponent, DropdownComponent, ExtraButtonComponent, Modal, setIcon } from "obsidian";
-import { Filter, FilterConjunction, FilterGroup, FilterOperator, PropertyDef, PropertyType } from "types";
+import { AbstractInputSuggest, App, ButtonComponent, Modal, Setting, SettingGroup, setIcon } from "obsidian";
+import { AnyFilterGroup, Filter, FilterConjunction, FilterGroup, FilterOperator, FilterSubgroup, PropertyDef, PropertyType } from "types";
 
 /**
  * Built-in type-ahead suggester for the filter property field, attached to a
@@ -38,18 +38,25 @@ class PropertySuggest extends AbstractInputSuggest<PropertyDef> {
     }
 }
 
+/**
+ * Appends the value control(s) for a filter row into `setting`. Every branch
+ * uses Setting's own built-in components (addText/addDropdown) except the
+ * multi-select case, which stays a hand-built pill widget on purpose — there
+ * is no built-in multi-value control in Obsidian's Setting API.
+ */
 function createFilterValueInput(
-    container: HTMLElement,
+    setting: Setting,
     type: PropertyType,
     value: string | undefined,
     onChange: (val: string) => void,
     operator?: string
-): HTMLInputElement | HTMLElement {
+): void {
     const safeValue = value || "";
     const needsMultiSelect = operator === "contains any of" || operator === "does not contain any of"
         || operator === "contains all of" || operator === "does not contain all of"
         || operator === "has tag" || operator === "does not have tag";
     if (needsMultiSelect) {
+        const container = setting.controlEl;
         // Multi-select container for operators that accept multiple values
         const multiSelectContainer = container.createDiv({ cls: "ore-multi-select-container", attr: { tabindex: "-1" } });
 
@@ -239,7 +246,7 @@ function createFilterValueInput(
         // Set initial placeholder
         updatePlaceholder();
 
-        return multiSelectContainer;
+        return;
     } else if (operator === "within past" || operator === "within future") {
         const validUnits: readonly string[] = RELATIVE_DATE_UNITS_PLURAL;
         // Accept singular units too — matcher.ts's RELATIVE_DATE_UNITS allows them,
@@ -249,38 +256,52 @@ function createFilterValueInput(
         const amount = parts[0] || "1";
         const storedUnit = parts[1] || "days";
         const unit = validUnits.includes(storedUnit) ? storedUnit : `${storedUnit}s`;
-        const wrapper = container.createDiv({ cls: "ore-relative-date-container" });
-        const numInput = wrapper.createEl("input", { type: "number", value: amount, attr: { min: "1" } });
-        numInput.addClass("ore-relative-date-amount");
-        const unitDropdown = new DropdownComponent(wrapper);
-        unitDropdown.addOptions(Object.fromEntries(validUnits.map(u => [u, u])));
-        unitDropdown.setValue(unit);
-        const fireChange = () => onChange(`${numInput.value} ${unitDropdown.getValue()}`);
-        numInput.oninput = fireChange;
-        unitDropdown.onChange(fireChange);
+
+        let amountInput!: HTMLInputElement;
+        let unitDropdown!: import("obsidian").DropdownComponent;
+        const fireChange = () => onChange(`${amountInput.value} ${unitDropdown.getValue()}`);
+
+        setting.addText(text => {
+            text.inputEl.type = "number";
+            text.inputEl.min = "1";
+            text.inputEl.addClass("ore-relative-date-amount");
+            text.setValue(amount);
+            amountInput = text.inputEl;
+            text.inputEl.oninput = fireChange;
+        });
+        setting.addDropdown(dropdown => {
+            dropdown.selectEl.addClass("ore-relative-date-unit");
+            dropdown.addOptions(Object.fromEntries(validUnits.map(u => [u, u])));
+            dropdown.setValue(unit);
+            unitDropdown = dropdown;
+            dropdown.onChange(fireChange);
+        });
         // Sync stored value to defaults if the stored value was not a valid relative format
         if (!isValidStored) window.setTimeout(fireChange, 0);
-        return wrapper;
+        return;
     } else if (type === "date" || type === "datetime") {
-        const input = container.createEl("input", {
-            type: type === "datetime" ? "datetime-local" : "date",
-            value: safeValue,
-            attr: {
-                max: type === "datetime" ? "9999-12-31T23:59" : "9999-12-31"
-            }
+        setting.addText(text => {
+            text.inputEl.type = type === "datetime" ? "datetime-local" : "date";
+            text.inputEl.max = type === "datetime" ? "9999-12-31T23:59" : "9999-12-31";
+            text.setValue(safeValue);
+            text.inputEl.oninput = () => onChange(text.inputEl.value);
         });
-        input.oninput = () => onChange(input.value);
-        return input;
+        return;
     } else if (type === "number") {
-        const input = container.createEl("input", { type: "number", value: safeValue });
-        input.oninput = () => onChange(input.value);
-        return input;
+        setting.addText(text => {
+            text.inputEl.type = "number";
+            text.setValue(safeValue);
+            text.inputEl.oninput = () => onChange(text.inputEl.value);
+        });
+        return;
     } else {
-        const input = container.createEl("input", { type: "text", value: safeValue });
-        input.addClass("metadata-input", "metadata-input-text");
-        input.placeholder = "Value...";
-        input.oninput = () => onChange(input.value);
-        return input;
+        setting.addText(text => {
+            text.setValue(safeValue);
+            text.inputEl.addClass("metadata-input", "metadata-input-text");
+            text.setPlaceholder("Value...");
+            text.inputEl.oninput = () => onChange(text.inputEl.value);
+        });
+        return;
     }
 }
 
@@ -298,6 +319,21 @@ function createPill(container: HTMLElement, value: string, onRemove: () => void,
     }
 }
 
+const CONJUNCTION_LABELS: Record<FilterConjunction, string> = {
+    AND: "All the following are true",
+    OR: "Any of the following are true",
+    NOR: "None of the following are true"
+};
+const CONJUNCTION_VALUES: Record<FilterConjunction, string> = { AND: "and", OR: "or", NOR: "not" };
+const CONJUNCTION_REVERSE: Record<string, FilterConjunction> = { and: "AND", or: "OR", not: "NOR" };
+
+/**
+ * Renders the root filter group and, one level deep, its subgroups — each as
+ * its own SettingGroup (built-in Obsidian component) hosting one Setting per
+ * row. 2 levels is a hard ceiling: a subgroup never gets an "Add filter
+ * group" button, and FilterSubgroup's own conditions are typed Filter[] only,
+ * so a third level can't be constructed even by mistake.
+ */
 class FilterBuilder {
     availableProperties: PropertyDef[];
 
@@ -311,263 +347,264 @@ class FilterBuilder {
     }
 
     render(container: HTMLElement) {
-        this.renderGroup(container, this.root, true);
+        const settingGroup = new SettingGroup(container);
+        this.renderConjunction(settingGroup, this.root);
+        this.renderConditions(settingGroup, this.root.conditions, true);
+
+        settingGroup.addSetting(setting => {
+            setting.addButton(btn => btn
+                .setIcon("plus")
+                .setButtonText("Add filter")
+                .onClick(() => {
+                    this.root.conditions.push({ type: "filter", field: "file", operator: "links to", value: "" });
+                    this.onSave(); this.onRefresh();
+                })
+                .buttonEl.addClass("ore-text-icon-button"));
+            setting.addButton(btn => btn
+                .setIcon("plus")
+                .setButtonText("Add filter group")
+                .onClick(() => {
+                    this.root.conditions.push({ type: "group", operator: "AND", conditions: [] });
+                    this.onSave(); this.onRefresh();
+                })
+                .buttonEl.addClass("ore-text-icon-button"));
+        });
     }
 
-    renderGroup(container: HTMLElement, group: FilterGroup, isRoot: boolean = false) {
-        const groupDiv = container.createDiv({ cls: "filter-group" });
-        const header = groupDiv.createDiv({ cls: "filter-group-header" });
-
-        const labelMap: Record<string, string> = {
-            "AND": "All the following are true",
-            "OR": "Any of the following are true",
-            "NOR": "None of the following are true"
-        };
-
-        const valueMap: Record<string, string> = {
-            "AND": "and",
-            "OR": "or",
-            "NOR": "not"
-        };
-        const reverseValueMap: Record<string, FilterConjunction> = {
-            "and": "AND",
-            "or": "OR",
-            "not": "NOR"
-        };
-
-        const conjunctionDropdown = new DropdownComponent(header);
-        conjunctionDropdown.selectEl.addClass("conjunction");
-        conjunctionDropdown.addOptions({
-            and: labelMap["AND"]!,
-            or: labelMap["OR"]!,
-            not: labelMap["NOR"]!,
+    private renderConjunction(settingGroup: SettingGroup, group: AnyFilterGroup) {
+        settingGroup.addSetting(setting => {
+            setting.addDropdown(dropdown => {
+                dropdown.selectEl.addClass("conjunction");
+                dropdown.addOptions({
+                    and: CONJUNCTION_LABELS.AND,
+                    or: CONJUNCTION_LABELS.OR,
+                    not: CONJUNCTION_LABELS.NOR,
+                });
+                dropdown.setValue(CONJUNCTION_VALUES[group.operator] || "and");
+                dropdown.onChange((newVal) => {
+                    const val = CONJUNCTION_REVERSE[newVal];
+                    if (val) {
+                        group.operator = val;
+                        this.onSave();
+                        this.onRefresh();
+                    }
+                });
+            });
         });
-        conjunctionDropdown.setValue(valueMap[group.operator] || "and");
-        conjunctionDropdown.onChange((newVal) => {
-            const val = reverseValueMap[newVal];
-            if (val) {
-                group.operator = val;
-                this.onSave();
-                this.onRefresh();
+    }
+
+    private renderConditions(settingGroup: SettingGroup, conditions: (Filter | FilterSubgroup)[], allowSubgroups: boolean) {
+        if (conditions.length === 0) {
+            const placeholderFilter: Filter = { type: "filter", field: "file", operator: "links to", value: "" };
+            this.renderFilterRow(settingGroup, placeholderFilter, conditions, 0, -1, true);
+            return;
+        }
+
+        conditions.forEach((condition, index) => {
+            const conjunctionWord = index === 0 ? "Where" : (conditions === this.root.conditions
+                ? (this.root.operator === "OR" || this.root.operator === "NOR" ? "or" : "and")
+                : "and");
+
+            if (allowSubgroups && condition.type === "group") {
+                this.renderSubgroup(settingGroup, condition, conjunctionWord, () => {
+                    conditions.splice(index, 1);
+                    this.onSave();
+                    this.onRefresh();
+                });
+            } else if (condition.type === "filter") {
+                this.renderFilterRow(settingGroup, condition, conditions, index, index, false, conjunctionWord);
             }
         });
+    }
 
+    private renderSubgroup(parentGroup: SettingGroup, subgroup: FilterSubgroup, conjunctionWord: string, onDelete: () => void) {
+        const wrapper = parentGroup.listEl.createDiv({ cls: "ore-filter-subgroup" });
+        wrapper.createDiv({ cls: "ore-filter-subgroup-label", text: conjunctionWord });
 
-        const statementsContainer = groupDiv.createDiv({ cls: "filter-group-statements" });
+        const settingGroup = new SettingGroup(wrapper);
+        settingGroup.addExtraButton(btn => btn
+            .setIcon("trash-2")
+            .setTooltip("Remove filter group")
+            .onClick(onDelete));
 
-        // If conditions is empty, show a default empty rule
-        if (group.conditions.length === 0) {
-            const rowWrapper = statementsContainer.createDiv({ cls: "filter-row" });
-            const conjLabel = rowWrapper.createSpan({ cls: "conjunction" });
-            conjLabel.innerText = "Where";
+        this.renderConjunction(settingGroup, subgroup);
 
-            // Create a temporary placeholder filter
+        if (subgroup.conditions.length === 0) {
             const placeholderFilter: Filter = { type: "filter", field: "file", operator: "links to", value: "" };
-            this.renderFilterRow(rowWrapper, placeholderFilter, group, -1, true);
+            this.renderFilterRow(settingGroup, placeholderFilter, subgroup.conditions, 0, -1, true);
         } else {
-            group.conditions.forEach((condition, index) => {
-                const rowWrapper = statementsContainer.createDiv({ cls: "filter-row" });
-                const conjLabel = rowWrapper.createSpan({ cls: "conjunction" });
-                if (index === 0) {
-                    conjLabel.innerText = "Where";
-                } else {
-                    conjLabel.innerText = (group.operator === "OR" || group.operator === "NOR") ? "or" : "and";
-                }
-
-                if (condition.type === "group") {
-                    rowWrapper.addClass("mod-group");
-                    this.renderGroup(rowWrapper, condition);
-
-                    const h = rowWrapper.querySelector(".filter-group-header");
-                    if (h) {
-                        const headerActionsDiv = h.createDiv({ cls: "filter-group-header-actions" });
-                        new ExtraButtonComponent(headerActionsDiv)
-                            .setIcon("trash-2")
-                            .setTooltip("Remove filter")
-                            .onClick(() => {
-                                group.conditions.splice(index, 1);
-                                this.onSave();
-                                this.onRefresh();
-                            });
-                    }
-                } else {
-                    this.renderFilterRow(rowWrapper, condition, group, index);
-                }
+            subgroup.conditions.forEach((filter, index) => {
+                const word = index === 0 ? "Where" : (subgroup.operator === "OR" || subgroup.operator === "NOR" ? "or" : "and");
+                this.renderFilterRow(settingGroup, filter, subgroup.conditions, index, index, false, word);
             });
         }
 
-        const actionsDiv = groupDiv.createDiv({ cls: "filter-group-actions" });
-        new ButtonComponent(actionsDiv)
-            .setIcon("plus")
-            .setButtonText("Add filter")
-            .onClick(() => {
-                group.conditions.push({ type: "filter", field: "file", operator: "links to", value: "" });
-                this.onSave(); this.onRefresh();
-            })
-            .buttonEl.addClass("ore-text-icon-button");
-        new ButtonComponent(actionsDiv)
-            .setIcon("plus")
-            .setButtonText("Add filter group")
-            .onClick(() => {
-                group.conditions.push({ type: "group", operator: "AND", conditions: [] });
-                this.onSave(); this.onRefresh();
-            })
-            .buttonEl.addClass("ore-text-icon-button");
+        settingGroup.addSetting(setting => {
+            setting.addButton(btn => btn
+                .setIcon("plus")
+                .setButtonText("Add filter")
+                .onClick(() => {
+                    subgroup.conditions.push({ type: "filter", field: "file", operator: "links to", value: "" });
+                    this.onSave(); this.onRefresh();
+                })
+                .buttonEl.addClass("ore-text-icon-button"));
+            // Deliberately no "Add filter group" here — subgroups are the 2nd
+            // and last level, both by this UI and by FilterSubgroup's type.
+        });
     }
 
-    renderFilterRow(row: HTMLElement, filter: Filter, parentGroup: FilterGroup, index: number, isPlaceholder: boolean = false) {
-        const statement = row.createDiv({ cls: "ore-filter-statement" });
-        const expression = statement.createDiv({ cls: "ore-filter-expression metadata-property" });
-
+    private renderFilterRow(
+        settingGroup: SettingGroup,
+        filter: Filter,
+        parentConditions: (Filter | FilterSubgroup)[],
+        _renderIndex: number,
+        index: number,
+        isPlaceholder: boolean,
+        conjunctionWord: string = "Where"
+    ) {
         const currentType = this.plugin.getPropertyType(filter.field, this.availableProperties);
-
         // Track if this placeholder has been added to the conditions array
         let placeholderAdded = false;
 
-        const commitFieldChange = (newVal: string) => {
-            const newType = this.plugin.getPropertyType(newVal, this.availableProperties);
-            const validOps = OPERATORS[newType === "datetime" ? "date" : newType] ?? OPERATORS["text"];
-            const newOperator = validOps?.[0] as FilterOperator;
+        settingGroup.addSetting(setting => {
+            setting.settingEl.addClass("ore-filter-row");
+            setting.setName(conjunctionWord);
 
-            // If this is a placeholder, add it to the conditions array
-            if (isPlaceholder && !placeholderAdded) {
-                parentGroup.conditions.push({
-                    type: "filter",
-                    field: newVal,
-                    operator: newOperator,
-                    value: ""
-                });
-                placeholderAdded = true;
-            } else if (isPlaceholder && placeholderAdded) {
-                // Update the filter in the conditions array
-                const conditionIndex = parentGroup.conditions.length - 1;
-                if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
-                    const conditionFilter = parentGroup.conditions[conditionIndex];
-                    conditionFilter.field = newVal;
-                    conditionFilter.operator = newOperator;
-                    conditionFilter.value = "";
-                }
-            } else {
-                filter.field = newVal;
-                filter.operator = newOperator;
-                filter.value = "";
-            }
+            const commitFieldChange = (newVal: string) => {
+                const newType = this.plugin.getPropertyType(newVal, this.availableProperties);
+                const validOps = OPERATORS[newType === "datetime" ? "date" : newType] ?? OPERATORS["text"];
+                const newOperator = validOps?.[0] as FilterOperator;
 
-            this.onSave();
-            this.onRefresh();
-        };
-
-        const propertyInput = expression.createEl("input", {
-            type: "text",
-            value: this.plugin.getPropertyLabel(filter.field),
-            cls: "ore-property-input",
-        });
-        const propertySuggest = new PropertySuggest(
-            this.plugin.app,
-            propertyInput,
-            this.plugin,
-            this.availableProperties,
-            (prop) => commitFieldChange(prop.key)
-        );
-        propertySuggest.onSelect((prop) => commitFieldChange(prop.key));
-        propertyInput.addEventListener("blur", () => {
-            const typed = propertyInput.value.trim();
-            if (typed.length > 0 && typed !== this.plugin.getPropertyLabel(filter.field)) {
-                commitFieldChange(typed);
-            }
-        });
-
-        let opsKey = currentType;
-        if (currentType === "datetime") opsKey = "date";
-        if (currentType === "unknown") opsKey = "text";
-        if (!OPERATORS[opsKey]) opsKey = "text";
-
-        const validOps = OPERATORS[opsKey] as FilterOperator[];
-
-        const operatorDropdown = new DropdownComponent(expression);
-        operatorDropdown.addOptions(Object.fromEntries(validOps.map(op => [op, op])));
-        operatorDropdown.setValue(filter.operator);
-        operatorDropdown.onChange((newVal) => {
-            const operator = newVal as FilterOperator;
-            // If this is a placeholder, add it to the conditions array first
-            if (isPlaceholder && !placeholderAdded) {
-                parentGroup.conditions.push({ ...filter, operator });
-                placeholderAdded = true;
-            } else if (isPlaceholder && placeholderAdded) {
-                // Update the filter in the conditions array (it's the last one we added)
-                const conditionIndex = parentGroup.conditions.length - 1;
-                if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
-                    parentGroup.conditions[conditionIndex].operator = operator;
-                }
-            } else {
-                filter.operator = operator;
-            }
-
-            this.onSave();
-            this.onRefresh();
-        });
-
-        const handleDelete = () => {
-            if (isPlaceholder) {
-                // For placeholder, just refresh to show the default again
-                this.onRefresh();
-            } else {
-                parentGroup.conditions.splice(index, 1);
-                this.onSave();
-                this.onRefresh();
-            }
-        };
-
-        if (!["is empty", "is not empty"].includes(filter.operator)) {
-            const rhs = expression.createDiv({ cls: "ore-filter-rhs-container metadata-property-value" });
-
-            createFilterValueInput(rhs, currentType, filter.value, (val) => {
-                // If this is a placeholder, add it to the conditions array first
                 if (isPlaceholder && !placeholderAdded) {
-                    parentGroup.conditions.push({ ...filter, value: val });
+                    parentConditions.push({ type: "filter", field: newVal, operator: newOperator, value: "" });
                     placeholderAdded = true;
                 } else if (isPlaceholder && placeholderAdded) {
-                    // Update the filter in the conditions array (it's the last one we added)
-                    const conditionIndex = parentGroup.conditions.length - 1;
-                    if (conditionIndex >= 0 && parentGroup.conditions[conditionIndex]?.type === "filter") {
-                        parentGroup.conditions[conditionIndex].value = val;
+                    const conditionIndex = parentConditions.length - 1;
+                    const condition = parentConditions[conditionIndex];
+                    if (conditionIndex >= 0 && condition?.type === "filter") {
+                        condition.field = newVal;
+                        condition.operator = newOperator;
+                        condition.value = "";
                     }
                 } else {
-                    filter.value = val;
+                    filter.field = newVal;
+                    filter.operator = newOperator;
+                    filter.value = "";
                 }
 
                 this.onSave();
-            }, filter.operator);
-        }
+                this.onRefresh();
+            };
 
-        const actions = expression.createDiv({ cls: "ore-filter-row-actions" });
-        new ExtraButtonComponent(actions).setIcon("trash-2").setTooltip("Remove filter").onClick(handleDelete);
+            setting.addText(text => {
+                text.inputEl.addClass("ore-property-input");
+                text.setValue(this.plugin.getPropertyLabel(filter.field));
+                const propertySuggest = new PropertySuggest(
+                    this.plugin.app,
+                    text.inputEl,
+                    this.plugin,
+                    this.availableProperties,
+                    (prop) => commitFieldChange(prop.key)
+                );
+                propertySuggest.onSelect((prop) => commitFieldChange(prop.key));
+                text.inputEl.addEventListener("blur", () => {
+                    const typed = text.inputEl.value.trim();
+                    if (typed.length > 0 && typed !== this.plugin.getPropertyLabel(filter.field)) {
+                        commitFieldChange(typed);
+                    }
+                });
+            });
+
+            let opsKey = currentType;
+            if (currentType === "datetime") opsKey = "date";
+            if (currentType === "unknown") opsKey = "text";
+            if (!OPERATORS[opsKey]) opsKey = "text";
+            const validOps = OPERATORS[opsKey] as FilterOperator[];
+
+            setting.addDropdown(dropdown => {
+                dropdown.selectEl.addClass("ore-filter-operator");
+                dropdown.addOptions(Object.fromEntries(validOps.map(op => [op, op])));
+                dropdown.setValue(filter.operator);
+                dropdown.onChange((newVal) => {
+                    const operator = newVal as FilterOperator;
+                    if (isPlaceholder && !placeholderAdded) {
+                        parentConditions.push({ ...filter, operator });
+                        placeholderAdded = true;
+                    } else if (isPlaceholder && placeholderAdded) {
+                        const conditionIndex = parentConditions.length - 1;
+                        const condition = parentConditions[conditionIndex];
+                        if (conditionIndex >= 0 && condition?.type === "filter") {
+                            condition.operator = operator;
+                        }
+                    } else {
+                        filter.operator = operator;
+                    }
+
+                    this.onSave();
+                    this.onRefresh();
+                });
+            });
+
+            if (!["is empty", "is not empty"].includes(filter.operator)) {
+                createFilterValueInput(setting, currentType, filter.value, (val) => {
+                    if (isPlaceholder && !placeholderAdded) {
+                        parentConditions.push({ ...filter, value: val });
+                        placeholderAdded = true;
+                    } else if (isPlaceholder && placeholderAdded) {
+                        const conditionIndex = parentConditions.length - 1;
+                        const condition = parentConditions[conditionIndex];
+                        if (conditionIndex >= 0 && condition?.type === "filter") {
+                            condition.value = val;
+                        }
+                    } else {
+                        filter.value = val;
+                    }
+
+                    this.onSave();
+                }, filter.operator);
+            }
+
+            const handleDelete = () => {
+                if (isPlaceholder) {
+                    this.onRefresh();
+                } else {
+                    parentConditions.splice(index, 1);
+                    this.onSave();
+                    this.onRefresh();
+                }
+            };
+            setting.addExtraButton(btn => btn.setIcon("trash-2").setTooltip("Remove filter").onClick(handleDelete));
+        });
     }
 }
 
 /**
- * Hosts the interactive filter-group builder (AND/OR/NOR groups, arbitrarily
- * nested, each row a property/operator/value expression) in its own modal.
- * Edits `root` in place — the same live-mutation pattern EditRuleModal already
- * uses for its command list — so there's no separate save/cancel state here;
- * whatever the outer rule editor does with its own Save/Cancel governs
- * persistence. `onChange` lets the caller refresh a summary view as edits land.
+ * Hosts the interactive filter-group builder (root group + up to one level of
+ * nested subgroups, each row a property/operator/value expression) in its own
+ * modal. Edits `root` in place — the same live-mutation pattern EditRuleModal
+ * already uses for its command list — so there's no separate save/cancel
+ * state here; whatever the outer rule editor does with its own Save/Cancel
+ * governs persistence. `onChange` lets the caller refresh a summary view as
+ * edits land.
  */
 export class FilterModal extends Modal {
     constructor(
         app: App,
         private plugin: ObsidianRuleEnginePlugin,
         private root: FilterGroup,
+        ruleName: string,
         private onChange: () => void
     ) {
         super(app);
-        this.setTitle("Edit filters");
+        this.setTitle(`Edit filters — ${ruleName}`);
     }
 
     onOpen() {
         const { contentEl } = this;
+        // Same full viewport window + scroll styling as EditRuleModal.
+        this.modalEl.addClass("ore-edit-rule-modal-window");
         contentEl.empty();
-        contentEl.addClass("ore-filter-modal");
+        contentEl.addClass("ore-filter-modal", "ore-edit-rule-modal");
         const container = contentEl.createDiv({ cls: "ore-parent-query-container" });
 
         const builder = new FilterBuilder(

@@ -304,7 +304,7 @@ test("filter builder shows existing filter condition", async ({ page }) => {
   await openFilterModal(settingsPage);
 
   // Rule 0 has a "file.name contains matched" filter
-  const filterRow = settingsPage.locator(".ore-filter-modal .filter-row");
+  const filterRow = settingsPage.locator(".ore-filter-modal .ore-filter-row");
   expect(await filterRow.count()).toBeGreaterThan(0);
 
   await closeModal(settingsPage); // FilterModal
@@ -318,7 +318,7 @@ test("filter builder — add a new filter", async ({ page }) => {
   await openFilterModal(settingsPage);
 
   const filterModal = settingsPage.locator(".ore-filter-modal");
-  const countBefore = await filterModal.locator(".filter-row").count();
+  const countBefore = await filterModal.locator(".ore-filter-row").count();
 
   // Click "Add filter" button
   const addFilterBtn = filterModal.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
@@ -326,7 +326,7 @@ test("filter builder — add a new filter", async ({ page }) => {
   await settingsPage.waitForTimeout(300);
 
   // A new filter row should appear
-  const countAfter = await filterModal.locator(".filter-row").count();
+  const countAfter = await filterModal.locator(".ore-filter-row").count();
   expect(countAfter).toBeGreaterThan(countBefore);
 
   await closeModal(settingsPage); // FilterModal
@@ -347,14 +347,14 @@ test("filter builder — delete a filter", async ({ page }) => {
   await addBtn.click();
   await settingsPage.waitForTimeout(300);
 
-  const rowsBefore = await filterModal.locator(".filter-row").count();
+  const rowsBefore = await filterModal.locator(".ore-filter-row").count();
 
   // Click the first delete (trash) button in a filter row
-  const deleteBtn = filterModal.locator(".filter-row .clickable-icon").first();
+  const deleteBtn = filterModal.locator(".ore-filter-row .clickable-icon").first();
   await deleteBtn.click();
   await settingsPage.waitForTimeout(300);
 
-  const rowsAfter = await filterModal.locator(".filter-row").count();
+  const rowsAfter = await filterModal.locator(".ore-filter-row").count();
   expect(rowsAfter).toBeLessThan(rowsBefore);
 
   await closeModal(settingsPage); // FilterModal
@@ -367,7 +367,7 @@ test("filter builder — property input accepts free text not in the suggestion 
   await openEditRuleModal(settingsPage, 0);
   await openFilterModal(settingsPage);
 
-  const propertyInput = settingsPage.locator(".ore-filter-modal .filter-row .ore-property-input").first();
+  const propertyInput = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-property-input").first();
   await propertyInput.fill("some.unindexed.property");
   // Blur without picking a suggestion
   await settingsPage.keyboard.press("Tab");
@@ -385,10 +385,10 @@ test("filter builder — operator dropdown changes and persists the filter's ope
   await openEditRuleModal(settingsPage, 0);
   await openFilterModal(settingsPage);
 
-  // Rule 0's filter is "file.name contains matched" — operator is a direct
-  // child <select> of .ore-filter-expression (the relative-date/multi-select
-  // dropdowns, if any, live nested inside .ore-filter-rhs-container instead).
-  const operatorSelect = settingsPage.locator(".ore-filter-modal .ore-filter-expression > select.dropdown").first();
+  // Rule 0's filter is "file.name contains matched" — the operator dropdown
+  // carries its own class since a relative-date row can have two <select>s
+  // (operator + unit) in the same row.
+  const operatorSelect = settingsPage.locator(".ore-filter-modal select.ore-filter-operator").first();
   await expect(operatorSelect).toHaveValue("contains");
 
   await operatorSelect.selectOption("does not contain");
@@ -428,7 +428,7 @@ test("filter builder — conjunction dropdown changes AND/OR/NOR and persists", 
   await openEditRuleModal(settingsPage, 0);
   await openFilterModal(settingsPage);
 
-  const conjunctionSelect = settingsPage.locator(".ore-filter-modal .filter-group-header select.conjunction").first();
+  const conjunctionSelect = settingsPage.locator(".ore-filter-modal select.conjunction").first();
   await expect(conjunctionSelect).toHaveValue("and");
 
   await conjunctionSelect.selectOption("or");
@@ -468,7 +468,7 @@ test("filter builder — relative-date unit dropdown changes and persists", asyn
   await openEditRuleModal(settingsPage, 2);
   await openFilterModal(settingsPage);
 
-  const unitSelect = settingsPage.locator(".ore-filter-modal .ore-relative-date-container select.dropdown").first();
+  const unitSelect = settingsPage.locator(".ore-filter-modal select.ore-relative-date-unit").first();
   await expect(unitSelect).toHaveValue("days");
 
   await unitSelect.selectOption("weeks");
@@ -495,6 +495,64 @@ test("filter builder — relative-date unit dropdown changes and persists", asyn
     };
     const condition = plugin.settings.rules[2]?.filterGroup?.conditions?.[0];
     if (condition) condition.value = "7 days";
+    void plugin.saveSettings();
+  });
+
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder — add a nested filter group (2 levels), with no further nesting offered", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
+
+  const filterModal = settingsPage.locator(".ore-filter-modal");
+
+  const addGroupBtn = filterModal.locator(".ore-text-icon-button", { hasText: "Add filter group" }).first();
+  await addGroupBtn.click();
+  await settingsPage.waitForTimeout(300);
+
+  const subgroup = filterModal.locator(".ore-filter-subgroup").first();
+  await expect(subgroup).toBeVisible();
+
+  // 2 levels is a hard ceiling — a subgroup never offers "Add filter group".
+  await expect(subgroup.locator(".ore-text-icon-button", { hasText: "Add filter group" })).toHaveCount(0);
+
+  const addFilterInSubgroup = subgroup.locator(".ore-text-icon-button", { hasText: "Add filter" }).first();
+  await addFilterInSubgroup.click();
+  await settingsPage.waitForTimeout(300);
+
+  const rowInSubgroup = subgroup.locator(".ore-filter-row").first();
+  await expect(rowInSubgroup).toBeVisible();
+
+  const propertyInput = rowInSubgroup.locator(".ore-property-input");
+  await propertyInput.fill("file.extension");
+  await settingsPage.keyboard.press("Tab");
+  await settingsPage.waitForTimeout(300);
+
+  await settingsPage.locator(".ore-filter-modal button", { hasText: "Done" }).click();
+  await settingsPage.locator(".ore-edit-rule-modal button", { hasText: "Save" }).click();
+  await settingsPage.waitForTimeout(300);
+
+  const persistedConditions = await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ filterGroup: { conditions: Array<{ type: string; field?: string; conditions?: Array<{ field?: string }> }> } }> };
+    };
+    return plugin?.settings?.rules?.[0]?.filterGroup?.conditions ?? [];
+  });
+  const nestedGroup = persistedConditions.find(c => c.type === "group");
+  expect(nestedGroup).toBeTruthy();
+  expect(nestedGroup?.conditions?.[0]?.field).toBe("file.extension");
+
+  // Clean up — rule 0's original single filter is relied on by the
+  // template-rendering tests later in this run.
+  await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
+      settings: { rules: Array<{ filterGroup: { conditions: Array<{ type: string }> } }> };
+      saveSettings(): Promise<void>;
+    };
+    const group = plugin.settings.rules[0]?.filterGroup;
+    if (group) group.conditions = group.conditions.filter((c) => c.type !== "group");
     void plugin.saveSettings();
   });
 

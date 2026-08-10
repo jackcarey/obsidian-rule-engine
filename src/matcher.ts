@@ -1,5 +1,5 @@
 import { App, TFile, FrontMatterCache, moment } from "obsidian";
-import { FilterGroup, Filter } from "./types";
+import { AnyFilterGroup, Filter } from "./types";
 import { RELATIVE_DATE_UNITS } from "./consts";
 
 // Obsidian types moment as a namespace rather than a callable — cast for runtime use
@@ -23,7 +23,7 @@ function parseRelativeValue(value: string): [number, moment.unitOfTime.DurationC
  * @param frontmatter - The frontmatter of the file
  * @returns True if all conditions in the group are met, false otherwise
  */
-export function checkRules(app: App, group: FilterGroup, file: TFile, frontmatter?: FrontMatterCache, log?: (...args: unknown[]) => void): boolean {
+export function checkRules(app: App, group: AnyFilterGroup, file: TFile, frontmatter?: FrontMatterCache, log?: (...args: unknown[]) => void): boolean {
 	if (!group || !group.conditions || group.conditions.length === 0) return true;
 
 	// Evaluate all conditions in this group

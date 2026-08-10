@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { checkRules } from "../../src/matcher";
-import type { FilterGroup, Filter } from "../../src/types";
+import type { FilterGroup, FilterSubgroup, Filter } from "../../src/types";
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -41,16 +41,20 @@ function mockApp(opts: {
 	} as unknown as import("obsidian").App;
 }
 
-function andGroup(...conditions: (Filter | FilterGroup)[]): FilterGroup {
+function andGroup(...conditions: (Filter | FilterSubgroup)[]): FilterGroup {
 	return { type: "group", operator: "AND", conditions };
 }
 
-function orGroup(...conditions: (Filter | FilterGroup)[]): FilterGroup {
+function orGroup(...conditions: (Filter | FilterSubgroup)[]): FilterGroup {
 	return { type: "group", operator: "OR", conditions };
 }
 
-function norGroup(...conditions: (Filter | FilterGroup)[]): FilterGroup {
+function norGroup(...conditions: (Filter | FilterSubgroup)[]): FilterGroup {
 	return { type: "group", operator: "NOR", conditions };
+}
+
+function subGroup(operator: FilterGroup["operator"], ...conditions: Filter[]): FilterSubgroup {
+	return { type: "group", operator, conditions };
 }
 
 function filter(field: string, operator: Filter["operator"], value?: string): Filter {
@@ -101,14 +105,14 @@ describe("NOR group", () => {
 describe("nested groups", () => {
 	it("evaluates nested groups recursively", () => {
 		const group = orGroup(
-			andGroup(filter("file.basename", "is", "note"), filter("file.extension", "is", "md")),
+			subGroup("AND", filter("file.basename", "is", "note"), filter("file.extension", "is", "md")),
 			filter("file.basename", "is", "other")
 		);
 		expect(checkRules(mockApp(), group, mockFile())).toBe(true);
 	});
 	it("returns false when all nested groups fail", () => {
 		const group = andGroup(
-			orGroup(filter("file.basename", "is", "wrong1"), filter("file.basename", "is", "wrong2")),
+			subGroup("OR", filter("file.basename", "is", "wrong1"), filter("file.basename", "is", "wrong2")),
 			filter("file.extension", "is", "md")
 		);
 		expect(checkRules(mockApp(), group, mockFile())).toBe(false);

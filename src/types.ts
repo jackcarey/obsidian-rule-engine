@@ -36,11 +36,20 @@ export interface Filter {
 	value?: string;
 }
 
+/** A group nested one level inside a root FilterGroup. Leaf filters only - no further nesting, so 2 levels (root + subgroup) is a hard ceiling. */
+export interface FilterSubgroup {
+	type: "group";
+	operator: FilterConjunction;
+	conditions: Filter[];
+}
+
 export interface FilterGroup {
 	type: "group";
 	operator: FilterConjunction;
-	conditions: (Filter | FilterGroup)[];
+	conditions: (Filter | FilterSubgroup)[];
 }
+
+export type AnyFilterGroup = FilterGroup | FilterSubgroup;
 
 
 export type BaseFileHandling = "file" | "results" | "both";
