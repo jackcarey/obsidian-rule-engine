@@ -189,13 +189,13 @@ describe("applyMocSection", () => {
 		expect(result).toBe(["## Related notes", "", "- [[A]]", "", "## Related notes", "second"].join("\n"));
 	});
 
-	it("creates a missing heading one level deeper than the file's last heading", () => {
+	it("creates a missing heading at the default level (2) regardless of the file's existing headings", () => {
 		const content = ["# Title", "", "## Existing", "content"].join("\n");
 		const headings = [heading("Title", 1, 0), heading("Existing", 2, 2)];
 
 		const result = applyMocSection(content, headings, "Related notes", ["- [[A]]"]);
 
-		expect(result).toBe(["# Title", "", "## Existing", "content", "", "### Related notes", "", "- [[A]]"].join("\n"));
+		expect(result).toBe(["# Title", "", "## Existing", "content", "", "## Related notes", "", "- [[A]]"].join("\n"));
 	});
 
 	it("creates a missing heading at level 2 when the file has no headings at all", () => {
@@ -205,13 +205,21 @@ describe("applyMocSection", () => {
 		expect(result).toBe(["Just some text.", "", "## Related notes", "", "- [[A]]"].join("\n"));
 	});
 
-	it("caps the created heading level at 6", () => {
-		const content = "###### Deepest";
-		const headings = [heading("Deepest", 6, 0)];
+	it("creates the missing heading at a custom level when given one", () => {
+		const content = "Just some text.";
+		const result = applyMocSection(content, [], "Related notes", ["- [[A]]"], 4);
 
-		const result = applyMocSection(content, headings, "Related notes", ["- [[A]]"]);
+		expect(result).toBe(["Just some text.", "", "#### Related notes", "", "- [[A]]"].join("\n"));
+	});
 
-		expect(result).toBe(["###### Deepest", "", "###### Related notes", "", "- [[A]]"].join("\n"));
+	it("clamps an out-of-range missing heading level to 1-6", () => {
+		const content = "Just some text.";
+
+		const tooLow = applyMocSection(content, [], "Related notes", ["- [[A]]"], 0);
+		expect(tooLow).toBe(["Just some text.", "", "# Related notes", "", "- [[A]]"].join("\n"));
+
+		const tooHigh = applyMocSection(content, [], "Related notes", ["- [[A]]"], 9);
+		expect(tooHigh).toBe(["Just some text.", "", "###### Related notes", "", "- [[A]]"].join("\n"));
 	});
 
 	it("does not leave a double-blank line when the file already ends with a blank line", () => {
