@@ -74,6 +74,12 @@ function renderSettingGroupItem(
 		const save = async (value: unknown) => {
 			await saveFn({ params: { [key]: value } });
 		};
+		const currentValueAsText = () =>
+			typeof currentValue === "string" ||
+			typeof currentValue === "number" ||
+			typeof currentValue === "boolean"
+				? String(currentValue)
+				: "";
 
 		switch (control.type) {
 			case "toggle":
@@ -98,11 +104,7 @@ function renderSettingGroupItem(
 					if (control.min !== undefined) t.inputEl.min = String(control.min);
 					if (control.max !== undefined) t.inputEl.max = String(control.max);
 					if (control.placeholder) t.setPlaceholder(control.placeholder);
-					t.setValue(
-						currentValue !== undefined
-							? String(currentValue as string | number | boolean)
-							: "",
-					);
+					t.setValue(currentValueAsText());
 					t.onChange((value) => {
 						const parsed = parseFloat(value);
 						if (Number.isFinite(parsed)) void save(parsed);
@@ -119,11 +121,7 @@ function renderSettingGroupItem(
 			case "textarea":
 				setting.addTextArea((t) => {
 					if (control.placeholder) t.setPlaceholder(control.placeholder);
-					t.setValue(
-						currentValue !== undefined
-							? String(currentValue as string | number | boolean)
-							: "",
-					);
+					t.setValue(currentValueAsText());
 					if (control.rows) t.inputEl.rows = control.rows;
 					t.onChange(save);
 				});
@@ -134,11 +132,7 @@ function renderSettingGroupItem(
 				setting.addText((t) => {
 					if ("placeholder" in control && control.placeholder)
 						t.setPlaceholder(control.placeholder);
-					t.setValue(
-						currentValue !== undefined
-							? String(currentValue as string | number | boolean)
-							: "",
-					);
+					t.setValue(currentValueAsText());
 					t.onChange(save);
 				});
 				break;
