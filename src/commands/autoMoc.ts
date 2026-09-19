@@ -2,6 +2,10 @@ import type { GetCommandFn } from "commands";
 import type ObsidianRuleEnginePlugin from "main";
 import {
 	applyMocSection,
+	clampMinCount,
+	clampMinPercentage,
+	DEFAULT_MIN_COUNT,
+	DEFAULT_MIN_PERCENTAGE,
 	findMocMatches,
 	getFileTags,
 	type MocMode,
@@ -12,6 +16,8 @@ export const AUTO_MOC_ID = "generate-auto-moc";
 
 export interface AutoMocParams extends Record<string, unknown> {
 	mode?: MocMode;
+	minPercentage?: number;
+	minCount?: number;
 	heading?: string;
 	headingLevel?: number;
 }
@@ -28,12 +34,38 @@ export const autoMoc: GetCommandFn<AutoMocParams> = (plugin) => ({
 	settingCallback: () => [
 		{
 			name: "Mode",
-			desc: '"any" matches notes sharing at least one tag. "all" matches notes that have every one of this file\'s tags.',
+			desc: '"Any" matches notes sharing at least one tag. "All" matches notes that have every one of this file\'s tags. The percentage and number modes use the thresholds below.',
 			control: {
 				type: "dropdown",
 				key: "mode",
 				defaultValue: DEFAULT_MODE,
-				options: { any: "Any shared tag", all: "All tags" },
+				options: {
+					any: "Any shared tag",
+					all: "All tags",
+					percentage: "Minimum percentage of tags",
+					count: "Minimum number of tags",
+				},
+			},
+		},
+		{
+			name: "Minimum percentage",
+			desc: "Only used by the 'Minimum percentage of tags' mode. Share of this file's tags a note must also have (1-100).",
+			control: {
+				type: "number",
+				key: "minPercentage",
+				defaultValue: DEFAULT_MIN_PERCENTAGE,
+				min: 1,
+				max: 100,
+			},
+		},
+		{
+			name: "Minimum count",
+			desc: "Only used by the 'Minimum number of tags' mode. Number of this file's tags a note must also have (at least 1).",
+			control: {
+				type: "number",
+				key: "minCount",
+				defaultValue: DEFAULT_MIN_COUNT,
+				min: 1,
 			},
 		},
 		{
@@ -74,6 +106,9 @@ async function runAutoMoc(
 	params: AutoMocParams,
 ): Promise<void> {
 	const mode = params.mode ?? DEFAULT_MODE;
+	// Per-file frontmatter overrides arrive as raw strings.
+	const minPercentage = clampMinPercentage(params.minPercentage);
+	const minCount = clampMinCount(params.minCount);
 	const heading = params.heading?.trim().length
 		? params.heading.trim()
 		: DEFAULT_HEADING;
@@ -81,9 +116,18 @@ async function runAutoMoc(
 
 	try {
 		const sourceTags = getFileTags(plugin.app, file);
-		if (!sourceTags.length) return;
+		plugin.debug(`autoMoc: mode=${mode} minPercentage=${minPercentage} minCount=${minCount}`);
+		if (!sourceTags.length) {
+			plugin.debug("autoMoc: file has no tags, skipping");
+			return;
+		}
+		plugin.debug(`autoMoc: ${sourceTags.length} source tag(s)`);
 
-		const matches = findMocMatches(plugin.app, file, sourceTags, mode);
+		const matches = findMocMatches(plugin.app, file, sourceTags, mode, {
+			minPercentage,
+			minCount,
+		});
+		plugin.debug(`autoMoc: ${matches.length} match(es)`);
 		const lines = matches.map(
 			(m) => `- [[${plugin.app.metadataCache.fileToLinktext(m, file.path)}]]`,
 		);

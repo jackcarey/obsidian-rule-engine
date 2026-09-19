@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { HeadingCache } from "obsidian";
-import { getFileTags, findMocMatches, applyMocSection } from "../../src/moc";
+import { getFileTags, findMocMatches, applyMocSection, clampMinPercentage, clampMinCount } from "../../src/moc";
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -124,6 +124,134 @@ describe("findMocMatches", () => {
 		const source = mockFile("source.md");
 		const result = findMocMatches(app, source, getFileTags(app, source), "all");
 		expect(result).toEqual([]);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// findMocMatches - percentage / count modes
+// ---------------------------------------------------------------------------
+
+// Source has 4 tags; candidates share 1, 2, 3 and 4 of them (plus one with none).
+function thresholdApp() {
+	return mockApp({
+		"source.md": { frontmatter: { tags: ["a", "b", "c", "d"] } },
+		"shares-1.md": { frontmatter: { tags: ["a", "z"] } },
+		"shares-2.md": { frontmatter: { tags: ["a", "b"] } },
+		"shares-3.md": { frontmatter: { tags: ["a", "b", "c"] } },
+		"shares-4.md": { frontmatter: { tags: ["a", "b", "c", "d", "e"] } },
+		"shares-0.md": { frontmatter: { tags: ["z"] } },
+	});
+}
+
+function run(mode: "percentage" | "count", options: { minPercentage?: number; minCount?: number }) {
+	const app = thresholdApp();
+	const source = mockFile("source.md");
+	return findMocMatches(app, source, getFileTags(app, source), mode, options).map(f => f.path);
+}
+
+describe("findMocMatches - percentage mode", () => {
+	it("matches at exactly the threshold and above, not below", () => {
+		expect(run("percentage", { minPercentage: 50 })).toEqual(["shares-2.md", "shares-3.md", "shares-4.md"]);
+	});
+
+	it("excludes a candidate just below the threshold", () => {
+		expect(run("percentage", { minPercentage: 51 })).toEqual(["shares-3.md", "shares-4.md"]);
+	});
+
+	it("100% requires every source tag", () => {
+		expect(run("percentage", { minPercentage: 100 })).toEqual(["shares-4.md"]);
+	});
+
+	it("a threshold above 100 clamps to 100", () => {
+		expect(run("percentage", { minPercentage: 250 })).toEqual(["shares-4.md"]);
+	});
+
+	it("a 0 or negative threshold clamps up so files sharing nothing never match", () => {
+		expect(run("percentage", { minPercentage: 0 })).not.toContain("shares-0.md");
+		expect(run("percentage", { minPercentage: -10 })).not.toContain("shares-0.md");
+		expect(run("percentage", { minPercentage: 0 })).toContain("shares-1.md");
+	});
+
+	it("falls back to 50% when the threshold is missing or NaN", () => {
+		expect(run("percentage", {})).toEqual(["shares-2.md", "shares-3.md", "shares-4.md"]);
+		expect(run("percentage", { minPercentage: NaN })).toEqual(["shares-2.md", "shares-3.md", "shares-4.md"]);
+	});
+
+	it("avoids float error at exact fractions (29 of 100 tags = 29%)", () => {
+		const sourceTags = Array.from({ length: 100 }, (_, i) => `t${i}`);
+		const app = mockApp({
+			"source.md": { frontmatter: { tags: sourceTags } },
+			"other.md": { frontmatter: { tags: sourceTags.slice(0, 29) } },
+		});
+		const source = mockFile("source.md");
+		const result = findMocMatches(app, source, getFileTags(app, source), "percentage", { minPercentage: 29 });
+		expect(result.map(f => f.path)).toEqual(["other.md"]);
+	});
+});
+
+describe("findMocMatches - count mode", () => {
+	it("matches at exactly the threshold and above, not below", () => {
+		expect(run("count", { minCount: 2 })).toEqual(["shares-2.md", "shares-3.md", "shares-4.md"]);
+	});
+
+	it("a threshold above the source tag count matches nothing", () => {
+		expect(run("count", { minCount: 5 })).toEqual([]);
+	});
+
+	it("a threshold equal to the source tag count matches only full overlaps", () => {
+		expect(run("count", { minCount: 4 })).toEqual(["shares-4.md"]);
+	});
+
+	it("a 0 or negative threshold clamps to 1 so files sharing nothing never match", () => {
+		const anyShared = ["shares-1.md", "shares-2.md", "shares-3.md", "shares-4.md"];
+		expect(run("count", { minCount: 0 })).toEqual(anyShared);
+		expect(run("count", { minCount: -3 })).toEqual(anyShared);
+	});
+
+	it("falls back to 2 when the threshold is missing or NaN", () => {
+		expect(run("count", {})).toEqual(["shares-2.md", "shares-3.md", "shares-4.md"]);
+		expect(run("count", { minCount: NaN })).toEqual(["shares-2.md", "shares-3.md", "shares-4.md"]);
+	});
+
+	it("counts tags case-insensitively", () => {
+		const app = mockApp({
+			"source.md": { frontmatter: { tags: ["A", "B"] } },
+			"other.md": { frontmatter: { tags: ["a", "b"] } },
+		});
+		const source = mockFile("source.md");
+		const result = findMocMatches(app, source, getFileTags(app, source), "count", { minCount: 2 });
+		expect(result.map(f => f.path)).toEqual(["other.md"]);
+	});
+});
+
+describe("findMocMatches - existing modes ignore thresholds", () => {
+	it("'any' and 'all' behave the same when options are passed", () => {
+		const app = thresholdApp();
+		const source = mockFile("source.md");
+		const tags = getFileTags(app, source);
+		const opts = { minPercentage: 100, minCount: 4 };
+		expect(findMocMatches(app, source, tags, "any", opts).map(f => f.path)).toEqual(
+			["shares-1.md", "shares-2.md", "shares-3.md", "shares-4.md"],
+		);
+		expect(findMocMatches(app, source, tags, "all", opts).map(f => f.path)).toEqual(["shares-4.md"]);
+	});
+});
+
+describe("threshold coercion", () => {
+	it("coerces numeric strings (frontmatter overrides) and clamps", () => {
+		expect(clampMinPercentage("75")).toBe(75);
+		expect(clampMinPercentage("abc")).toBe(50);
+		expect(clampMinPercentage(0)).toBe(1);
+		expect(clampMinPercentage(101)).toBe(100);
+		expect(clampMinCount("3")).toBe(3);
+		expect(clampMinCount("abc")).toBe(2);
+		expect(clampMinCount(0)).toBe(1);
+		expect(clampMinCount(2.2)).toBe(3);
+	});
+
+	it("undefined falls back to defaults", () => {
+		expect(clampMinPercentage(undefined)).toBe(50);
+		expect(clampMinCount(undefined)).toBe(2);
 	});
 });
 

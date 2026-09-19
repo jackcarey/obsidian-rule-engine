@@ -141,6 +141,54 @@ test("'all' mode only lists notes that have every one of the source's tags", asy
 	expect(content).not.toContain("[[moc-no-match]]");
 });
 
+test("'percentage' mode at 50% lists notes sharing at least half of the source's tags", async ({ page }) => {
+	await configureCommand(page, { mode: "percentage", minPercentage: 50, heading: "Related notes" });
+	await openNote(page, SOURCE_NOTE);
+
+	await runCommand(page);
+	const content = await waitForContentChange(page, SOURCE_NOTE, SOURCE_ORIGINAL_CONTENT, 15000);
+
+	expect(content).toContain("[[moc-match-any]]");
+	expect(content).toContain("[[moc-match-all]]");
+	expect(content).not.toContain("[[moc-no-match]]");
+});
+
+test("'percentage' mode at 100% only lists notes that have every source tag", async ({ page }) => {
+	await configureCommand(page, { mode: "percentage", minPercentage: 100, heading: "Related notes" });
+	await openNote(page, SOURCE_NOTE);
+
+	await runCommand(page);
+	const content = await waitForContentChange(page, SOURCE_NOTE, SOURCE_ORIGINAL_CONTENT, 15000);
+
+	expect(content).toContain("[[moc-match-all]]");
+	expect(content).not.toContain("[[moc-match-any]]");
+	expect(content).not.toContain("[[moc-no-match]]");
+});
+
+test("'count' mode with a minimum of 1 lists notes sharing at least one tag", async ({ page }) => {
+	await configureCommand(page, { mode: "count", minCount: 1, heading: "Related notes" });
+	await openNote(page, SOURCE_NOTE);
+
+	await runCommand(page);
+	const content = await waitForContentChange(page, SOURCE_NOTE, SOURCE_ORIGINAL_CONTENT, 15000);
+
+	expect(content).toContain("[[moc-match-any]]");
+	expect(content).toContain("[[moc-match-all]]");
+	expect(content).not.toContain("[[moc-no-match]]");
+});
+
+test("'count' mode with a minimum of 2 only lists notes sharing both tags", async ({ page }) => {
+	await configureCommand(page, { mode: "count", minCount: 2, heading: "Related notes" });
+	await openNote(page, SOURCE_NOTE);
+
+	await runCommand(page);
+	const content = await waitForContentChange(page, SOURCE_NOTE, SOURCE_ORIGINAL_CONTENT, 15000);
+
+	expect(content).toContain("[[moc-match-all]]");
+	expect(content).not.toContain("[[moc-match-any]]");
+	expect(content).not.toContain("[[moc-no-match]]");
+});
+
 test("heading matching is case-insensitive and updates the same section", async ({ page }) => {
 	await configureCommand(page, { mode: "any", heading: "RELATED NOTES" });
 	await openNote(page, SOURCE_NOTE);

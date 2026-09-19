@@ -81,7 +81,13 @@ Both commands write to the same kind of frontmatter list field (`tags` by defaul
 
 **`Generate automatic MOC`** builds a live "map of content" - a bullet list of links to other notes sharing tags with the current file - under a heading in the current file's body.
 
-- **Mode** - `any` (notes sharing at least one tag with the current file) or `all` (notes that have *every* one of the current file's tags).
+- **Mode** - how notes are matched against the current file's tags:
+  - `any` - notes sharing at least one tag.
+  - `all` - notes that have *every* one of the current file's tags.
+  - `percentage` - notes that share at least **Minimum percentage** of the current file's tags (e.g. 50% of 4 tags means at least 2 shared).
+  - `count` - notes that share at least **Minimum count** of the current file's tags.
+- **Minimum percentage** - 1-100, default 50. Only used by `percentage` mode.
+- **Minimum count** - at least 1, default 2. Only used by `count` mode. A count larger than the current file's tag count will not match.
 - **Heading** - which heading to place the list under, matched case-insensitively. If it doesn't exist yet, it's created automatically at the end of the file, one level deeper than the file's last heading (or `##` if the file has no headings at all).
 
 Unlike the tag generation commands above, this list is **fully regenerated every run**, not appended to - since it's entirely derived from the vault's current tags rather than anything you typed, keeping it always up to date matters more than preserving history. Two things follow from that:
