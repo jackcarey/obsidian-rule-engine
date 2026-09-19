@@ -19,8 +19,10 @@ import {
 	HIDE_MARKDOWN_CLASS,
 	TYPE_ICONS,
 } from "./consts";
+import { parseCommandOverrides, stripCommandIdPrefix } from "./commandOverrides";
 import { checkRules } from "./matcher";
 import { ObsidianRuleEngineSettingTab } from "./settings";
+import { errorNoticeText } from "./format";
 import { migrateRule } from "./ruleImport";
 import { referenceCandidates } from "./sampleValue";
 import { renderTemplate } from "./templateRenderer";
@@ -68,13 +70,8 @@ function toggleMarkdownVisibility(
 	}
 }
 
-/**
- * Strips the "plugin-id:" prefix Obsidian adds to command ids, so overrides
- * keyed by either the full id or the short id can both be looked up.
- */
-export function stripCommandIdPrefix(id: string): string {
-	return id.includes(":") ? id.slice(id.indexOf(":") + 1) : id;
-}
+export { stripCommandIdPrefix };
+
 export default class ObsidianRuleEnginePlugin extends Plugin {
 	settings: CustomRulesSettings = JSON.parse(
 		JSON.stringify(DEFAULT_SETTINGS),
@@ -89,7 +86,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 		if (args[0] instanceof Error) {
 			const msg =
-				"⛔ " + (args[0].message?.length ? args[0].message : args[0].name);
+				errorNoticeText(args[0]);
 			console.error(...args);
 			// Errors always surface, regardless of showNotices - suppressing them
 			// would hide failures, not noise.
@@ -139,26 +136,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	};
 
 	getFileCommandOverrides(file: TFile): Record<string, Partial<CommandConfig>> {
-		const frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter;
-		if (!frontmatter) return {};
-		const overrides: Record<string, Partial<CommandConfig>> = {};
-		for (const key of Object.keys(frontmatter)) {
-			// ore:[cmd-id]:[setting]
-			const match = /^ore:(.+):([^:]+)$/.exec(key);
-			if (!match) continue;
-			const [, cmdId, setting] = match;
-			if (!cmdId || !setting) continue;
-			if (!overrides[cmdId]) overrides[cmdId] = {};
-			const value = frontmatter[key] as unknown;
-			if (setting === "enabled") {
-				overrides[cmdId].enabled =
-					value === true || value === "true" || value === 1;
-			} else {
-				if (!overrides[cmdId].params) overrides[cmdId].params = {};
-				overrides[cmdId].params[setting] = value;
-			}
-		}
-		return overrides;
+		return parseCommandOverrides(this.app.metadataCache.getFileCache(file)?.frontmatter);
 	}
 
 	/**
