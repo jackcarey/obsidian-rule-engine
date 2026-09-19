@@ -12,7 +12,14 @@ export default defineConfig({
 			provider: "v8",
 			reporter: ["text", "html"],
 			include: ["src/**/*.ts"],
+			// Plugin/UI classes need a real Obsidian; e2e covers them instead.
 			exclude: ["src/main.ts", "src/settings.ts"],
+			// Guard only the pure logic modules so they can't quietly rot.
+			thresholds: {
+				"src/{matcher,filters,moc,tfidf,tagFieldUtils,templateRenderer,ruleImport}.ts": {
+					lines: 80,
+				},
+			},
 		},
 	},
 	resolve: {
