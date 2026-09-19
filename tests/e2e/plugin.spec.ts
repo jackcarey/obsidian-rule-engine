@@ -55,6 +55,23 @@ test("settings page shows Rule Engine tab and rule list", async ({ page }) => {
   await closeSettings(settingsPage, page);
 });
 
+test("rule list header has import, export and add buttons in that order", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+
+  const labels = ["Import rules", "Export rules", "Add new rule"];
+  const xs: number[] = [];
+  for (const label of labels) {
+    const btn = settingsPage.locator(`[aria-label="${label}"]`).first();
+    await expect(btn).toBeVisible();
+    const box = await btn.boundingBox();
+    xs.push(box?.x ?? Number.NaN);
+  }
+  expect(xs[0]).toBeLessThan(xs[1] ?? Number.NaN);
+  expect(xs[1]).toBeLessThan(xs[2] ?? Number.NaN);
+
+  await closeSettings(settingsPage, page);
+});
+
 test("settings shows enabled toggle and it works", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
 

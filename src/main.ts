@@ -21,6 +21,7 @@ import {
 } from "./consts";
 import { checkRules } from "./matcher";
 import { ObsidianRuleEngineSettingTab } from "./settings";
+import { migrateRule } from "./ruleImport";
 import { referenceCandidates } from "./sampleValue";
 import { renderTemplate } from "./templateRenderer";
 import type {
@@ -534,29 +535,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			loadedData || {},
 		) as CustomRulesSettings;
 
-		// Migrate pre-2.0 rules: separate templateBase/templateCanvas override strings
-		// are replaced by enableTemplateForBase/enableTemplateForCanvas toggles on the single `template`.
-		// A rule that had non-empty override text keeps applying its template in that
-		// context; the override text itself is discarded (only `template` survives).
-		for (const rule of this.settings.rules) {
-			const legacy = rule as unknown as {
-				templateBase?: string;
-				templateCanvas?: string;
-			};
-			if (rule.enableTemplateForBase === undefined) {
-				rule.enableTemplateForBase = Boolean(legacy.templateBase?.trim());
-			}
-			if (rule.enableTemplateForCanvas === undefined) {
-				rule.enableTemplateForCanvas = Boolean(legacy.templateCanvas?.trim());
-			}
-			// Pre-2.0 rules always applied their template to normal file views
-			// unconditionally - default to true so existing rules keep working.
-			if (rule.enableTemplateForFile === undefined) {
-				rule.enableTemplateForFile = true;
-			}
-			delete legacy.templateBase;
-			delete legacy.templateCanvas;
-		}
+		for (const rule of this.settings.rules) migrateRule(rule);
 
 		// Ensure all available commands are initialized in settings
 		this.settings.commands = this.settings.commands || {};
