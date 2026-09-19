@@ -829,6 +829,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const builtInProps: Array<[string, PropertyType]> = [
 			["file", "file"],
 			["file.name", "text"],
+			["file.basename", "text"],
+			["file.extension", "text"],
 			["file.path", "text"],
 			["file.folder", "text"],
 			["file.ctime", "date"],
@@ -836,6 +838,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 			["file.size", "number"],
 			["file.outlinks", "number"],
 			["file.inlinks", "number"],
+			["file.links", "list"],
+			["file.backlinks", "list"],
+			["file.embeds", "list"],
 			["file tags", "list"],
 			["aliases", "list"],
 		];
@@ -874,7 +879,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (key === "aliases") return "forward";
 		if (key === "file.ctime" || key === "file.mtime") return "clock";
 		if (key === "file.outlinks") return "arrow-right";
-		if (key === "file.inlinks") return "arrow-left";
+		if (key === "file.inlinks" || key === "file.backlinks") return "arrow-left";
+		if (key === "file.links") return "link";
+		if (key === "file.embeds") return "paperclip";
 		return TYPE_ICONS[type] || "pilcrow";
 	}
 
@@ -896,6 +903,11 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	getPropertyLabel(key: string): string {
 		const labelMap: Record<string, string> = {
 			"file.name": "file name",
+			"file.basename": "file basename",
+			"file.extension": "file extension",
+			"file.links": "outgoing links",
+			"file.backlinks": "backlinks",
+			"file.embeds": "embeds",
 			"file.path": "file path",
 			"file.folder": "folder",
 			"file.size": "file size",

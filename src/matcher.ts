@@ -296,6 +296,17 @@ function evaluateFilter(
 			targetValue = Object.values(app.metadataCache.resolvedLinks).filter(
 				(dests) => file.path in dests,
 			).length;
+		// Link lists hold paths so "contains" works on folder or note name.
+		else if (filter.field === "file.links")
+			targetValue = Object.keys(app.metadataCache.resolvedLinks[file.path] ?? {});
+		else if (filter.field === "file.backlinks")
+			targetValue = Object.entries(app.metadataCache.resolvedLinks)
+				.filter(([, dests]) => file.path in dests)
+				.map(([src]) => src);
+		else if (filter.field === "file.embeds")
+			targetValue = (app.metadataCache.getFileCache(file)?.embeds ?? []).map(
+				(e) => e.link,
+			);
 		else if (filter.field === "file.ctime") targetValue = file.stat.ctime;
 		else if (filter.field === "file.mtime") targetValue = file.stat.mtime;
 		else if (filter.field === "file.extension") targetValue = file.extension;
