@@ -13,7 +13,7 @@ import { applyFilterChain } from "./filters";
  * @param file - The file to render the template for
  * @param container - The container to render the template into
  * @param component - The component to render the template with
- * @param log - Optional debug sink; the renderer has no plugin handle
+ * @param log - Debug sink; the renderer has no plugin handle.
  */
 export async function renderTemplate(
 	app: App,
@@ -117,7 +117,7 @@ export async function renderTemplate(
 
 			let value = resolveValue(key, index, isFileProperty);
 			if (value === null) {
-				// Blank output otherwise looks like a broken template.
+				// Blank output looks like a broken template.
 				log?.(`renderTemplate`, file.path, `unresolved variable: ${filePrefix ?? ""}${key}`);
 				return "";
 			}

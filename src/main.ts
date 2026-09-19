@@ -16,6 +16,8 @@ import { list as commandList } from "./commands";
 import {
 	CUSTOM_RULE_CLASS,
 	DEFAULT_SETTINGS,
+	FILE_PROPERTIES,
+	getFileProperty,
 	HIDE_MARKDOWN_CLASS,
 	TYPE_ICONS,
 } from "./consts";
@@ -497,8 +499,13 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 
 		this.debug(`injectCustomView`, `rendering template`);
-		await renderTemplate(this.app, template, file, customEl, this, (...a) =>
-			this.debug(...a),
+		await renderTemplate(
+			this.app,
+			template,
+			file,
+			customEl,
+			this,
+			this.settings.debug ? (...a) => this.debug(...a) : undefined,
 		);
 		container.addClass(HIDE_MARKDOWN_CLASS);
 		toggleMarkdownVisibility(container, true);
@@ -643,8 +650,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		this.debug(`restoreCanvasNode`);
 		(previewContainer.parentElement ?? previewContainer).removeClass(HIDE_MARKDOWN_CLASS);
 		toggleMarkdownVisibility(previewContainer, false);
-		const customEl = previewContainer.querySelector(`.${CUSTOM_RULE_CLASS}`);
-		if (customEl) customEl.remove();
+		nodeEl.querySelector(`.${CUSTOM_RULE_CLASS}`)?.remove();
 	}
 
 	/**
@@ -827,28 +833,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	 * Scans the vault to find properties and INFER their types.
 	 */
 	scanVaultProperties(): PropertyDef[] {
-		// Define built-in properties in the desired order
-		const builtInProps: Array<[string, PropertyType]> = [
-			["file", "file"],
-			["file.name", "text"],
-			["file.basename", "text"],
-			["file.extension", "text"],
-			["file.path", "text"],
-			["file.folder", "text"],
-			["file.ctime", "date"],
-			["file.mtime", "date"],
-			["file.size", "number"],
-			["file.outlinks", "number"],
-			["file.inlinks", "number"],
-			["file.links", "list"],
-			["file.backlinks", "list"],
-			["file.embeds", "list"],
-			["file tags", "list"],
-			["aliases", "list"],
-		];
-
-		// init with built-in props
-		const propMap = new Map<string, PropertyType>(builtInProps);
+		const propMap = new Map<string, PropertyType>(FILE_PROPERTIES.map((p) => [p.key, p.type]));
 
 		// Scan frontmatter properties
 		const files = this.app.vault.getMarkdownFiles();
@@ -877,14 +862,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	 * Gets the icon for a property
 	 */
 	getPropertyIcon(key: string, type: PropertyType): string {
-		if (key === "file tags") return "tags";
-		if (key === "aliases") return "forward";
-		if (key === "file.ctime" || key === "file.mtime") return "clock";
-		if (key === "file.outlinks") return "arrow-right";
-		if (key === "file.inlinks" || key === "file.backlinks") return "arrow-left";
-		if (key === "file.links") return "link";
-		if (key === "file.embeds") return "paperclip";
-		return TYPE_ICONS[type] || "pilcrow";
+		return getFileProperty(key)?.icon ?? (TYPE_ICONS[type] || "pilcrow");
 	}
 
 	getPropertyType(
@@ -903,21 +881,6 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	 * Gets the display label for a property key
 	 */
 	getPropertyLabel(key: string): string {
-		const labelMap: Record<string, string> = {
-			"file.name": "file name",
-			"file.basename": "file basename",
-			"file.extension": "file extension",
-			"file.links": "outgoing links",
-			"file.backlinks": "backlinks",
-			"file.embeds": "embeds",
-			"file.path": "file path",
-			"file.folder": "folder",
-			"file.size": "file size",
-			"file.outlinks": "outgoing link count",
-			"file.inlinks": "backlink count",
-			"file.ctime": "created time",
-			"file.mtime": "modified time",
-		};
-		return labelMap[key] || key;
+		return getFileProperty(key)?.label ?? key;
 	}
 }

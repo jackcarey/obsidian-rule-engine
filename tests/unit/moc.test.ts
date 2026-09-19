@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { HeadingCache } from "obsidian";
-import { getFileTags, findMocMatches, applyMocSection, clampMinPercentage, clampMinCount } from "../../src/moc";
+import { findMocMatches, applyMocSection, clampMinPercentage, clampMinCount } from "../../src/moc";
+import { getFileTags } from "../../src/tagFieldUtils";
 
 // ---------------------------------------------------------------------------
 // Mock helpers

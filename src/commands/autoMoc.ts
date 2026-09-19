@@ -2,15 +2,13 @@ import type { GetCommandFn } from "commands";
 import type ObsidianRuleEnginePlugin from "main";
 import {
 	applyMocSection,
-	clampMinCount,
-	clampMinPercentage,
 	DEFAULT_MIN_COUNT,
 	DEFAULT_MIN_PERCENTAGE,
 	findMocMatches,
-	getFileTags,
 	type MocMode,
 } from "moc";
 import type { TFile } from "obsidian";
+import { getFileTags } from "tagFieldUtils";
 
 export const AUTO_MOC_ID = "generate-auto-moc";
 
@@ -106,9 +104,6 @@ async function runAutoMoc(
 	params: AutoMocParams,
 ): Promise<void> {
 	const mode = params.mode ?? DEFAULT_MODE;
-	// Per-file frontmatter overrides arrive as raw strings.
-	const minPercentage = clampMinPercentage(params.minPercentage);
-	const minCount = clampMinCount(params.minCount);
 	const heading = params.heading?.trim().length
 		? params.heading.trim()
 		: DEFAULT_HEADING;
@@ -116,16 +111,17 @@ async function runAutoMoc(
 
 	try {
 		const sourceTags = getFileTags(plugin.app, file);
-		plugin.debug(`autoMoc: mode=${mode} minPercentage=${minPercentage} minCount=${minCount}`);
+		plugin.debug(`autoMoc: mode=${mode} minPercentage=${params.minPercentage} minCount=${params.minCount}`);
 		if (!sourceTags.length) {
 			plugin.debug("autoMoc: file has no tags, skipping");
 			return;
 		}
 		plugin.debug(`autoMoc: ${sourceTags.length} source tag(s)`);
 
+		// Frontmatter overrides arrive as strings; findMocMatches coerces and clamps.
 		const matches = findMocMatches(plugin.app, file, sourceTags, mode, {
-			minPercentage,
-			minCount,
+			minPercentage: params.minPercentage,
+			minCount: params.minCount,
 		});
 		plugin.debug(`autoMoc: ${matches.length} match(es)`);
 		const lines = matches.map(

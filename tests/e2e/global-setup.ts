@@ -213,7 +213,6 @@ export default async function globalSetup() {
     )
   );
 
-  // Canvas with one file node pointing at a note the "Canvas Rule" matches.
   writeFileSync(path.join(VAULT_DIR, "Notes", "canvas-node-target.md"), "# Canvas node target\n");
   writeFileSync(
     path.join(VAULT_DIR, "Notes", "canvas-check.canvas"),

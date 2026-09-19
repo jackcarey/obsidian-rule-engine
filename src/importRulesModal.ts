@@ -1,7 +1,7 @@
 import { type App, ButtonComponent, FuzzySuggestModal, Modal, type TFile } from "obsidian";
+import { plural } from "format";
 import type { ParsedImport } from "ruleImport";
 
-/** Picks a .json file from the vault, newest first so a fresh export is on top. */
 export class PickRuleFileModal extends FuzzySuggestModal<TFile> {
 	constructor(
 		app: App,
@@ -12,6 +12,7 @@ export class PickRuleFileModal extends FuzzySuggestModal<TFile> {
 	}
 
 	getItems(): TFile[] {
+		// Newest first so a fresh export is on top.
 		return this.app.vault
 			.getFiles()
 			.filter((f) => f.extension === "json")
@@ -27,7 +28,7 @@ export class PickRuleFileModal extends FuzzySuggestModal<TFile> {
 	}
 }
 
-/** Shows what was found in the chosen file; the caller decides how to merge. */
+/** Previews what was found so the user can pick add or replace. */
 export class ImportRulesModal extends Modal {
 	constructor(
 		app: App,
@@ -41,11 +42,10 @@ export class ImportRulesModal extends Modal {
 
 	onOpen() {
 		const { contentEl } = this;
-		contentEl.empty();
 		const { rules, skipped } = this.result;
 		contentEl.createEl("p", {
 			text:
-				`Found ${rules.length} rule${rules.length === 1 ? "" : "s"} in ${this.fileName}` +
+				`Found ${plural(rules.length, "rule")} in ${this.fileName}` +
 				(skipped ? ` (${skipped} invalid, will be skipped)` : "") +
 				":",
 		});
@@ -57,18 +57,8 @@ export class ImportRulesModal extends Modal {
 			this.close();
 		};
 		const buttons = contentEl.createDiv("modal-button-container");
-		new ButtonComponent(buttons)
-			.setButtonText("Add to existing")
-			.setCta()
-			.onClick(() => run(false));
-		new ButtonComponent(buttons)
-			.setButtonText("Replace all")
-			.setDestructive()
-			.onClick(() => run(true));
+		new ButtonComponent(buttons).setButtonText("Add to existing").setCta().onClick(() => run(false));
+		new ButtonComponent(buttons).setButtonText("Replace all").setDestructive().onClick(() => run(true));
 		new ButtonComponent(buttons).setButtonText("Cancel").onClick(() => this.close());
-	}
-
-	onClose() {
-		this.contentEl.empty();
 	}
 }

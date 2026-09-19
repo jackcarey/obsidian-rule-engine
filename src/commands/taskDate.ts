@@ -3,7 +3,7 @@ import { addOverrideHint } from "commandSettingsModal";
 import { GetCommandFn } from "commands";
 import { Editor, MarkdownView, MarkdownFileInfo } from "obsidian";
 import { SuggestItem } from "types";
-import { applyTaskDueDates, TaskDateFormat } from "taskDates";
+import { formatLocalDate, TaskDateFormat, withDueDate } from "taskDates";
 
 export const TASK_DATE_ID = 'apply-task-due-date';
 export interface TaskDateParams extends Record<string, unknown> {
@@ -106,7 +106,6 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
             dtStr = String(cache.frontmatter[fieldKey]);
         }
 
-        // 2. File Title Fallback (looks for YYYY-MM-DD)
         const titleMatch = file.basename.match(/\d{4}-\d{2}-\d{2}/);
         if (!dtStr.length && config.params.parseTitle && titleMatch?.length) {
             dtStr = titleMatch[0];
@@ -114,39 +113,22 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
         }
 
         if (!dtStr?.length) {
-            // 3. Last Modified/Current Date Fallback
-            // Using native Date to avoid external libraries
-            const date = new Date(file.stat.mtime);
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-
-            const targetDate = `${y}-${m}-${d}`;
-            dtStr = targetDate;
+            dtStr = formatLocalDate(file.stat.mtime);
             dateSource = 'file modified time';
         }
 
         const format: TaskDateFormat = config.params.format === 'dataview' ? 'dataview' : 'emoji';
         plugin.debug(`taskDate: format=${format}, date=${dtStr} (${dateSource})`);
 
-        const original = editor.getValue();
-        const result = applyTaskDueDates(original, dtStr, format);
-        plugin.debug(`taskDate: ${result.changed} line(s) changed`);
-        if (!result.changed) return;
-
-        // Replace only changed lines so the cursor and undo history aren't disturbed.
-        const before = original.split('\n');
-        const after = result.text.split('\n');
-        for (let i = before.length - 1; i >= 0; i--) {
-            const oldLine = before[i] ?? '';
-            const newLine = after[i] ?? '';
-            if (oldLine === newLine) continue;
-            editor.replaceRange(
-                newLine,
-                { line: i, ch: 0 },
-                { line: i, ch: oldLine.length }
-            );
+        // Per-line edits keep the cursor and undo history intact; bottom-up so line numbers stay valid.
+        let changed = 0;
+        for (let i = editor.lineCount() - 1; i >= 0; i--) {
+            const old = editor.getLine(i);
+            const next = withDueDate(old, dtStr, format);
+            if (next === old) continue;
+            changed++;
+            editor.replaceRange(next, { line: i, ch: 0 }, { line: i, ch: old.length });
         }
-        return;
+        plugin.debug(`taskDate: ${changed} line(s) changed`);
     }
 });

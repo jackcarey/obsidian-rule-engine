@@ -46,8 +46,7 @@ class PropertySuggest extends AbstractInputSuggest<PropertyDef> {
 
     protected getSuggestions(query: string): PropertyDef[] {
         const q = query.trim().toLowerCase();
-        // The input is pre-filled with the current label, so filtering on it
-        // would hide every other property until the user clears the field.
+        // The input holds the current label; filtering on it would hide the other properties.
         const currentLabel = this.plugin
             .getPropertyLabel(this.getCurrentKey())
             .toLowerCase();
@@ -419,8 +418,10 @@ const CONJUNCTION_REVERSE: Record<string, FilterConjunction> = {
  */
 class FilterBuilder {
     availableProperties: PropertyDef[];
-    // Looked up once per modal open so hints don't shift while editing.
+    // Fixed per open so hints don't jump while editing.
     private referenceFiles: TFile[];
+    // Rows re-render on every edit; the file set is fixed, so results can be reused.
+    private hintCache = new Map<string, ReturnType<typeof findSample>>();
 
     constructor(
         public plugin: ObsidianRuleEnginePlugin,
@@ -433,8 +434,11 @@ class FilterBuilder {
     }
 
     private renderHint(setting: Setting, field: string) {
-        const sample = findSample(this.plugin.app, this.referenceFiles, field);
-        // No hint beats a misleading one when no note has this property.
+        if (!this.hintCache.has(field)) {
+            this.hintCache.set(field, findSample(this.plugin.app, this.referenceFiles, field));
+        }
+        const sample = this.hintCache.get(field);
+        // Better no hint than a wrong one.
         if (!sample) return;
         const hint = setting.settingEl.createDiv({ cls: "ore-filter-hint" });
         hint.appendText("e.g. ");
@@ -728,7 +732,7 @@ class FilterBuilder {
                     () => filter.field,
                 );
                 propertySuggest.onSelect((prop) => commitFieldChange(prop.key));
-                // So typing replaces the label instead of appending to it.
+                // Select on focus so typing replaces the label.
                 text.inputEl.addEventListener("focus", () => text.inputEl.select());
                 text.inputEl.addEventListener("blur", () => {
                     const typed = text.inputEl.value.trim();

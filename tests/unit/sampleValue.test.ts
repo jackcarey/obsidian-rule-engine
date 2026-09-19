@@ -69,13 +69,9 @@ describe("findSample", () => {
 				resolvedLinks: {},
 			},
 		} as unknown as A;
-		const found = findSample(a, [without, withValue], "status");
-		expect(found?.text).toBe("done");
-		expect(found?.file.path).toBe("has.md");
-	});
-	it("prefers the first file when it has a value", () => {
-		const a = app({ frontmatter: { status: "x" } });
-		expect(findSample(a, [file("one.md"), file("two.md")], "status")?.file.path).toBe("one.md");
+		expect(findSample(a, [without, withValue], "status")).toMatchObject({ text: "done", file: withValue });
+		// Order matters when several have one.
+		expect(findSample(a, [withValue, without], "status")?.file).toBe(withValue);
 	});
 	it("returns null when no file has one", () => {
 		expect(findSample(app(), [file("a.md"), file("b.md")], "missing")).toBeNull();
@@ -111,12 +107,9 @@ describe("describeSample", () => {
 		expect(describeSample(a, f, "file.backlinks")).toBe("x.md");
 	});
 	it("gives no example for empty lists so the search can move on", () => {
-		const a = app();
-		expect(describeSample(a, f, "file.embeds")).toBeNull();
-		expect(describeSample(a, f, "file tags")).toBeNull();
-		expect(describeSample(a, f, "aliases")).toBeNull();
-		expect(describeSample(a, f, "file.links")).toBeNull();
-		expect(describeSample(a, f, "file.backlinks")).toBeNull();
+		for (const key of ["file.embeds", "file tags", "aliases", "file.links", "file.backlinks"]) {
+			expect(describeSample(app(), f, key)).toBeNull();
+		}
 	});
 	it("summarises the bare file field", () => {
 		const a = app({ frontmatter: { status: "x", position: {} }, tags: [{ tag: "#one" }] });

@@ -53,8 +53,7 @@
     justify-content: flex-start;
 }
 
-/* Example-value hint sits under the controls; wrapping the row lets it take
-   its own full-width line while the name and controls stay on the first. */
+/* Wrap so the hint gets its own full-width line. */
 .ore-filter-row {
     flex-wrap: wrap;
 }
@@ -67,7 +66,7 @@
     overflow-wrap: anywhere;
 }
 
-/* Monospace so the example reads as literal data, distinct from the label text. */
+/* Monospace marks the example as literal data. */
 .ore-filter-hint-value {
     font-family: var(--font-monospace);
 }
@@ -381,8 +380,7 @@
     margin-bottom: var(--size-4-2);
 }
 
-/* No color set on the summary parts: they sit in a setting description and
-   should match its default secondary text color. */
+/* No color: inherit the setting description's secondary color. */
 .ore-filter-summary-heading {
     font-weight: var(--font-medium);
 }

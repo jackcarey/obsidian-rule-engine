@@ -1,5 +1,5 @@
-import { App, HeadingCache, TFile } from "obsidian";
-import { normalizeTag } from "tagFieldUtils";
+import type { App, HeadingCache, TFile } from "obsidian";
+import { getFileTags } from "tagFieldUtils";
 
 export type MocMode = "any" | "all" | "percentage" | "count";
 
@@ -11,7 +11,7 @@ export interface MocOptions {
 export const DEFAULT_MIN_PERCENTAGE = 50;
 export const DEFAULT_MIN_COUNT = 2;
 
-// Thresholds of 0 (or below) would match every file, so clamp to a real minimum.
+// 0 or less would match every file.
 export function clampMinPercentage(value: unknown): number {
 	const n = Number(value);
 	if (!Number.isFinite(n)) return DEFAULT_MIN_PERCENTAGE;
@@ -24,44 +24,10 @@ export function clampMinCount(value: unknown): number {
 	return Math.max(1, Math.ceil(n));
 }
 
-/** A file's combined body+frontmatter tags, normalized and deduped case-insensitively. */
-export function getFileTags(app: App, file: TFile): string[] {
-	const cache = app.metadataCache.getFileCache(file);
-	const seen = new Set<string>();
-	const tags: string[] = [];
-
-	const addTag = (raw: string) => {
-		const normalized = normalizeTag(raw);
-		const key = normalized.toLowerCase();
-		if (normalized && !seen.has(key)) {
-			seen.add(key);
-			tags.push(normalized);
-		}
-	};
-
-	for (const bodyTag of cache?.tags ?? []) {
-		addTag(bodyTag.tag.replace(/^#+/, ""));
-	}
-
-	const frontmatterTags = cache?.frontmatter?.tags as string | string[] | undefined;
-	if (frontmatterTags) {
-		const list = Array.isArray(frontmatterTags) ? frontmatterTags : [frontmatterTags];
-		for (const tag of list) addTag(String(tag));
-	}
-
-	return tags;
-}
-
 /**
- * Finds every other markdown file in the vault whose tags match `file`'s own
- * tags per `mode` ('any' shared tag, 'all' of them - `file`'s tag set is a
- * subset of the candidate's, 'percentage' of `file`'s tags shared, or 'count'
- * of shared tags). Sorted alphabetically by basename.
- *
- * `sourceTags` must be non-empty and is assumed to already be `file`'s tags
- * (via `getFileTags`) - callers should treat an empty tag set as a no-op
- * before calling this, since 'all' mode would otherwise vacuously match
- * every file in the vault against an empty required-tag-set.
+ * Other notes whose tags match `file`'s per `mode`, sorted by basename.
+ * `sourceTags` must be non-empty: 'all' would match every note against an
+ * empty set.
  */
 export function findMocMatches(app: App, file: TFile, sourceTags: string[], mode: MocMode, options: MocOptions = {}): TFile[] {
 	const sourceKeys = sourceTags.map(t => t.toLowerCase());
@@ -78,7 +44,7 @@ export function findMocMatches(app: App, file: TFile, sourceTags: string[], mode
 		switch (mode) {
 			case "any": isMatch = shared > 0; break;
 			case "all": isMatch = shared === sourceKeys.length; break;
-			// Multiply before dividing: 0.29 * 100 is 28.999... and would miss a 29% threshold.
+			// Multiply first: 0.29 * 100 is 28.999... and would miss a 29% threshold.
 			case "percentage": isMatch = shared * 100 / sourceKeys.length >= minPercentage; break;
 			case "count": isMatch = shared >= minCount; break;
 		}

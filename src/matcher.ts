@@ -1,5 +1,6 @@
 import { type App, type FrontMatterCache, moment, type TFile } from "obsidian";
 import { RELATIVE_DATE_UNITS } from "./consts";
+import { embedLinks, inlinkPaths, outlinkPaths } from "./fileFields";
 import type { AnyFilterGroup, Filter } from "./types";
 
 // Obsidian types moment as a namespace rather than a callable - cast for runtime use
@@ -289,24 +290,13 @@ function evaluateFilter(
 			targetValue = file.parent?.path || "";
 		else if (filter.field === "file.size") targetValue = file.stat.size;
 		else if (filter.field === "file.outlinks")
-			targetValue = Object.keys(
-				app.metadataCache.resolvedLinks[file.path] ?? {},
-			).length;
+			targetValue = outlinkPaths(app, file).length;
 		else if (filter.field === "file.inlinks")
-			targetValue = Object.values(app.metadataCache.resolvedLinks).filter(
-				(dests) => file.path in dests,
-			).length;
-		// Link lists hold paths so "contains" works on folder or note name.
-		else if (filter.field === "file.links")
-			targetValue = Object.keys(app.metadataCache.resolvedLinks[file.path] ?? {});
-		else if (filter.field === "file.backlinks")
-			targetValue = Object.entries(app.metadataCache.resolvedLinks)
-				.filter(([, dests]) => file.path in dests)
-				.map(([src]) => src);
-		else if (filter.field === "file.embeds")
-			targetValue = (app.metadataCache.getFileCache(file)?.embeds ?? []).map(
-				(e) => e.link,
-			);
+			targetValue = inlinkPaths(app, file).length;
+		// Paths, so "contains" works on folder or note name.
+		else if (filter.field === "file.links") targetValue = outlinkPaths(app, file);
+		else if (filter.field === "file.backlinks") targetValue = inlinkPaths(app, file);
+		else if (filter.field === "file.embeds") targetValue = embedLinks(app, file);
 		else if (filter.field === "file.ctime") targetValue = file.stat.ctime;
 		else if (filter.field === "file.mtime") targetValue = file.stat.mtime;
 		else if (filter.field === "file.extension") targetValue = file.extension;

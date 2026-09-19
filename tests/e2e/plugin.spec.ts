@@ -329,7 +329,7 @@ test("filter builder shows existing filter condition", async ({ page }) => {
   await closeSettings(settingsPage, page);
 });
 
-// Placed before the tests that edit rule 0/1's filters, which would change what these read.
+// Runs before tests that edit rules 0/1, which would change what these read.
 test("filter builder - each row shows an example value from the open note", async ({ page }) => {
   await openNote(page, "matched-file.md");
 
@@ -341,8 +341,8 @@ test("filter builder - each row shows an example value from the open note", asyn
   const hint = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-filter-hint").first();
   await expect(hint).toHaveText("e.g. matched-file.md (from matched-file)");
 
-  await closeModal(settingsPage); // FilterModal
-  await closeModal(settingsPage); // EditRuleModal
+  await closeModal(settingsPage);
+  await closeModal(settingsPage);
   await closeSettings(settingsPage, page);
 });
 
@@ -360,8 +360,8 @@ test("filter builder - the bare 'file' property hint summarises folder, tags and
   await expect(hint).toContainText("properties: description");
   await expect(hint).toContainText("(from matched-file)");
 
-  await closeModal(settingsPage); // FilterModal
-  await closeModal(settingsPage); // EditRuleModal
+  await closeModal(settingsPage);
+  await closeModal(settingsPage);
   await closeSettings(settingsPage, page);
 });
 
@@ -433,8 +433,7 @@ test("filter builder - property input accepts free text not in the suggestion li
   await closeSettings(settingsPage, page);
 });
 
-// Regression: the input is pre-filled with the current property ("file name"), and the
-// suggester used to filter on that text, hiding everything not containing "file".
+// Regression: the suggester filtered on the pre-filled label and hid other properties.
 test("filter builder - property list shows every property on focus, not just ones matching the current value", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);
@@ -461,8 +460,8 @@ test("filter builder - property list shows every property on focus, not just one
   }
 
   await settingsPage.keyboard.press("Escape");
-  await closeModal(settingsPage); // FilterModal
-  await closeModal(settingsPage); // EditRuleModal
+  await closeModal(settingsPage);
+  await closeModal(settingsPage);
   await closeSettings(settingsPage, page);
 });
 
@@ -479,8 +478,8 @@ test("filter builder - typing narrows the property list", async ({ page }) => {
   await expect(suggestions.filter({ hasText: "created time" })).toHaveCount(0);
 
   await settingsPage.keyboard.press("Escape");
-  await closeModal(settingsPage); // FilterModal
-  await closeModal(settingsPage); // EditRuleModal
+  await closeModal(settingsPage);
+  await closeModal(settingsPage);
   await closeSettings(settingsPage, page);
 });
 

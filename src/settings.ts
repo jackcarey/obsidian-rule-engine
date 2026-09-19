@@ -7,6 +7,7 @@ import { CommandSettingsModal } from "commandSettingsModal";
 import { ConfirmModal } from "confirmModal";
 import { ImportRulesModal, PickRuleFileModal } from "importRulesModal";
 import { ExportRulesModal } from "exportRulesModal";
+import { plural } from "format";
 import { exportFileName, type ParsedImport, parseRuleImport, serializeRules } from "ruleImport";
 
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
@@ -72,13 +73,13 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			return;
 		}
 		new ExportRulesModal(this.app, rules, (chosen) => {
-			// A vault file is the only save target that works on desktop and mobile without a native dialog.
+			// A vault file works on desktop and mobile without a native dialog.
 			const path = exportFileName((p) => this.app.vault.getAbstractFileByPath(p) !== null);
 			this.app.vault
 				.create(path, serializeRules(chosen))
 				.then(() => {
 					this.plugin.debug(`exported ${chosen.length} rules to ${path}`);
-					this.plugin.notify(`Saved ${chosen.length} rule${chosen.length === 1 ? "" : "s"} to ${path}`);
+					this.plugin.notify(`Saved ${plural(chosen.length, "rule")} to ${path}`);
 				})
 				.catch((e) => this.plugin.debug(e));
 		}).open();
@@ -89,7 +90,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			this.app.vault
 				.read(file)
 				.then((text) => {
-					const result = parseRuleImport(text, () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+					const result = parseRuleImport(text);
 					if (result.error) {
 						this.plugin.debug(`import failed for ${file.path}: ${result.error}`);
 						new Notice(`${file.name}: ${result.error}`);
@@ -110,7 +111,7 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 				void this.plugin.saveSettings();
 				this.update();
 				this.plugin.notify(
-					`Imported ${parsed.rules.length} rule${parsed.rules.length === 1 ? "" : "s"}` +
+					`Imported ${plural(parsed.rules.length, "rule")}` +
 						(parsed.skipped ? `, skipped ${parsed.skipped} invalid` : ""),
 				);
 			};
@@ -128,7 +129,6 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 			heading: "Rule configuration",
 			cls: "ore-rule-list",
 			emptyState: "No rules yet.",
-			// Left to right: import, export, then add.
 			extraButtons: [
 				(btn) => btn.setIcon("download").setTooltip("Import rules").onClick(() => this.importRules()),
 				(btn) => btn.setIcon("upload").setTooltip("Export rules").onClick(() => this.exportRules()),

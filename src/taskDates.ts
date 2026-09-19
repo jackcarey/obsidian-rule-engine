@@ -1,33 +1,18 @@
 export type TaskDateFormat = 'emoji' | 'dataview';
 
-// Unchecked "- [ ]" tasks only; other bullets and checked tasks are left alone.
 const OPEN_TASK = /^\s*-\s\[ \]\s/;
-// Matches [due:: x], (due:: x) and bare due:: x.
+// [due:: x], (due:: x) or bare due:: x
 const DATAVIEW_DUE = /(^|[\s[(])due::/;
 
-/** True if the task already has a due date in either format. */
-function hasDueDate(line: string): boolean {
-    return line.includes('📅') || DATAVIEW_DUE.test(line);
+/** Local YYYY-MM-DD; toISOString would shift the day for users far from UTC. */
+export function formatLocalDate(ms: number): string {
+    const d = new Date(ms);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/**
- * Appends a due date to open tasks that don't have one.
- * Checking both formats stops us doubling up when the user switches format.
- */
-export function applyTaskDueDates(
-    text: string,
-    date: string,
-    format: TaskDateFormat = 'emoji',
-): { text: string; changed: number } {
-    const suffix = format === 'dataview' ? ` [due:: ${date}]` : ` 📅 ${date}`;
-    let changed = 0;
-    const lines = text.split('\n').map(rawLine => {
-        // Keep CRLF endings intact, trimEnd would otherwise drop the \r.
-        const cr = rawLine.endsWith('\r') ? '\r' : '';
-        const line = cr ? rawLine.slice(0, -1) : rawLine;
-        if (!OPEN_TASK.test(line) || hasDueDate(line)) return rawLine;
-        changed++;
-        return `${line.trimEnd()}${suffix}${cr}`;
-    });
-    return { text: lines.join('\n'), changed };
+/** Skips tasks dated in either format, so switching format never doubles up. */
+export function withDueDate(line: string, date: string, format: TaskDateFormat = 'emoji'): string {
+    if (!OPEN_TASK.test(line) || line.includes('📅') || DATAVIEW_DUE.test(line)) return line;
+    return `${line.trimEnd()}${format === 'dataview' ? ` [due:: ${date}]` : ` 📅 ${date}`}`;
 }
