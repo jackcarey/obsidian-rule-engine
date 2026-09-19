@@ -380,6 +380,57 @@ test("filter builder - property input accepts free text not in the suggestion li
   await closeSettings(settingsPage, page);
 });
 
+// Regression: the input is pre-filled with the current property ("file name"), and the
+// suggester used to filter on that text, hiding everything not containing "file".
+test("filter builder - property list shows every property on focus, not just ones matching the current value", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
+
+  const propertyInput = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-property-input").first();
+  await propertyInput.click();
+
+  const suggestions = settingsPage.locator(".suggestion-container .suggestion-item");
+  await expect(suggestions.first()).toBeVisible();
+  for (const label of [
+    "backlink count",
+    "outgoing link count",
+    "backlinks",
+    "outgoing links",
+    "embeds",
+    "file size",
+    "created time",
+    "modified time",
+    "folder",
+    "file extension",
+  ]) {
+    await expect(suggestions.filter({ hasText: label }).first()).toBeVisible();
+  }
+
+  await settingsPage.keyboard.press("Escape");
+  await closeModal(settingsPage); // FilterModal
+  await closeModal(settingsPage); // EditRuleModal
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder - typing narrows the property list", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
+
+  const propertyInput = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-property-input").first();
+  await propertyInput.fill("backlink");
+
+  const suggestions = settingsPage.locator(".suggestion-container .suggestion-item");
+  await expect(suggestions.filter({ hasText: "backlink count" }).first()).toBeVisible();
+  await expect(suggestions.filter({ hasText: "created time" })).toHaveCount(0);
+
+  await settingsPage.keyboard.press("Escape");
+  await closeModal(settingsPage); // FilterModal
+  await closeModal(settingsPage); // EditRuleModal
+  await closeSettings(settingsPage, page);
+});
+
 test("filter builder - operator dropdown changes and persists the filter's operator", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);

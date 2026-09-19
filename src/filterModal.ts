@@ -37,14 +37,23 @@ class PropertySuggest extends AbstractInputSuggest<PropertyDef> {
         private plugin: ObsidianRuleEnginePlugin,
         private properties: PropertyDef[],
         private onPick: (prop: PropertyDef) => void,
+        private getCurrentKey: () => string,
     ) {
         super(app, inputEl);
     }
 
     protected getSuggestions(query: string): PropertyDef[] {
-        const q = query.toLowerCase();
-        return this.properties.filter((p) =>
-            this.plugin.getPropertyLabel(p.key).toLowerCase().includes(q),
+        const q = query.trim().toLowerCase();
+        // The input is pre-filled with the current label, so filtering on it
+        // would hide every other property until the user clears the field.
+        const currentLabel = this.plugin
+            .getPropertyLabel(this.getCurrentKey())
+            .toLowerCase();
+        if (!q || q === currentLabel) return this.properties;
+        return this.properties.filter(
+            (p) =>
+                this.plugin.getPropertyLabel(p.key).toLowerCase().includes(q) ||
+                p.key.toLowerCase().includes(q),
         );
     }
 
@@ -52,6 +61,9 @@ class PropertySuggest extends AbstractInputSuggest<PropertyDef> {
         const iconEl = el.createSpan({ cls: "ore-combobox-button-icon" });
         setIcon(iconEl, this.plugin.getPropertyIcon(prop.key, prop.type));
         el.createSpan({ text: this.plugin.getPropertyLabel(prop.key) });
+        if (prop.key === this.getCurrentKey()) {
+            setIcon(el.createSpan({ cls: "ore-combobox-button-icon" }), "check");
+        }
     }
 
     selectSuggestion(prop: PropertyDef, _evt: MouseEvent | KeyboardEvent): void {
@@ -698,8 +710,11 @@ class FilterBuilder {
                     this.plugin,
                     this.availableProperties,
                     (prop) => commitFieldChange(prop.key),
+                    () => filter.field,
                 );
                 propertySuggest.onSelect((prop) => commitFieldChange(prop.key));
+                // So typing replaces the label instead of appending to it.
+                text.inputEl.addEventListener("focus", () => text.inputEl.select());
                 text.inputEl.addEventListener("blur", () => {
                     const typed = text.inputEl.value.trim();
                     if (
