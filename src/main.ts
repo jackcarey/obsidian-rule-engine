@@ -641,7 +641,13 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 		this.debug(`processCanvasNode`, file.path, `injecting template`);
 
-		await this.injectCustomView(previewContainer, file, matchedTemplate);
+		// Inject beside the preview, not inside it: injectCustomView hides the
+		// preview, and anything inside it would be hidden too.
+		await this.injectCustomView(
+			previewContainer.parentElement ?? previewContainer,
+			file,
+			matchedTemplate,
+		);
 	}
 
 	/**
@@ -657,7 +663,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		if (!previewContainer) return;
 
 		this.debug(`restoreCanvasNode`);
-		previewContainer.removeClass(HIDE_MARKDOWN_CLASS);
+		(previewContainer.parentElement ?? previewContainer).removeClass(HIDE_MARKDOWN_CLASS);
 		toggleMarkdownVisibility(previewContainer, false);
 		const customEl = previewContainer.querySelector(`.${CUSTOM_RULE_CLASS}`);
 		if (customEl) customEl.remove();
