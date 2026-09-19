@@ -12,7 +12,9 @@ import {
     type Setting,
     SettingGroup,
     setIcon,
+    type TFile,
 } from "obsidian";
+import { findSample } from "sampleValue";
 import type {
     AnyFilterGroup,
     Filter,
@@ -417,6 +419,8 @@ const CONJUNCTION_REVERSE: Record<string, FilterConjunction> = {
  */
 class FilterBuilder {
     availableProperties: PropertyDef[];
+    // Looked up once per modal open so hints don't shift while editing.
+    private referenceFiles: TFile[];
 
     constructor(
         public plugin: ObsidianRuleEnginePlugin,
@@ -425,6 +429,17 @@ class FilterBuilder {
         public onRefresh: () => void,
     ) {
         this.availableProperties = this.plugin.scanVaultProperties();
+        this.referenceFiles = this.plugin.getReferenceFiles();
+    }
+
+    private renderHint(setting: Setting, field: string) {
+        const sample = findSample(this.plugin.app, this.referenceFiles, field);
+        // No hint beats a misleading one when no note has this property.
+        if (!sample) return;
+        const hint = setting.settingEl.createDiv({ cls: "ore-filter-hint" });
+        hint.appendText("e.g. ");
+        hint.createSpan({ cls: "ore-filter-hint-value", text: sample.text });
+        hint.appendText(` (from ${sample.file.basename})`);
     }
 
     render(container: HTMLElement) {
@@ -796,6 +811,8 @@ class FilterBuilder {
                     .setTooltip("Remove filter")
                     .onClick(handleDelete),
             );
+
+            this.renderHint(setting, filter.field);
         });
     }
 }

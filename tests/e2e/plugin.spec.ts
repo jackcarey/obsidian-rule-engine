@@ -312,6 +312,42 @@ test("filter builder shows existing filter condition", async ({ page }) => {
   await closeSettings(settingsPage, page);
 });
 
+// Placed before the tests that edit rule 0/1's filters, which would change what these read.
+test("filter builder - each row shows an example value from the open note", async ({ page }) => {
+  await openNote(page, "matched-file.md");
+
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
+
+  // Rule 0 is "file.name contains matched"
+  const hint = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-filter-hint").first();
+  await expect(hint).toHaveText("e.g. matched-file.md (from matched-file)");
+
+  await closeModal(settingsPage); // FilterModal
+  await closeModal(settingsPage); // EditRuleModal
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder - the bare 'file' property hint summarises folder, tags and properties", async ({ page }) => {
+  await openNote(page, "matched-file.md");
+
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 1);
+  await openFilterModal(settingsPage);
+
+  // Rule 1 is "file has tag rich"
+  const hint = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-filter-hint").first();
+  await expect(hint).toContainText("folder: Notes");
+  await expect(hint).toContainText("tags:");
+  await expect(hint).toContainText("properties: description");
+  await expect(hint).toContainText("(from matched-file)");
+
+  await closeModal(settingsPage); // FilterModal
+  await closeModal(settingsPage); // EditRuleModal
+  await closeSettings(settingsPage, page);
+});
+
 test("filter builder - add a new filter", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);

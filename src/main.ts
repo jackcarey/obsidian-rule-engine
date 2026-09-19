@@ -21,6 +21,7 @@ import {
 } from "./consts";
 import { checkRules } from "./matcher";
 import { ObsidianRuleEngineSettingTab } from "./settings";
+import { referenceCandidates } from "./sampleValue";
 import { renderTemplate } from "./templateRenderer";
 import type {
 	BaseFileHandling,
@@ -807,6 +808,19 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		} else {
 			doCmds();
 		}
+	}
+
+	/** Files that filter hints take their example values from, best first. */
+	getReferenceFiles(): TFile[] {
+		return referenceCandidates(
+			this.app.workspace.getActiveFile(),
+			this.app.workspace.getLastOpenFiles(),
+			(path) => {
+				const f = this.app.vault.getAbstractFileByPath(path);
+				return f instanceof TFile ? f : null;
+			},
+			this.app.vault.getMarkdownFiles(),
+		);
 	}
 
 	inferType(val: unknown): PropertyType {

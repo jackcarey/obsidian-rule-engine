@@ -53,6 +53,25 @@
     justify-content: flex-start;
 }
 
+/* Example-value hint sits under the controls; wrapping the row lets it take
+   its own full-width line while the name and controls stay on the first. */
+.ore-filter-row {
+    flex-wrap: wrap;
+}
+
+.ore-filter-hint {
+    flex-basis: 100%;
+    padding-inline-start: 4.5rem;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+/* Monospace so the example reads as literal data, distinct from the label text. */
+.ore-filter-hint-value {
+    font-family: var(--font-monospace);
+}
+
 /* Header rows (root and subgroup conjunction): .setting-item-info and
    .setting-item-control both default to flex-grow: 1, so they split the
    row's width and strand the name/dropdown/delete cluster in the middle
