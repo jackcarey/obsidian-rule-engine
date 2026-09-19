@@ -781,6 +781,36 @@ test("file with 2 resolved incoming links renders the inlinks-count template", a
   await expect(page.locator(".ore-e2e-outlinks-rendered")).not.toBeVisible();
 });
 
+// ── 5b. Canvas templates ─────────────────────────────────────────────────────
+
+type CanvasPlugin = {
+  settings: { workInCanvas: boolean };
+  processAllCanvasNodes(): void;
+  restoreAllCanvasNodes(): void;
+};
+
+test("canvas file node renders the canvas template, and restores when canvas support is turned off", async ({ page }) => {
+  await page.evaluate(async () => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as CanvasPlugin;
+    plugin.settings.workInCanvas = true;
+    await window.app.workspace.openLinkText("Notes/canvas-check.canvas", "");
+  });
+  // Canvas nodes render asynchronously after the view opens.
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => {
+    (window.app.plugins.plugins["rule-engine"] as unknown as CanvasPlugin).processAllCanvasNodes();
+  });
+
+  await expect(page.locator(".canvas-node .ore-e2e-canvas-rendered")).toBeVisible({ timeout: 8000 });
+
+  await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as CanvasPlugin;
+    plugin.settings.workInCanvas = false;
+    plugin.restoreAllCanvasNodes();
+  });
+  await expect(page.locator(".canvas-node .ore-e2e-canvas-rendered")).toHaveCount(0);
+});
+
 // ── 6. Plugin settings persistence ───────────────────────────────────────────
 
 test("adding and saving a new rule persists it", async ({ page }) => {

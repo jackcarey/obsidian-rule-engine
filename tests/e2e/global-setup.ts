@@ -188,12 +188,39 @@ export default async function globalSetup() {
             commandIds: [],
             baseFileHandling: "file",
           },
+          {
+            id: "e2e-rule-canvas",
+            name: "Canvas Rule",
+            filterGroup: {
+              type: "group",
+              operator: "AND",
+              conditions: [{ type: "filter", field: "file.name", operator: "contains", value: "canvas-node-target" }],
+            },
+            template: '<div class="ore-e2e-canvas-rendered"><p>{{file.basename}}</p></div>',
+            // File-only off so the canvas path is what renders it.
+            enableTemplateForFile: false,
+            enableTemplateForBase: false,
+            enableTemplateForCanvas: true,
+            enabled: true,
+            commandIds: [],
+            baseFileHandling: "file",
+          },
         ],
         commands: {},
       },
       null,
       2
     )
+  );
+
+  // Canvas with one file node pointing at a note the "Canvas Rule" matches.
+  writeFileSync(path.join(VAULT_DIR, "Notes", "canvas-node-target.md"), "# Canvas node target\n");
+  writeFileSync(
+    path.join(VAULT_DIR, "Notes", "canvas-check.canvas"),
+    JSON.stringify({
+      nodes: [{ id: "n1", type: "file", file: "Notes/canvas-node-target.md", x: 0, y: 0, width: 400, height: 300 }],
+      edges: [],
+    })
   );
 
   // Notes with a relative `check_date` for the "within past"/"within future" filter rules
