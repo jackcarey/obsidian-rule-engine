@@ -176,7 +176,8 @@ Match files using powerful filter rules based on file properties or frontmatter.
 
 **Available Properties:**
 
-- **File properties**: `file.name`, `file.path`, `file.folder`, `file.size`, `file.ctime`, `file.mtime`, `file.extension`
+- **File properties**: `file.name`, `file.basename`, `file.extension`, `file.path`, `file.folder`, `file.size`, `file.ctime`, `file.mtime`
+- **Links**: `file.outlinks` and `file.inlinks` (counts), and `file.links`, `file.backlinks` and `file.embeds` (lists of paths)
 - **Frontmatter**: Any property from your note's frontmatter (e.g., `title`, `tags`, `status`, `date`)
 - **Tags**: The `tags` property (automatically detected as a list)
 
@@ -189,6 +190,17 @@ Match files using powerful filter rules based on file properties or frontmatter.
   - Works on `file.ctime`, `file.mtime`, and frontmatter date string fields
 - **Lists/Tags**: `contains`, `does not contain`, `is empty`, `is not empty`
 - **Checkboxes**: `is` (true/false)
+
+Click a rule's property field to see every property. Each filter row also shows an example value under it, taken from the open note, or the most recently opened note that still exists, then any other note that has the property.
+
+#### Import and export rules
+
+Use the buttons in the rules header to share rules or move them between vaults.
+
+- **Export** lets you pick which rules to include and saves them as `rule-engine-rules-YYYY-MM-DD.json` in the vault root. Existing files are never overwritten.
+- **Import** lists the `.json` files in your vault, previews the rules found, and lets you add them to your existing rules or replace all of them. Imported rules get new ids, and invalid rules are skipped.
+
+To import a file from outside the vault, copy it into the vault first.
 
 #### HTML Templates
 
