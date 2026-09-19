@@ -59,7 +59,7 @@ function formatScalar(v: unknown): string {
 
 /** Display text for a property on one file, or null if there is nothing to show. */
 export function describeSample(app: App, file: TFile, field: string): string | null {
-	const fm = app.metadataCache.getFileCache(file)?.frontmatter as Record<string, unknown> | undefined;
+	const fm: Record<string, unknown> | undefined = app.metadataCache.getFileCache(file)?.frontmatter;
 
 	switch (field) {
 		case "file": {

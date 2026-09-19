@@ -70,7 +70,7 @@ export function normalizeRule(raw: unknown): RuleConfig | null {
 			? raw.baseFileHandling
 			: "file",
 	} as RuleConfig;
-	migrateRule(rule, raw as LegacyFields);
+	migrateRule(rule, raw);
 	return rule;
 }
 
