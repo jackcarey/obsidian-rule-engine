@@ -1,5 +1,33 @@
 import { App, TFile } from "obsidian";
 
+/** Body and frontmatter tags, normalized and deduped case-insensitively. */
+export function getFileTags(app: App, file: TFile): string[] {
+	const cache = app.metadataCache.getFileCache(file);
+	const seen = new Set<string>();
+	const tags: string[] = [];
+
+	const addTag = (raw: string) => {
+		const normalized = normalizeTag(raw);
+		const key = normalized.toLowerCase();
+		if (normalized && !seen.has(key)) {
+			seen.add(key);
+			tags.push(normalized);
+		}
+	};
+
+	for (const bodyTag of cache?.tags ?? []) {
+		addTag(bodyTag.tag.replace(/^#+/, ""));
+	}
+
+	const frontmatterTags = cache?.frontmatter?.tags as string | string[] | undefined;
+	if (frontmatterTags) {
+		const list = Array.isArray(frontmatterTags) ? frontmatterTags : [frontmatterTags];
+		for (const tag of list) addTag(String(tag));
+	}
+
+	return tags;
+}
+
 export interface TagMergeOptions {
 	/**
 	 * Ceiling on the field's total tag count. In append mode (the default),

@@ -11,14 +11,17 @@
             "id": "0bab95444b0ed4a2",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "canvas",
               "state": {
-                "file": "Notes/tag-generation-fixture.md",
-                "mode": "preview",
-                "source": false
+                "file": "Notes/canvas-check.canvas",
+                "viewState": {
+                  "x": 200,
+                  "y": 150,
+                  "zoom": 0
+                }
               },
-              "icon": "lucide-file",
-              "title": "tag-generation-fixture"
+              "icon": "lucide-layout-dashboard",
+              "title": "canvas-check"
             }
           }
         ]
@@ -187,6 +190,8 @@
   },
   "active": "0bab95444b0ed4a2",
   "lastOpenFiles": [
+    "Notes/tag-generation-fixture.md",
+    "Notes/canvas-check.canvas",
     "Notes/inlinks-check.md",
     "Notes/outlinks-check.md",
     "Notes/within-future-check.md",
@@ -195,8 +200,9 @@
     "Notes/other-file.md",
     "Notes/matched-file.md",
     "Notes/moc-no-tags.md",
+    "Notes/bases-cmd-b.md",
+    "Notes/bases-cmd-a.md",
     "Notes/moc-source.md",
-    "Notes/tag-generation-fixture.md",
     "Notes/unmatched-file.md"
   ]
 }

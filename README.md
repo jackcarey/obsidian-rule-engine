@@ -37,7 +37,7 @@ By default, commands provided by this plugin are disabled. You can enable them i
 - `Force template` - Apply a template to the current file regardless of rule automations and conditions.
 - `Restore view` - Remove any applied templates from the current file.
 - `Process now` - Check and execute automations as if the file has just been opened.
-- `Fill emoji task due dates` - Add a 📅 due-date emoji to unchecked task lines in the current file that don't already have one. See [Task due dates](#task-due-dates).
+- `Fill task due dates` - Add a due date (📅 emoji or Dataview `[due:: ]` format) to unchecked task lines in the current file that don't already have one. See [Task due dates](#task-due-dates).
 - `Generate TF-IDF tags` - Score the current file's words against other notes and append the most distinctive terms to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
 - `Generate semantic tags` - Match the current file's content against tags already used in your vault, using a small embedding model (downloaded on first use), and append the closest matches to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
 - `Generate automatic MOC` - Build a "map of content" list of notes sharing tags with the current file, under a heading. See [Automatic MOC](#automatic-moc).
@@ -49,9 +49,10 @@ Any command available in the current Obsidian context will be available to inclu
 
 ### Task due dates
 
-**`Fill emoji task due dates`** scans the current file's unchecked task lines (`- [ ] ...`) and appends a `📅 YYYY-MM-DD` due date to any that don't already have one, in the [Tasks plugin](https://publish.obsidian.md/tasks/)'s emoji format.
+**`Fill task due dates`** scans the current file's unchecked task lines (`- [ ] ...`) and appends a due date to any that don't already have one. Tasks that already have a `📅` emoji or a Dataview `due::` field (`[due:: x]`, `(due:: x)` or bare `due:: x`) are skipped.
 
 - **Frontmatter field** - an optional frontmatter field to read the due date from (default: none).
+- **Format** - `Emoji` (default) appends `📅 YYYY-MM-DD`, the [Tasks plugin](https://publish.obsidian.md/tasks/)'s format. `Dataview` appends `[due:: YYYY-MM-DD]`.
 - **Parse from title** - if enabled and the frontmatter field is empty or unset, falls back to a `YYYY-MM-DD` date found in the file's title.
 - If neither source yields a date, it falls back to the file's last-modified time.
 
@@ -81,7 +82,13 @@ Both commands write to the same kind of frontmatter list field (`tags` by defaul
 
 **`Generate automatic MOC`** builds a live "map of content" - a bullet list of links to other notes sharing tags with the current file - under a heading in the current file's body.
 
-- **Mode** - `any` (notes sharing at least one tag with the current file) or `all` (notes that have *every* one of the current file's tags).
+- **Mode** - how notes are matched against the current file's tags:
+  - `any` - notes sharing at least one tag.
+  - `all` - notes that have *every* one of the current file's tags.
+  - `percentage` - notes that share at least **Minimum percentage** of the current file's tags (e.g. 50% of 4 tags means at least 2 shared).
+  - `count` - notes that share at least **Minimum count** of the current file's tags.
+- **Minimum percentage** - 1-100, default 50. Only used by `percentage` mode.
+- **Minimum count** - at least 1, default 2. Only used by `count` mode. A count larger than the current file's tag count will not match.
 - **Heading** - which heading to place the list under, matched case-insensitively. If it doesn't exist yet, it's created automatically at the end of the file, one level deeper than the file's last heading (or `##` if the file has no headings at all).
 
 Unlike the tag generation commands above, this list is **fully regenerated every run**, not appended to - since it's entirely derived from the vault's current tags rather than anything you typed, keeping it always up to date matters more than preserving history. Two things follow from that:
@@ -169,7 +176,8 @@ Match files using powerful filter rules based on file properties or frontmatter.
 
 **Available Properties:**
 
-- **File properties**: `file.name`, `file.path`, `file.folder`, `file.size`, `file.ctime`, `file.mtime`, `file.extension`
+- **File properties**: `file.name`, `file.basename`, `file.extension`, `file.path`, `file.folder`, `file.size`, `file.ctime`, `file.mtime`
+- **Links**: `file.outlinks` and `file.inlinks` (counts), and `file.links`, `file.backlinks` and `file.embeds` (lists of paths)
 - **Frontmatter**: Any property from your note's frontmatter (e.g., `title`, `tags`, `status`, `date`)
 - **Tags**: The `tags` property (automatically detected as a list)
 
@@ -182,6 +190,17 @@ Match files using powerful filter rules based on file properties or frontmatter.
   - Works on `file.ctime`, `file.mtime`, and frontmatter date string fields
 - **Lists/Tags**: `contains`, `does not contain`, `is empty`, `is not empty`
 - **Checkboxes**: `is` (true/false)
+
+Click a rule's property field to see every property. Each filter row also shows an example value under it, taken from the open note, or the most recently opened note that still exists, then any other note that has the property.
+
+#### Import and export rules
+
+Use the buttons in the rules header to share rules or move them between vaults.
+
+- **Export** lets you pick which rules to include and saves them as `rule-engine-rules-YYYY-MM-DD.json` in the vault root. Existing files are never overwritten.
+- **Import** lists the `.json` files in your vault, previews the rules found, and lets you add them to your existing rules or replace all of them. Imported rules get new ids, and invalid rules are skipped.
+
+To import a file from outside the vault, copy it into the vault first.
 
 #### HTML Templates
 

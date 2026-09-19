@@ -3,16 +3,18 @@ import { addOverrideHint } from "commandSettingsModal";
 import { GetCommandFn } from "commands";
 import { Editor, MarkdownView, MarkdownFileInfo } from "obsidian";
 import { SuggestItem } from "types";
+import { formatLocalDate, TaskDateFormat, withDueDate } from "taskDates";
 
 export const TASK_DATE_ID = 'apply-task-due-date';
 export interface TaskDateParams extends Record<string, unknown> {
     frontmatterField?: string;
     parseTitle?: boolean;
+    format?: TaskDateFormat;
 }
 
 export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
     id: TASK_DATE_ID,
-    name: 'Fill emoji task due dates',
+    name: 'Fill task due dates',
     description: 'The due date will always fall back to the last modified time of the file if the field or title are not parsed.',
     settingCallback: (currentConfig, saveFn) => {
         const params = currentConfig.params;
@@ -71,66 +73,62 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
                 desc: 'If a date cannot be found in frontmatter, should one be parsed from the title (in yyyy-mm-dd format)?',
                 control: { type: 'toggle', key: 'parseTitle' },
             },
+            {
+                name: 'Format',
+                desc: 'Emoji adds "📅 date". Dataview adds "[due:: date]". Tasks with either are always skipped.',
+                control: {
+                    type: 'dropdown',
+                    key: 'format',
+                    defaultValue: 'emoji',
+                    options: { emoji: 'Emoji (📅)', dataview: 'Dataview ([due:: ])' },
+                },
+            },
         ];
     },
     editorCallback: (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
         const file = view.file;
-        if (!file) return;
+        if (!file) {
+            plugin.debug('taskDate: no file, skipping');
+            return;
+        }
 
         const cache = plugin?.app.metadataCache.getFileCache(file);
         const config = plugin?.getCommandConfig<TaskDateParams>(TASK_DATE_ID);
-        if (!config?.enabled) return;
+        if (!config?.enabled) {
+            plugin.debug('taskDate: command disabled, skipping');
+            return;
+        }
 
         let dtStr: string = "";
+        let dateSource = 'frontmatter';
         const fieldKey = config.params.frontmatterField || 'due';
         if (fieldKey && cache?.frontmatter?.[fieldKey]) {
             dtStr = String(cache.frontmatter[fieldKey]);
         }
 
-        // 2. File Title Fallback (looks for YYYY-MM-DD)
         const titleMatch = file.basename.match(/\d{4}-\d{2}-\d{2}/);
         if (!dtStr.length && config.params.parseTitle && titleMatch?.length) {
             dtStr = titleMatch[0];
+            dateSource = 'title';
         }
 
         if (!dtStr?.length) {
-            // 3. Last Modified/Current Date Fallback
-            // Using native Date to avoid external libraries
-            const date = new Date(file.stat.mtime);
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-
-            const targetDate = `${y}-${m}-${d}`;
-            dtStr = targetDate;
+            dtStr = formatLocalDate(file.stat.mtime);
+            dateSource = 'file modified time';
         }
 
-        const lineCount = editor.lineCount();
+        const format: TaskDateFormat = config.params.format === 'dataview' ? 'dataview' : 'emoji';
+        plugin.debug(`taskDate: format=${format}, date=${dtStr} (${dateSource})`);
 
-        /**
-         * Regex Breakdown:
-         * ^(\s*-\s\[ \]\s) : Starts with optional whitespace, dash, and empty checkbox
-         * (?!.*📅)        : Negative lookahead; ensures line doesn't already have the emoji
-         * (.*)$            : Captures the rest of the task text
-         */
-        const taskRegex = /^(\s*-\s\[ \]\s)(?!.*📅)(.*)$/;
-
-        // Iterate backwards to maintain correct line indices during modification
-        for (let i = lineCount - 1; i >= 0; i--) {
-            const line = editor.getLine(i);
-            const match = line.match(taskRegex);
-
-            if (match) {
-                const updatedLine = `${line.trimEnd()} 📅 ${dtStr}`;
-                if (updatedLine !== line) {
-                    editor.replaceRange(
-                        updatedLine,
-                        { line: i, ch: 0 },
-                        { line: i, ch: line.length }
-                    );
-                }
-            }
+        // Per-line edits keep the cursor and undo history intact; bottom-up so line numbers stay valid.
+        let changed = 0;
+        for (let i = editor.lineCount() - 1; i >= 0; i--) {
+            const old = editor.getLine(i);
+            const next = withDueDate(old, dtStr, format);
+            if (next === old) continue;
+            changed++;
+            editor.replaceRange(next, { line: i, ch: 0 }, { line: i, ch: old.length });
         }
-        return;
+        plugin.debug(`taskDate: ${changed} line(s) changed`);
     }
 });

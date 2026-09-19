@@ -210,9 +210,10 @@ export class RuleEngineBasesView extends BasesView implements HoverParent {
             );
 
             if (matchedTemplate?.length && this.config.get("enableTemplates")) {
+                this.plugin.debug(`card template`, entry.file.path);
                 this.plugin
                     .injectCustomView(card, entry.file, matchedTemplate)
-                    .catch((e) => console.error(e));
+                    .catch((e) => this.plugin.debug(e));
             } else {
                 // Render properties as rows inside the card
                 for (const propId of order) {

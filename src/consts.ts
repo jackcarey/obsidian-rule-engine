@@ -11,6 +11,28 @@ export const TYPE_ICONS: Record<PropertyType, string> = {
     unknown: "text"
 } as const;
 
+/** Built-in filter properties, in picker order. Label and icon are optional overrides. */
+export const FILE_PROPERTIES: Array<{ key: string; type: PropertyType; label?: string; icon?: string }> = [
+    { key: "file", type: "file" },
+    { key: "file.name", type: "text", label: "file name" },
+    { key: "file.basename", type: "text", label: "file basename" },
+    { key: "file.extension", type: "text", label: "file extension" },
+    { key: "file.path", type: "text", label: "file path" },
+    { key: "file.folder", type: "text", label: "folder" },
+    { key: "file.ctime", type: "date", label: "created time", icon: "clock" },
+    { key: "file.mtime", type: "date", label: "modified time", icon: "clock" },
+    { key: "file.size", type: "number", label: "file size" },
+    { key: "file.outlinks", type: "number", label: "outgoing link count", icon: "arrow-right" },
+    { key: "file.inlinks", type: "number", label: "backlink count", icon: "arrow-left" },
+    { key: "file.links", type: "list", label: "outgoing links", icon: "link" },
+    { key: "file.backlinks", type: "list", label: "backlinks", icon: "arrow-left" },
+    { key: "file.embeds", type: "list", label: "embeds", icon: "paperclip" },
+    { key: "file tags", type: "list", icon: "tags" },
+    { key: "aliases", type: "list", icon: "forward" },
+];
+const FILE_PROPERTY_BY_KEY = new Map(FILE_PROPERTIES.map((p) => [p.key, p]));
+export const getFileProperty = (key: string) => FILE_PROPERTY_BY_KEY.get(key);
+
 export const OPERATORS: Record<string, string[]> = {
     text: ["contains", "does not contain", "is", "is not", "starts with", "ends with", "contains any of", "does not contain any of", "contains all of", "does not contain all of", "is empty", "is not empty"],
     list: ["contains", "does not contain", "contains any of", "does not contain any of", "contains all of", "does not contain all of", "is empty", "is not empty"],

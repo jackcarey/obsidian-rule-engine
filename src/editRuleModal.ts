@@ -2,7 +2,7 @@ import { ComboboxSuggestModal } from "comboSuggestModal";
 import { CommandSettingsModal } from "commandSettingsModal";
 import { FilterModal } from "filterModal";
 import type ObsidianRuleEnginePlugin from "main";
-import { stripCommandIdPrefix } from "main";
+import { stripCommandIdPrefix } from "commandOverrides";
 import {
     type App,
     ButtonComponent,

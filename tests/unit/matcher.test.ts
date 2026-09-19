@@ -30,6 +30,7 @@ function mockApp(
 	opts: {
 		bodyTags?: Array<{ tag: string }>;
 		bodyLinks?: Array<{ link: string }>;
+		embeds?: Array<{ link: string }>;
 		linkDest?: { path: string } | null;
 		resolvedLinks?: Record<string, Record<string, number>>;
 	} = {},
@@ -39,6 +40,7 @@ function mockApp(
 			getFileCache: () => ({
 				tags: opts.bodyTags ?? [],
 				links: opts.bodyLinks ?? [],
+				embeds: opts.embeds ?? [],
 			}),
 			getFirstLinkpathDest: (_l: string, _s: string) => opts.linkDest ?? null,
 			resolvedLinks: opts.resolvedLinks ?? {},
@@ -408,6 +410,60 @@ describe("numeric comparison operators", () => {
 				file,
 			),
 		).toBe(false));
+});
+
+// ---------------------------------------------------------------------------
+// file.links / file.backlinks / file.embeds
+// ---------------------------------------------------------------------------
+
+describe("file.links", () => {
+	const file = mockFile({ path: "note.md" });
+	const app = mockApp({
+		resolvedLinks: { "note.md": { "Projects/a.md": 1, "b.md": 1 } },
+	});
+	it("contains matches part of a linked path", () =>
+		expect(
+			checkRules(app, andGroup(filter("file.links", "contains", "Projects")), file),
+		).toBe(true));
+	it("is empty when there are no outgoing links", () =>
+		expect(
+			checkRules(mockApp(), andGroup(filter("file.links", "is empty")), file),
+		).toBe(true));
+});
+
+describe("file.backlinks", () => {
+	const file = mockFile({ path: "note.md" });
+	const app = mockApp({
+		resolvedLinks: { "x.md": { "note.md": 1 }, "y.md": { "other.md": 1 } },
+	});
+	it("lists files that link here", () => {
+		expect(
+			checkRules(app, andGroup(filter("file.backlinks", "contains", "x.md")), file),
+		).toBe(true);
+		expect(
+			checkRules(app, andGroup(filter("file.backlinks", "contains", "y.md")), file),
+		).toBe(false);
+	});
+	it("is empty when nothing links here", () =>
+		expect(
+			checkRules(mockApp(), andGroup(filter("file.backlinks", "is empty")), file),
+		).toBe(true));
+});
+
+describe("file.embeds", () => {
+	const file = mockFile();
+	it("matches embed targets", () =>
+		expect(
+			checkRules(
+				mockApp({ embeds: [{ link: "diagram.png" }] }),
+				andGroup(filter("file.embeds", "contains", "diagram")),
+				file,
+			),
+		).toBe(true));
+	it("is empty without embeds", () =>
+		expect(
+			checkRules(mockApp(), andGroup(filter("file.embeds", "is empty")), file),
+		).toBe(true));
 });
 
 // ---------------------------------------------------------------------------

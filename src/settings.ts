@@ -1,10 +1,14 @@
-import { App, PluginSettingTab, Setting, SettingDefinitionItem, SettingDefinitionList, SettingGroupItem } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting, SettingDefinitionItem, SettingDefinitionList, SettingGroupItem } from "obsidian";
 import ObsidianRuleEnginePlugin from "./main";
 import { RuleConfig, FilterGroup } from "./types";
 import { DEFAULT_RULES } from "./consts";
 import { EditRuleModal } from "editRuleModal";
 import { CommandSettingsModal } from "commandSettingsModal";
 import { ConfirmModal } from "confirmModal";
+import { ImportRulesModal, PickRuleFileModal } from "importRulesModal";
+import { ExportRulesModal } from "exportRulesModal";
+import { plural } from "format";
+import { exportFileName, type ParsedImport, parseRuleImport, serializeRules } from "ruleImport";
 
 export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 	plugin: ObsidianRuleEnginePlugin;
@@ -62,12 +66,73 @@ export class ObsidianRuleEngineSettingTab extends PluginSettingTab {
 		];
 	}
 
+	private exportRules(): void {
+		const { rules } = this.plugin.settings;
+		if (!rules.length) {
+			this.plugin.notify("No rules to export");
+			return;
+		}
+		new ExportRulesModal(this.app, rules, (chosen) => {
+			// A vault file works on desktop and mobile without a native dialog.
+			const path = exportFileName((p) => this.app.vault.getAbstractFileByPath(p) !== null);
+			this.app.vault
+				.create(path, serializeRules(chosen))
+				.then(() => {
+					this.plugin.debug(`exported ${chosen.length} rules to ${path}`);
+					this.plugin.notify(`Saved ${plural(chosen.length, "rule")} to ${path}`);
+				})
+				.catch((e) => this.plugin.debug(e));
+		}).open();
+	}
+
+	private importRules(): void {
+		new PickRuleFileModal(this.app, (file) => {
+			this.app.vault
+				.read(file)
+				.then((text) => {
+					const result = parseRuleImport(text);
+					if (result.error) {
+						this.plugin.debug(`import failed for ${file.path}: ${result.error}`);
+						new Notice(`${file.name}: ${result.error}`);
+						return;
+					}
+					this.confirmImport(file.name, result);
+				})
+				.catch((e) => this.plugin.debug(e));
+		}).open();
+	}
+
+	private confirmImport(fileName: string, result: ParsedImport): void {
+		new ImportRulesModal(this.app, fileName, result, (parsed, replace) => {
+			const apply = () => {
+				const { settings } = this.plugin;
+				settings.rules = replace ? parsed.rules : [...settings.rules, ...parsed.rules];
+				this.plugin.debug(`imported ${parsed.rules.length} rules, skipped ${parsed.skipped}`, { replace });
+				void this.plugin.saveSettings();
+				this.update();
+				this.plugin.notify(
+					`Imported ${plural(parsed.rules.length, "rule")}` +
+						(parsed.skipped ? `, skipped ${parsed.skipped} invalid` : ""),
+				);
+			};
+			if (replace) {
+				new ConfirmModal(this.app, "Replace all existing rules with the imported ones?", apply, "Replace").open();
+			} else {
+				apply();
+			}
+		}).open();
+	}
+
 	private getRuleListDefinition(): SettingDefinitionList {
 		return {
 			type: "list",
 			heading: "Rule configuration",
 			cls: "ore-rule-list",
 			emptyState: "No rules yet.",
+			extraButtons: [
+				(btn) => btn.setIcon("download").setTooltip("Import rules").onClick(() => this.importRules()),
+				(btn) => btn.setIcon("upload").setTooltip("Export rules").onClick(() => this.exportRules()),
+			],
 			search: {
 				placeholder: "Search rules...",
 				match: (def, query) => def.name.toLowerCase().includes(query.toLowerCase()),

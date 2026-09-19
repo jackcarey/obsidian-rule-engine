@@ -1,5 +1,5 @@
-import { defineConfig } from "vitest/config";
 import { resolve } from "path";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
@@ -12,7 +12,15 @@ export default defineConfig({
 			provider: "v8",
 			reporter: ["text", "html"],
 			include: ["src/**/*.ts"],
+			// UI classes need real Obsidian; e2e covers them.
 			exclude: ["src/main.ts", "src/settings.ts"],
+			// Stops the pure-logic modules degrading.
+			thresholds: {
+				"src/{matcher,filters,moc,tfidf,tagFieldUtils,templateRenderer,ruleImport,sampleValue,taskDates,fileFields}.ts":
+				{
+					lines: 80,
+				},
+			},
 		},
 	},
 	resolve: {

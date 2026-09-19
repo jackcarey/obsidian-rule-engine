@@ -13,6 +13,7 @@ import { applyFilterChain } from "./filters";
  * @param file - The file to render the template for
  * @param container - The container to render the template into
  * @param component - The component to render the template with
+ * @param log - Debug sink; the renderer has no plugin handle.
  */
 export async function renderTemplate(
 	app: App,
@@ -20,6 +21,7 @@ export async function renderTemplate(
 	file: TFile,
 	container: HTMLElement,
 	component: Component,
+	log?: (...args: unknown[]) => void,
 ) {
 	const cache = app.metadataCache.getFileCache(file);
 	const frontmatter = cache?.frontmatter;
@@ -114,7 +116,11 @@ export async function renderTemplate(
 			}
 
 			let value = resolveValue(key, index, isFileProperty);
-			if (value === null) return "";
+			if (value === null) {
+				// Blank output looks like a broken template.
+				log?.(`renderTemplate`, file.path, `unresolved variable: ${filePrefix ?? ""}${key}`);
+				return "";
+			}
 
 			if (filterChain) {
 				const filteredValue = applyFilterChain(value, filterChain.trim());
@@ -202,7 +208,7 @@ export async function renderTemplate(
 		contentEl.removeAttribute("id");
 	}
 
-	executeScripts(container);
+	executeScripts(container, log);
 }
 
 /**
@@ -217,7 +223,10 @@ export async function renderTemplate(
  *
  * @param container - The container whose inline scripts should be executed
  */
-function executeScripts(container: HTMLElement): void {
+function executeScripts(
+	container: HTMLElement,
+	log?: (...args: unknown[]) => void,
+): void {
 	const scripts = Array.from(container.querySelectorAll("script"));
 
 	scripts.forEach((script) => {
@@ -235,6 +244,7 @@ function executeScripts(container: HTMLElement): void {
 					fn.call(container);
 				} catch (e) {
 					console.error("[Custom Views] Error executing template script:", e);
+					log?.(`renderTemplate`, `template script failed`, e);
 				}
 			}
 		}

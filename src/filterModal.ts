@@ -12,7 +12,9 @@ import {
     type Setting,
     SettingGroup,
     setIcon,
+    type TFile,
 } from "obsidian";
+import { findSample } from "sampleValue";
 import type {
     AnyFilterGroup,
     Filter,
@@ -37,14 +39,22 @@ class PropertySuggest extends AbstractInputSuggest<PropertyDef> {
         private plugin: ObsidianRuleEnginePlugin,
         private properties: PropertyDef[],
         private onPick: (prop: PropertyDef) => void,
+        private getCurrentKey: () => string,
     ) {
         super(app, inputEl);
     }
 
     protected getSuggestions(query: string): PropertyDef[] {
-        const q = query.toLowerCase();
-        return this.properties.filter((p) =>
-            this.plugin.getPropertyLabel(p.key).toLowerCase().includes(q),
+        const q = query.trim().toLowerCase();
+        // The input holds the current label; filtering on it would hide the other properties.
+        const currentLabel = this.plugin
+            .getPropertyLabel(this.getCurrentKey())
+            .toLowerCase();
+        if (!q || q === currentLabel) return this.properties;
+        return this.properties.filter(
+            (p) =>
+                this.plugin.getPropertyLabel(p.key).toLowerCase().includes(q) ||
+                p.key.toLowerCase().includes(q),
         );
     }
 
@@ -52,6 +62,9 @@ class PropertySuggest extends AbstractInputSuggest<PropertyDef> {
         const iconEl = el.createSpan({ cls: "ore-combobox-button-icon" });
         setIcon(iconEl, this.plugin.getPropertyIcon(prop.key, prop.type));
         el.createSpan({ text: this.plugin.getPropertyLabel(prop.key) });
+        if (prop.key === this.getCurrentKey()) {
+            setIcon(el.createSpan({ cls: "ore-combobox-button-icon" }), "check");
+        }
     }
 
     selectSuggestion(prop: PropertyDef, _evt: MouseEvent | KeyboardEvent): void {
@@ -405,6 +418,10 @@ const CONJUNCTION_REVERSE: Record<string, FilterConjunction> = {
  */
 class FilterBuilder {
     availableProperties: PropertyDef[];
+    // Fixed per open so hints don't jump while editing.
+    private referenceFiles: TFile[];
+    // Rows re-render on every edit; the file set is fixed, so results can be reused.
+    private hintCache = new Map<string, ReturnType<typeof findSample>>();
 
     constructor(
         public plugin: ObsidianRuleEnginePlugin,
@@ -413,6 +430,20 @@ class FilterBuilder {
         public onRefresh: () => void,
     ) {
         this.availableProperties = this.plugin.scanVaultProperties();
+        this.referenceFiles = this.plugin.getReferenceFiles();
+    }
+
+    private renderHint(setting: Setting, field: string) {
+        if (!this.hintCache.has(field)) {
+            this.hintCache.set(field, findSample(this.plugin.app, this.referenceFiles, field));
+        }
+        const sample = this.hintCache.get(field);
+        // Better no hint than a wrong one.
+        if (!sample) return;
+        const hint = setting.settingEl.createDiv({ cls: "ore-filter-hint" });
+        hint.appendText("e.g. ");
+        hint.createSpan({ cls: "ore-filter-hint-value", text: sample.text });
+        hint.appendText(` (from ${sample.file.basename})`);
     }
 
     render(container: HTMLElement) {
@@ -698,8 +729,11 @@ class FilterBuilder {
                     this.plugin,
                     this.availableProperties,
                     (prop) => commitFieldChange(prop.key),
+                    () => filter.field,
                 );
                 propertySuggest.onSelect((prop) => commitFieldChange(prop.key));
+                // Select on focus so typing replaces the label.
+                text.inputEl.addEventListener("focus", () => text.inputEl.select());
                 text.inputEl.addEventListener("blur", () => {
                     const typed = text.inputEl.value.trim();
                     if (
@@ -781,6 +815,8 @@ class FilterBuilder {
                     .setTooltip("Remove filter")
                     .onClick(handleDelete),
             );
+
+            this.renderHint(setting, filter.field);
         });
     }
 }

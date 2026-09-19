@@ -55,6 +55,23 @@ test("settings page shows Rule Engine tab and rule list", async ({ page }) => {
   await closeSettings(settingsPage, page);
 });
 
+test("rule list header has import, export and add buttons in that order", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+
+  const labels = ["Import rules", "Export rules", "Add new rule"];
+  const xs: number[] = [];
+  for (const label of labels) {
+    const btn = settingsPage.locator(`[aria-label="${label}"]`).first();
+    await expect(btn).toBeVisible();
+    const box = await btn.boundingBox();
+    xs.push(box?.x ?? Number.NaN);
+  }
+  expect(xs[0]).toBeLessThan(xs[1] ?? Number.NaN);
+  expect(xs[1]).toBeLessThan(xs[2] ?? Number.NaN);
+
+  await closeSettings(settingsPage, page);
+});
+
 test("settings shows enabled toggle and it works", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
 
@@ -97,12 +114,12 @@ test("command configuration - shows each command's ID and a per-file-overrides n
 test("command configuration - a command with a settingCallback opens its own settings via the gear button", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
 
-  // "Fill emoji task due dates" (apply-task-due-date) has a settingCallback.
+  // "Fill task due dates" (apply-task-due-date) has a settingCallback.
   // Obsidian's declarative settings list can only render one row's worth of
   // controls per list item, so per-command settings live behind a "Configure"
   // gear button that opens a dedicated modal - see CommandSettingsModal.
-  const taskDateRow = settingsPage.locator(".setting-item", { hasText: "Fill emoji task due dates" });
-  await taskDateRow.locator('[aria-label="Configure Fill emoji task due dates"]').click();
+  const taskDateRow = settingsPage.locator(".setting-item", { hasText: "Fill task due dates" });
+  await taskDateRow.locator('[aria-label="Configure Fill task due dates"]').click();
 
   const modal = settingsPage.locator(".modal-container .modal-content");
   await expect(modal.locator(".setting-item-name", { hasText: "Frontmatter field" })).toBeVisible();
@@ -312,6 +329,42 @@ test("filter builder shows existing filter condition", async ({ page }) => {
   await closeSettings(settingsPage, page);
 });
 
+// Runs before tests that edit rules 0/1, which would change what these read.
+test("filter builder - each row shows an example value from the open note", async ({ page }) => {
+  await openNote(page, "matched-file.md");
+
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
+
+  // Rule 0 is "file.name contains matched"
+  const hint = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-filter-hint").first();
+  await expect(hint).toHaveText("e.g. matched-file.md (from matched-file)");
+
+  await closeModal(settingsPage);
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder - the bare 'file' property hint summarises folder, tags and properties", async ({ page }) => {
+  await openNote(page, "matched-file.md");
+
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 1);
+  await openFilterModal(settingsPage);
+
+  // Rule 1 is "file has tag rich"
+  const hint = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-filter-hint").first();
+  await expect(hint).toContainText("folder: Notes");
+  await expect(hint).toContainText("tags:");
+  await expect(hint).toContainText("properties: description");
+  await expect(hint).toContainText("(from matched-file)");
+
+  await closeModal(settingsPage);
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
+});
+
 test("filter builder - add a new filter", async ({ page }) => {
   const settingsPage = await openPluginSettings(page, "Rule Engine");
   await openEditRuleModal(settingsPage, 0);
@@ -377,6 +430,56 @@ test("filter builder - property input accepts free text not in the suggestion li
 
   await closeModal(settingsPage); // FilterModal
   await closeModal(settingsPage); // EditRuleModal
+  await closeSettings(settingsPage, page);
+});
+
+// Regression: the suggester filtered on the pre-filled label and hid other properties.
+test("filter builder - property list shows every property on focus, not just ones matching the current value", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
+
+  const propertyInput = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-property-input").first();
+  await propertyInput.click();
+
+  const suggestions = settingsPage.locator(".suggestion-container .suggestion-item");
+  await expect(suggestions.first()).toBeVisible();
+  for (const label of [
+    "backlink count",
+    "outgoing link count",
+    "backlinks",
+    "outgoing links",
+    "embeds",
+    "file size",
+    "created time",
+    "modified time",
+    "folder",
+    "file extension",
+  ]) {
+    await expect(suggestions.filter({ hasText: label }).first()).toBeVisible();
+  }
+
+  await settingsPage.keyboard.press("Escape");
+  await closeModal(settingsPage);
+  await closeModal(settingsPage);
+  await closeSettings(settingsPage, page);
+});
+
+test("filter builder - typing narrows the property list", async ({ page }) => {
+  const settingsPage = await openPluginSettings(page, "Rule Engine");
+  await openEditRuleModal(settingsPage, 0);
+  await openFilterModal(settingsPage);
+
+  const propertyInput = settingsPage.locator(".ore-filter-modal .ore-filter-row .ore-property-input").first();
+  await propertyInput.fill("backlink");
+
+  const suggestions = settingsPage.locator(".suggestion-container .suggestion-item");
+  await expect(suggestions.filter({ hasText: "backlink count" }).first()).toBeVisible();
+  await expect(suggestions.filter({ hasText: "created time" })).toHaveCount(0);
+
+  await settingsPage.keyboard.press("Escape");
+  await closeModal(settingsPage);
+  await closeModal(settingsPage);
   await closeSettings(settingsPage, page);
 });
 
@@ -675,6 +778,36 @@ test("file with 2 resolved incoming links renders the inlinks-count template", a
 
   await expect(page.locator(".ore-e2e-inlinks-rendered")).toBeVisible({ timeout: 8000 });
   await expect(page.locator(".ore-e2e-outlinks-rendered")).not.toBeVisible();
+});
+
+// ── 5b. Canvas templates ─────────────────────────────────────────────────────
+
+type CanvasPlugin = {
+  settings: { workInCanvas: boolean };
+  processAllCanvasNodes(): void;
+  restoreAllCanvasNodes(): void;
+};
+
+test("canvas file node renders the canvas template, and restores when canvas support is turned off", async ({ page }) => {
+  await page.evaluate(async () => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as CanvasPlugin;
+    plugin.settings.workInCanvas = true;
+    await window.app.workspace.openLinkText("Notes/canvas-check.canvas", "");
+  });
+  // Canvas nodes render asynchronously after the view opens.
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => {
+    (window.app.plugins.plugins["rule-engine"] as unknown as CanvasPlugin).processAllCanvasNodes();
+  });
+
+  await expect(page.locator(".canvas-node .ore-e2e-canvas-rendered")).toBeVisible({ timeout: 8000 });
+
+  await page.evaluate(() => {
+    const plugin = window.app.plugins.plugins["rule-engine"] as unknown as CanvasPlugin;
+    plugin.settings.workInCanvas = false;
+    plugin.restoreAllCanvasNodes();
+  });
+  await expect(page.locator(".canvas-node .ore-e2e-canvas-rendered")).toHaveCount(0);
 });
 
 // ── 6. Plugin settings persistence ───────────────────────────────────────────

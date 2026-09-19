@@ -53,6 +53,24 @@
     justify-content: flex-start;
 }
 
+/* Wrap so the hint gets its own full-width line. */
+.ore-filter-row {
+    flex-wrap: wrap;
+}
+
+.ore-filter-hint {
+    flex-basis: 100%;
+    padding-inline-start: 4.5rem;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+/* Monospace marks the example as literal data. */
+.ore-filter-hint-value {
+    font-family: var(--font-monospace);
+}
+
 /* Header rows (root and subgroup conjunction): .setting-item-info and
    .setting-item-control both default to flex-grow: 1, so they split the
    row's width and strand the name/dropdown/delete cluster in the middle
@@ -362,19 +380,14 @@
     margin-bottom: var(--size-4-2);
 }
 
+/* No color: inherit the setting description's secondary color. */
 .ore-filter-summary-heading {
     font-weight: var(--font-medium);
-    color: var(--text-muted);
-}
-
-.ore-filter-summary-empty {
-    color: var(--text-faint);
 }
 
 .ore-filter-summary-list {
     margin: var(--size-2-1) 0 0 0;
     padding-left: var(--size-4-4);
-    color: var(--text-normal);
 }
 
 .ore-filter-summary-list li {
