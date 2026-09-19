@@ -381,19 +381,15 @@
     margin-bottom: var(--size-4-2);
 }
 
+/* No color set on the summary parts: they sit in a setting description and
+   should match its default secondary text color. */
 .ore-filter-summary-heading {
     font-weight: var(--font-medium);
-    color: var(--text-muted);
-}
-
-.ore-filter-summary-empty {
-    color: var(--text-faint);
 }
 
 .ore-filter-summary-list {
     margin: var(--size-2-1) 0 0 0;
     padding-left: var(--size-4-4);
-    color: var(--text-normal);
 }
 
 .ore-filter-summary-list li {
