@@ -3,16 +3,18 @@ import { addOverrideHint } from "commandSettingsModal";
 import { GetCommandFn } from "commands";
 import { Editor, MarkdownView, MarkdownFileInfo } from "obsidian";
 import { SuggestItem } from "types";
+import { applyTaskDueDates, TaskDateFormat } from "taskDates";
 
 export const TASK_DATE_ID = 'apply-task-due-date';
 export interface TaskDateParams extends Record<string, unknown> {
     frontmatterField?: string;
     parseTitle?: boolean;
+    format?: TaskDateFormat;
 }
 
 export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
     id: TASK_DATE_ID,
-    name: 'Fill emoji task due dates',
+    name: 'Fill task due dates',
     description: 'The due date will always fall back to the last modified time of the file if the field or title are not parsed.',
     settingCallback: (currentConfig, saveFn) => {
         const params = currentConfig.params;
@@ -71,17 +73,34 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
                 desc: 'If a date cannot be found in frontmatter, should one be parsed from the title (in yyyy-mm-dd format)?',
                 control: { type: 'toggle', key: 'parseTitle' },
             },
+            {
+                name: 'Format',
+                desc: 'Emoji adds "📅 date". Dataview adds "[due:: date]". Tasks with either are always skipped.',
+                control: {
+                    type: 'dropdown',
+                    key: 'format',
+                    defaultValue: 'emoji',
+                    options: { emoji: 'Emoji (📅)', dataview: 'Dataview ([due:: ])' },
+                },
+            },
         ];
     },
     editorCallback: (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
         const file = view.file;
-        if (!file) return;
+        if (!file) {
+            plugin.debug('taskDate: no file, skipping');
+            return;
+        }
 
         const cache = plugin?.app.metadataCache.getFileCache(file);
         const config = plugin?.getCommandConfig<TaskDateParams>(TASK_DATE_ID);
-        if (!config?.enabled) return;
+        if (!config?.enabled) {
+            plugin.debug('taskDate: command disabled, skipping');
+            return;
+        }
 
         let dtStr: string = "";
+        let dateSource = 'frontmatter';
         const fieldKey = config.params.frontmatterField || 'due';
         if (fieldKey && cache?.frontmatter?.[fieldKey]) {
             dtStr = String(cache.frontmatter[fieldKey]);
@@ -91,6 +110,7 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
         const titleMatch = file.basename.match(/\d{4}-\d{2}-\d{2}/);
         if (!dtStr.length && config.params.parseTitle && titleMatch?.length) {
             dtStr = titleMatch[0];
+            dateSource = 'title';
         }
 
         if (!dtStr?.length) {
@@ -103,33 +123,29 @@ export const taskDate: GetCommandFn<TaskDateParams> = (plugin) => ({
 
             const targetDate = `${y}-${m}-${d}`;
             dtStr = targetDate;
+            dateSource = 'file modified time';
         }
 
-        const lineCount = editor.lineCount();
+        const format: TaskDateFormat = config.params.format === 'dataview' ? 'dataview' : 'emoji';
+        plugin.debug(`taskDate: format=${format}, date=${dtStr} (${dateSource})`);
 
-        /**
-         * Regex Breakdown:
-         * ^(\s*-\s\[ \]\s) : Starts with optional whitespace, dash, and empty checkbox
-         * (?!.*📅)        : Negative lookahead; ensures line doesn't already have the emoji
-         * (.*)$            : Captures the rest of the task text
-         */
-        const taskRegex = /^(\s*-\s\[ \]\s)(?!.*📅)(.*)$/;
+        const original = editor.getValue();
+        const result = applyTaskDueDates(original, dtStr, format);
+        plugin.debug(`taskDate: ${result.changed} line(s) changed`);
+        if (!result.changed) return;
 
-        // Iterate backwards to maintain correct line indices during modification
-        for (let i = lineCount - 1; i >= 0; i--) {
-            const line = editor.getLine(i);
-            const match = line.match(taskRegex);
-
-            if (match) {
-                const updatedLine = `${line.trimEnd()} 📅 ${dtStr}`;
-                if (updatedLine !== line) {
-                    editor.replaceRange(
-                        updatedLine,
-                        { line: i, ch: 0 },
-                        { line: i, ch: line.length }
-                    );
-                }
-            }
+        // Replace only changed lines so the cursor and undo history aren't disturbed.
+        const before = original.split('\n');
+        const after = result.text.split('\n');
+        for (let i = before.length - 1; i >= 0; i--) {
+            const oldLine = before[i] ?? '';
+            const newLine = after[i] ?? '';
+            if (oldLine === newLine) continue;
+            editor.replaceRange(
+                newLine,
+                { line: i, ch: 0 },
+                { line: i, ch: oldLine.length }
+            );
         }
         return;
     }

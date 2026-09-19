@@ -37,7 +37,7 @@ By default, commands provided by this plugin are disabled. You can enable them i
 - `Force template` - Apply a template to the current file regardless of rule automations and conditions.
 - `Restore view` - Remove any applied templates from the current file.
 - `Process now` - Check and execute automations as if the file has just been opened.
-- `Fill emoji task due dates` - Add a 📅 due-date emoji to unchecked task lines in the current file that don't already have one. See [Task due dates](#task-due-dates).
+- `Fill task due dates` - Add a due date (📅 emoji or Dataview `[due:: ]` format) to unchecked task lines in the current file that don't already have one. See [Task due dates](#task-due-dates).
 - `Generate TF-IDF tags` - Score the current file's words against other notes and append the most distinctive terms to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
 - `Generate semantic tags` - Match the current file's content against tags already used in your vault, using a small embedding model (downloaded on first use), and append the closest matches to a frontmatter field. See [Tag generation commands](#tag-generation-commands).
 - `Generate automatic MOC` - Build a "map of content" list of notes sharing tags with the current file, under a heading. See [Automatic MOC](#automatic-moc).
@@ -49,9 +49,10 @@ Any command available in the current Obsidian context will be available to inclu
 
 ### Task due dates
 
-**`Fill emoji task due dates`** scans the current file's unchecked task lines (`- [ ] ...`) and appends a `📅 YYYY-MM-DD` due date to any that don't already have one, in the [Tasks plugin](https://publish.obsidian.md/tasks/)'s emoji format.
+**`Fill task due dates`** scans the current file's unchecked task lines (`- [ ] ...`) and appends a due date to any that don't already have one. Tasks that already have a `📅` emoji or a Dataview `due::` field (`[due:: x]`, `(due:: x)` or bare `due:: x`) are skipped.
 
 - **Frontmatter field** - an optional frontmatter field to read the due date from (default: none).
+- **Format** - `Emoji` (default) appends `📅 YYYY-MM-DD`, the [Tasks plugin](https://publish.obsidian.md/tasks/)'s format. `Dataview` appends `[due:: YYYY-MM-DD]`.
 - **Parse from title** - if enabled and the frontmatter field is empty or unset, falls back to a `YYYY-MM-DD` date found in the file's title.
 - If neither source yields a date, it falls back to the file's last-modified time.
 
