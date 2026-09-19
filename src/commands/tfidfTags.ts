@@ -108,6 +108,7 @@ async function runTfidfTagging(plugin: ObsidianRuleEnginePlugin, file: TFile, pa
 		});
 		const mergeOptions: TagMergeOptions = { maxCount: maxTags, override: params.override };
 		const { addedTags } = await appendFrontmatterTags(plugin.app, file, fieldKey, candidates, mergeOptions);
+		plugin.debug(`tfidfTags`, file.path, { candidates, addedTags });
 		plugin.notify(addedTags.length
 			? `Added ${addedTags.length} tag${addedTags.length === 1 ? "" : "s"} to "${fieldKey}"`
 			: `No new tags found for "${fieldKey}"`);

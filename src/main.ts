@@ -89,7 +89,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 		if (args[0] instanceof Error) {
 			const msg =
-				"⛔ " + args[0].message?.length ? args[0].message : args[0].name;
+				"⛔ " + (args[0].message?.length ? args[0].message : args[0].name);
 			console.error(...args);
 			// Errors always surface, regardless of showNotices - suppressing them
 			// would hide failures, not noise.
@@ -432,7 +432,10 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		const leaf = this.app.workspace.getLeaf(false);
 
-		if (!(leaf.view instanceof MarkdownView)) return;
+		if (!(leaf.view instanceof MarkdownView)) {
+			this.debug(`processMarkdownView`, `active leaf isn't markdown`);
+			return;
+		}
 
 		const view = leaf.view;
 
@@ -467,14 +470,17 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		const isLivePreviewMode = state.mode === "source" && state.source === false;
 
 		if (isTrueSourceMode) {
+			this.debug(`processMarkdownView`, `source mode, template skipped`);
 			this.restoreDefaultView(view);
 			return;
 		}
 
 		if (!this.settings.workInLivePreview && !isReadingMode) {
+			this.debug(`processMarkdownView`, `live preview templates are off`);
 			this.restoreDefaultView(view);
 			return;
 		} else if (!isReadingMode && !isLivePreviewMode) {
+			this.debug(`processMarkdownView`, `unsupported view mode`, state.mode);
 			this.restoreDefaultView(view);
 			return;
 		}
@@ -513,7 +519,9 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		}
 
 		this.debug(`injectCustomView`, `rendering template`);
-		await renderTemplate(this.app, template, file, customEl, this);
+		await renderTemplate(this.app, template, file, customEl, this, (...a) =>
+			this.debug(...a),
+		);
 		container.addClass(HIDE_MARKDOWN_CLASS);
 		toggleMarkdownVisibility(container, true);
 	}
@@ -575,7 +583,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 				const canvas = view.canvas;
 				if (canvas.nodes) {
 					// Process each node in the canvas
-					this.debug(`processAllCanvasNodes`, `processing nodes`);
+					this.debug(`processAllCanvasNodes`, `nodes: ${canvas.nodes.length}`);
 					canvas.nodes.forEach((node) => {
 						if (
 							node.file &&
@@ -583,6 +591,8 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 							node.file.extension === "md"
 						) {
 							void this.processCanvasNode(node);
+						} else {
+							this.debug(`processAllCanvasNodes`, `skipped non-markdown node`);
 						}
 					});
 				}
@@ -595,7 +605,10 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 	 */
 	async processCanvasNode(node: CanvasNode) {
 		const file = node.file;
-		if (!(file instanceof TFile)) return;
+		if (!(file instanceof TFile)) {
+			this.debug(`processCanvasNode`, `node has no file`);
+			return;
+		}
 
 		const {
 			matchedTemplate,
@@ -605,19 +618,28 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 		// this.executeCommands(baseFileHandling, commandIds);
 
 		if (!matchedTemplate) {
+			this.debug(`processCanvasNode`, file.path, `no canvas template matched`);
 			this.restoreCanvasNode(node);
 			return;
 		}
 
 		// Find the node's content element
 		const nodeEl = node.nodeEl as HTMLElement;
-		if (!nodeEl) return;
+		if (!nodeEl) {
+			this.debug(`processCanvasNode`, file.path, `node not rendered yet`);
+			return;
+		}
 
 		// Find the markdown preview container within the node
 		const previewContainer = nodeEl.querySelector(
 			".markdown-preview-view",
 		) as HTMLElement;
-		if (!previewContainer) return;
+		if (!previewContainer) {
+			// Happens while the node is being edited or hasn't rendered its preview.
+			this.debug(`processCanvasNode`, file.path, `no preview element in node`);
+			return;
+		}
+		this.debug(`processCanvasNode`, file.path, `injecting template`);
 
 		await this.injectCustomView(previewContainer, file, matchedTemplate);
 	}
@@ -716,7 +738,10 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 						const shortId = stripCommandIdPrefix(cmd.id);
 						const override =
 							fileOverrides?.[cmd.id] ?? fileOverrides?.[shortId];
-						if (override?.enabled === false) continue;
+						if (override?.enabled === false) {
+							this.debug(`executeCommands`, shortId, `disabled by file frontmatter`);
+							continue;
+						}
 						if (cmd.editorCallback) {
 							const activeEditor = view ?? this.app.workspace.activeEditor;
 							if (activeEditor?.editor) {

@@ -73,6 +73,7 @@ class ForceTemplateModal extends FuzzySuggestModal<RuleConfig> {
         if (ruleIdx != -1) {
             const file = this.plugin.app.workspace.getActiveFile();
             if (!file) return;
+            this.plugin.debug(`forceTemplate`, file.path, `rule #${ruleIdx}`, rule.name);
             this.plugin.processMarkdownView(file, {
                 skipCommandExecution: true,
                 forceTemplateIndex: ruleIdx

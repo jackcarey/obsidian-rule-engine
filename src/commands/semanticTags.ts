@@ -165,6 +165,11 @@ async function runSemanticTagging(plugin: ObsidianRuleEnginePlugin, file: TFile,
 		const candidates = [...vocabularyCandidates, ...inventedCandidates];
 		const mergeOptions: TagMergeOptions = { maxCount: maxTags, override: params.override };
 		const { addedTags } = await appendFrontmatterTags(plugin.app, file, fieldKey, candidates, mergeOptions);
+		plugin.debug(`semanticTags`, file.path, {
+			vocabularyCandidates,
+			inventedCandidates,
+			addedTags,
+		});
 		plugin.notify(addedTags.length
 			? `Added ${addedTags.length} tag${addedTags.length === 1 ? "" : "s"} to "${fieldKey}"`
 			: `No new tags found for "${fieldKey}"`);
