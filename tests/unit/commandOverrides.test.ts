@@ -4,7 +4,7 @@ import { errorNoticeText, plural } from "../../src/format";
 
 describe("stripCommandIdPrefix", () => {
 	it("removes the plugin prefix", () => {
-		expect(stripCommandIdPrefix("rule-engine:generate-auto-moc")).toBe("generate-auto-moc");
+		expect(stripCommandIdPrefix("rule-engine:auto-moc")).toBe("auto-moc");
 	});
 	it("leaves short ids alone", () => {
 		expect(stripCommandIdPrefix("check-rules")).toBe("check-rules");

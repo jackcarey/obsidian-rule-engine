@@ -16,7 +16,7 @@ import { expect, test } from "./fixtures";
 // doesn't cross-contaminate between files sharing the same command loop.
 
 const TASK_DATE_ID = "apply-task-due-date";
-const AUTO_MOC_ID = "generate-auto-moc";
+const AUTO_MOC_ID = "auto-moc";
 const TFIDF_TAGS_ID = "generate-tfidf-tags";
 
 const FILE_A = "bases-cmd-a.md";

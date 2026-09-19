@@ -1,3 +1,4 @@
+import { getFileTags } from "tagFieldUtils";
 import type { GetCommandFn } from "commands";
 import type ObsidianRuleEnginePlugin from "main";
 import {
@@ -8,9 +9,8 @@ import {
 	type MocMode,
 } from "moc";
 import type { TFile } from "obsidian";
-import { getFileTags } from "tagFieldUtils";
 
-export const AUTO_MOC_ID = "generate-auto-moc";
+export const AUTO_MOC_ID = "auto-moc";
 
 export interface AutoMocParams extends Record<string, unknown> {
 	mode?: MocMode;
@@ -111,7 +111,9 @@ async function runAutoMoc(
 
 	try {
 		const sourceTags = getFileTags(plugin.app, file);
-		plugin.debug(`autoMoc: mode=${mode} minPercentage=${params.minPercentage} minCount=${params.minCount}`);
+		plugin.debug(
+			`autoMoc: mode=${mode} minPercentage=${params.minPercentage} minCount=${params.minCount}`,
+		);
 		if (!sourceTags.length) {
 			plugin.debug("autoMoc: file has no tags, skipping");
 			return;

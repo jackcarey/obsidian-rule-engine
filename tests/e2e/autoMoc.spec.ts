@@ -3,7 +3,7 @@ import { expect, openNote, test } from "./fixtures";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const AUTO_MOC_ID = "generate-auto-moc";
+const AUTO_MOC_ID = "auto-moc";
 const SOURCE_NOTE = "moc-source.md";
 const NO_TAGS_NOTE = "moc-no-tags.md";
 
@@ -45,7 +45,7 @@ async function configureCommand(page: Page, params: CommandParams): Promise<void
 			const plugin = window.app.plugins.plugins["rule-engine"] as unknown as {
 				updateCommandConfig(id: string, cfg: { enabled: boolean; params: CommandParams }): Promise<void>;
 			};
-			await plugin.updateCommandConfig("generate-auto-moc", { enabled: true, params });
+			await plugin.updateCommandConfig("auto-moc", { enabled: true, params });
 		},
 		{ params }
 	);
