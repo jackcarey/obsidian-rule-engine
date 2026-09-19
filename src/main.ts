@@ -532,7 +532,7 @@ export default class ObsidianRuleEnginePlugin extends Plugin {
 
 		await this.saveSettings();
 
-		this.debug(`loaded settings`);
+		this.debug(`loaded settings: ${this.settings.rules.length} rules`);
 	}
 
 	async saveSettings() {
